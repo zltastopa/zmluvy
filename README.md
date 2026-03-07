@@ -76,8 +76,53 @@ for f in data/*.zip; do unzip -o "$f" -d data/; done
 uv run python load_crz.py data/*.xml
 ```
 
-## Data source
+## LLM extraction pipeline
 
-- Daily XML exports from `https://www.crz.gov.sk/export/YYYY-MM-DD.zip`
-- Published nightly by the Office of the Government of the Slovak Republic
-- All data is public by law (Act No. 211/2000 Coll.)
+Extract structured data from contract PDFs using an LLM (default: Gemini 2.5 Flash Lite via OpenRouter).
+
+```bash
+# 1. Download PDFs for a month
+uv run python download_sample_pdfs.py --month 2026-02 --all
+
+# 2. Convert PDFs to text
+uv run python pdf_to_text.py
+
+# 3. Extract structured fields via LLM
+uv run python extract_contracts.py
+```
+
+All three scripts support `--workers` for parallel execution and show
+a tqdm progress bar. They skip already-processed files, so you can
+Ctrl+C and resume anytime.
+
+Extracted fields include: service category, actual subject, hidden
+entities, penalties, penalty asymmetry, signatories, duration,
+funding source, bank accounts, and more. Results go into
+`data/extractions/` as JSON and the `extractions` table in SQLite.
+
+## Tax reliability data
+
+Cross-reference contracts against the Financial Administration's
+[Tax Reliability Index](https://www.financnasprava.sk/sk/elektronicke-sluzby/verejne-sluzby/zoznamy/detail/_5cd6a827-0ee0-4028-8982-4d8bb1de3008)
+to flag contracts with unreliable taxpayers.
+
+```bash
+# Download the latest ds_iz_ran.zip from the link above, then:
+unzip ds_iz_ran.zip
+uv run python load_tax_reliability.py
+```
+
+This creates a `tax_reliability` table (~680K subjects) joinable on ICO:
+
+```sql
+select z.nazov_zmluvy, z.dodavatel, z.suma, t.status
+from zmluvy z
+join tax_reliability t on z.dodavatel_ico = t.ico
+where t.status = 'menej spoľahlivý'
+order by z.suma desc
+```
+
+## Data sources
+
+- **CRZ**: Daily XML exports from `https://www.crz.gov.sk/export/YYYY-MM-DD.zip` — published nightly by the Office of the Government of the Slovak Republic. All data is public by law (Act No. 211/2000 Coll.)
+- **Tax reliability**: `ds_iz_ran.xml` from Finančná správa SR — CC0 license, updated daily
