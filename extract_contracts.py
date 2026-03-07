@@ -233,7 +233,7 @@ def extract_one(client, api_key, text, model=MODEL):
                 {"role": "user", "content": USER_PROMPT_TEMPLATE.format(text=truncated)},
             ],
             "temperature": 0.0,
-            "max_tokens": 2000,
+            "max_tokens": 4000,
         },
         timeout=60,
     )

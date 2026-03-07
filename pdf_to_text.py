@@ -9,6 +9,7 @@ import subprocess
 import os
 import csv
 import sys
+from tqdm import tqdm
 
 from settings import get_env, get_path
 
@@ -40,15 +41,16 @@ def main():
     print(f"Found {len(pdf_files)} PDFs to convert")
 
     manifest = []
-    ok, fail, empty = 0, 0, 0
+    ok, fail, empty, skip = 0, 0, 0, 0
 
-    for i, fname in enumerate(sorted(pdf_files)):
+    pbar = tqdm(sorted(pdf_files), desc="PDF→text", unit="pdf")
+    for fname in pbar:
         pdf_path = os.path.join(pdf_dir, fname)
         txt_path = os.path.join(text_dir, fname.replace(".pdf", ".txt"))
 
         # Skip if already converted
         if os.path.exists(txt_path) and os.path.getsize(txt_path) > 0:
-            ok += 1
+            skip += 1
             text = open(txt_path).read()
         else:
             text = extract_text(pdf_path)
@@ -58,9 +60,11 @@ def main():
                 ok += 1
             elif text == "":
                 empty += 1
+                pbar.set_postfix(ok=ok, fail=fail, empty=empty, skip=skip)
                 continue
             else:
                 fail += 1
+                pbar.set_postfix(ok=ok, fail=fail, empty=empty, skip=skip)
                 continue
 
         # Get contract metadata
@@ -87,8 +91,8 @@ def main():
                 "text_len": len(text),
             })
 
-        if (i + 1) % 10 == 0:
-            print(f"  [{i+1}/{len(pdf_files)}] processed...")
+        pbar.set_postfix(ok=ok, fail=fail, empty=empty, skip=skip)
+    pbar.close()
 
     # Write manifest
     manifest_path = os.path.join(text_dir, "manifest.csv")
