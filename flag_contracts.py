@@ -117,6 +117,38 @@ DEFAULT_RULES = [
         "sql_condition": "__custom__",
         "needs_extraction": 1,
     },
+    {
+        "id": "terminated_company",
+        "label": "Zrusena firma",
+        "description": "Dodavatel je zruseny/zaniknuty podla registra uctovnych zavierok (RUZ)",
+        "severity": "danger",
+        "sql_condition": "z.dodavatel_ico IS NOT NULL AND z.dodavatel_ico != '' AND z.dodavatel_ico IN (SELECT cin FROM ruz_entities WHERE terminated_on IS NOT NULL AND cin IS NOT NULL)",
+        "needs_extraction": 0,
+    },
+    {
+        "id": "not_in_ruz",
+        "label": "Dodavatel nie je v RUZ",
+        "description": "Dodavatel s ICO nie je evidovany v registri uctovnych zavierok",
+        "severity": "info",
+        "sql_condition": "z.dodavatel_ico IS NOT NULL AND z.dodavatel_ico != '' AND length(z.dodavatel_ico) = 8 AND z.dodavatel_ico NOT IN (SELECT cin FROM ruz_entities WHERE cin IS NOT NULL)",
+        "needs_extraction": 0,
+    },
+    {
+        "id": "micro_supplier_large_contract",
+        "label": "Mikro dodavatel, velka zmluva",
+        "description": "Dodavatel ma 0-1 zamestnancov podla RUZ, ale zmluva presahuje 100 000 EUR",
+        "severity": "warning",
+        "sql_condition": "z.suma > 100000 AND z.dodavatel_ico IS NOT NULL AND z.dodavatel_ico != '' AND z.dodavatel_ico IN (SELECT cin FROM ruz_entities WHERE organization_size_id IN (1, 2) AND cin IS NOT NULL AND terminated_on IS NULL)",
+        "needs_extraction": 0,
+    },
+    {
+        "id": "fresh_company",
+        "label": "Cerstve zalozena firma",
+        "description": "Dodavatel bol zalozeny menej ako 1 rok pred podpisom zmluvy",
+        "severity": "warning",
+        "sql_condition": "__custom__",
+        "needs_extraction": 0,
+    },
 ]
 
 
@@ -216,6 +248,8 @@ def evaluate_custom_rule(db, rule):
         return _eval_socpoist_debtor(db)
     if rule_id == "vszp_debtor_entity":
         return _eval_vszp_debtor_entity(db)
+    if rule_id == "fresh_company":
+        return _eval_fresh_company(db)
 
     raise ValueError(f"Unknown custom rule: {rule_id}")
 
@@ -360,6 +394,72 @@ def _eval_vszp_debtor_entity(db):
     # Remove stale flags
     cursor2 = db.execute(
         "DELETE FROM red_flags WHERE flag_type = 'vszp_debtor_entity' AND zmluva_id NOT IN ({})".format(
+            ",".join(str(i) for i in matching_ids) if matching_ids else "0"
+        )
+    )
+    removed = cursor2.rowcount
+    return inserted, removed
+
+
+def _eval_fresh_company(db):
+    """Flag contracts where supplier was established <1 year before contract signing."""
+    from datetime import datetime, timedelta
+
+    # Get all RUZ entities with CIN and established_on
+    ruz_rows = db.execute(
+        "SELECT cin, established_on, name FROM ruz_entities WHERE cin IS NOT NULL AND established_on IS NOT NULL AND terminated_on IS NULL"
+    ).fetchall()
+    ruz_map = {}
+    for r in ruz_rows:
+        cin = r["cin"]
+        try:
+            est = datetime.strptime(r["established_on"], "%Y-%m-%d")
+        except (ValueError, TypeError):
+            continue
+        # Keep the earliest established_on per CIN (some entities may have duplicates)
+        if cin not in ruz_map or est < ruz_map[cin][0]:
+            ruz_map[cin] = (est, r["name"])
+
+    # Get contracts with valid ICO and signing date
+    contracts = db.execute("""
+        SELECT id, dodavatel_ico, datum_podpisu, datum_zverejnenia
+        FROM zmluvy
+        WHERE dodavatel_ico IS NOT NULL AND dodavatel_ico != '' AND length(dodavatel_ico) = 8
+    """).fetchall()
+
+    matching_ids = set()
+    details = {}
+    for c in contracts:
+        ico = c["dodavatel_ico"]
+        if ico not in ruz_map:
+            continue
+        est_date, company_name = ruz_map[ico]
+        # Use datum_podpisu if available, otherwise datum_zverejnenia
+        date_str = c["datum_podpisu"] or c["datum_zverejnenia"]
+        if not date_str:
+            continue
+        try:
+            contract_date = datetime.strptime(date_str[:10], "%Y-%m-%d")
+        except (ValueError, TypeError):
+            continue
+        days_diff = (contract_date - est_date).days
+        if 0 <= days_diff < 365:
+            matching_ids.add(c["id"])
+            months = days_diff // 30
+            details[c["id"]] = f"{company_name} (zalozena {est_date.strftime('%d.%m.%Y')}, {months} mes. pred zmluvou)"
+
+    # Insert flags
+    inserted = 0
+    for zmluva_id in matching_ids:
+        cursor = db.execute(
+            "INSERT OR IGNORE INTO red_flags (zmluva_id, flag_type, detail) VALUES (?, ?, ?)",
+            (zmluva_id, "fresh_company", details.get(zmluva_id)),
+        )
+        inserted += cursor.rowcount
+
+    # Remove stale flags
+    cursor2 = db.execute(
+        "DELETE FROM red_flags WHERE flag_type = 'fresh_company' AND zmluva_id NOT IN ({})".format(
             ",".join(str(i) for i in matching_ids) if matching_ids else "0"
         )
     )

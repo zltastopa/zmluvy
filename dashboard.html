@@ -464,6 +464,19 @@
       </div>
     </div>
 
+    <div class="filter-section">
+      <h3>Register (RUZ)</h3>
+      <div class="filter-row">
+        <label><input type="checkbox" data-filter="ruz_terminated" value="1"> Zrusena firma</label>
+      </div>
+      <div class="filter-row">
+        <label><input type="checkbox" data-filter="ruz_fresh" value="1"> Cerstve zalozena (&lt;1r)</label>
+      </div>
+      <div class="filter-row">
+        <label><input type="checkbox" data-filter="ruz_micro" value="1"> Mikro firma (0-1 zam.)</label>
+      </div>
+    </div>
+
     <div class="filter-actions">
       <button class="btn btn-primary" onclick="browseApplyFilters()">Hladat</button>
       <button class="btn btn-secondary" onclick="browseResetFilters()">Reset</button>
@@ -983,6 +996,11 @@ const COLUMNS = [
   { key: 'dodavatel_tax_status', label: 'Dan. spolahlivost', on: true },
   { key: 'vszp_debt', label: 'Dlh VSZP', type: 'num', on: true },
   { key: 'socpoist_debt', label: 'Dlh Soc.poist.', type: 'num', on: true },
+  { key: 'ruz_established', label: 'Vznik firmy', on: false },
+  { key: 'ruz_terminated', label: 'Zanik firmy', on: false },
+  { key: 'ruz_legal_form', label: 'Prav. forma', on: false },
+  { key: 'ruz_org_size', label: 'Velkost firmy', on: true },
+  { key: 'ruz_nace', label: 'NACE', on: false },
   { key: 'signatories', label: 'Podpisujuci', on: true },
   { key: 'service_category', label: 'Kategoria', ext: true, on: true },
   { key: 'penalty_asymmetry', label: 'Pokuty asym.', ext: true, on: true },
@@ -1027,8 +1045,12 @@ var extraParams = {};
 function browseGetFilterParams() {
   var params = new URLSearchParams();
   document.querySelectorAll('[data-filter]').forEach(function(el) {
-    var v = el.value.trim();
-    if (v) params.set(el.dataset.filter, v);
+    if (el.type === 'checkbox') {
+      if (el.checked) params.set(el.dataset.filter, el.value);
+    } else {
+      var v = el.value.trim();
+      if (v) params.set(el.dataset.filter, v);
+    }
   });
   Object.keys(extraParams).forEach(function(k) { params.set(k, extraParams[k]); });
   params.set('sort', browseSortCol);
@@ -1041,8 +1063,12 @@ function browseGetFilterParams() {
 function browseSyncUrl() {
   var params = new URLSearchParams();
   document.querySelectorAll('[data-filter]').forEach(function(el) {
-    var v = el.value.trim();
-    if (v) params.set(el.dataset.filter, v);
+    if (el.type === 'checkbox') {
+      if (el.checked) params.set(el.dataset.filter, el.value);
+    } else {
+      var v = el.value.trim();
+      if (v) params.set(el.dataset.filter, v);
+    }
   });
   Object.keys(extraParams).forEach(function(k) { params.set(k, extraParams[k]); });
   if (browseSortCol !== 'flag_count' || browseSortDir !== 'desc') {
@@ -1122,6 +1148,14 @@ function browseRenderCell(col, row) {
     if (v) {
       td.textContent = formatNum(v) + ' EUR';
       td.style.color = '#e15b5b';
+    }
+  } else if (col.key === 'ruz_terminated') {
+    if (v) { td.textContent = v; td.style.color = '#e15b5b'; td.style.fontWeight = 'bold'; }
+  } else if (col.key === 'ruz_org_size') {
+    if (v) {
+      td.textContent = v;
+      var sizeId = row['ruz_org_size_id'];
+      if (sizeId != null && sizeId <= 2) { td.style.color = '#e89b3a'; }
     }
   } else if (col.key === 'suma' || col.key === 'suma_celkom') {
     td.textContent = v != null ? formatNum(v) + ' EUR' : '';
@@ -1223,7 +1257,8 @@ function browseApplyFilters() {
 
 function browseResetFilters(silent) {
   document.querySelectorAll('[data-filter]').forEach(function(el) {
-    if (el.tagName === 'SELECT') el.selectedIndex = 0;
+    if (el.type === 'checkbox') el.checked = false;
+    else if (el.tagName === 'SELECT') el.selectedIndex = 0;
     else el.value = '';
   });
   extraParams = {};
@@ -1249,7 +1284,9 @@ document.getElementById('filtersPanel').addEventListener('keydown', function(e) 
 function browsePrefillFromUrl() {
   originalUrlParams.forEach(function(value, key) {
     var el = document.querySelector('[data-filter="' + CSS.escape(key) + '"]');
-    if (el) el.value = value;
+    if (!el) return;
+    if (el.type === 'checkbox') el.checked = (value === el.value);
+    else el.value = value;
   });
 }
 

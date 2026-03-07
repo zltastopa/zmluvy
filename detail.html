@@ -393,6 +393,24 @@ function renderDetail(result) {
       'Dlznik Soc. poist.: ' + Number(d.dodavatel_socpoist_debt.amount).toLocaleString('sk-SK', {maximumFractionDigits: 2}) + ' EUR');
     dodCard.appendChild(spTag);
   }
+  if (d.dodavatel_ruz) {
+    var ruz = d.dodavatel_ruz;
+    var ruzInfo = el('div', 'ruz-info');
+    ruzInfo.style.marginTop = '8px';
+    ruzInfo.style.fontSize = '0.85em';
+    ruzInfo.style.color = '#888';
+    var parts = [];
+    if (ruz.legal_form) parts.push(ruz.legal_form);
+    if (ruz.organization_size) parts.push(ruz.organization_size);
+    if (ruz.established_on) parts.push('vznik: ' + ruz.established_on);
+    if (ruz.nace_category) parts.push('NACE: ' + ruz.nace_category);
+    if (ruz.region) parts.push(ruz.region);
+    if (parts.length) ruzInfo.textContent = parts.join(' | ');
+    if (parts.length) dodCard.appendChild(ruzInfo);
+    if (ruz.terminated_on) {
+      dodCard.appendChild(el('span', 'tag tag-cancelled tax-tag', 'Zrusena firma: ' + ruz.terminated_on));
+    }
+  }
   partiesGrid.appendChild(dodCard);
 
   // Objednavatel

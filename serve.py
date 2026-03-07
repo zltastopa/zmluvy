@@ -280,6 +280,18 @@ def api_detail(db, params):
         else:
             contract["dodavatel_socpoist_debt"] = None
 
+        # RUZ (business register) data for dodavatel
+        if ico_val:
+            ruz = db.execute(
+                """SELECT name, city, street, region, district, established_on, terminated_on,
+                    legal_form, nace_category, nace_code, organization_size, ownership_type
+                FROM ruz_entities WHERE cin = ? LIMIT 1""",
+                [ico_val]
+            ).fetchone()
+            contract["dodavatel_ruz"] = dict(ruz) if ruz else None
+        else:
+            contract["dodavatel_ruz"] = None
+
         return {"kind": "contract", "data": contract}
 
     # Supplier or buyer detail — same logic, different columns
@@ -808,6 +820,7 @@ _BROWSE_SORT_COLS = {
     'auto_renewal', 'bezodplatne', 'funding_type', 'grant_amount',
     'hidden_entity_count', 'penalty_count', 'iban_count',
     'flag_count', 'dodavatel_tax_status', 'vszp_debt',
+    'ruz_established', 'ruz_org_size_id',
 }
 
 
@@ -910,6 +923,14 @@ def _browse_where(params):
     elif v == 'any':
         clauses.append("(z.dodavatel_ico IN (SELECT cin FROM vszp_debtors WHERE cin IS NOT NULL) OR z.id IN (SELECT zmluva_id FROM red_flags WHERE flag_type = 'socpoist_debtor'))")
 
+    # RUZ filters
+    if params.get('ruz_terminated') == '1':
+        clauses.append("ruz.terminated_on IS NOT NULL")
+    if params.get('ruz_fresh') == '1':
+        clauses.append("z.id IN (SELECT zmluva_id FROM red_flags WHERE flag_type = 'fresh_company')")
+    if params.get('ruz_micro') == '1':
+        clauses.append("ruz.organization_size_id IN (1, 2)")
+
     # Red flags
     if params.get('flag'):
         clauses.append("z.id IN (SELECT zmluva_id FROM red_flags WHERE flag_type = ?)")
@@ -937,7 +958,7 @@ def api_browse(db, params):
     """Full browse endpoint with all fields, pagination, sorting."""
     where, bindings = _browse_where(params)
 
-    # Always join extractions + red flag counts + tax reliability + VSZP debtor info for browse
+    # Always join extractions + red flag counts + tax reliability + debtor info + RUZ for browse
     join = """LEFT JOIN extractions e ON e.zmluva_id = z.id
               LEFT JOIN (
                   SELECT zmluva_id, count(*) as flag_count,
@@ -950,7 +971,8 @@ def api_browse(db, params):
               ) vd ON vd.cin = z.dodavatel_ico
               LEFT JOIN (
                   SELECT zmluva_id, detail FROM red_flags WHERE flag_type = 'socpoist_debtor'
-              ) spd ON spd.zmluva_id = z.id"""
+              ) spd ON spd.zmluva_id = z.id
+              LEFT JOIN ruz_entities ruz ON ruz.cin = z.dodavatel_ico"""
 
     # Sort
     sort_col = params.get('sort', 'datum_zverejnenia')
@@ -968,6 +990,8 @@ def api_browse(db, params):
         sort_expr = "tr.status"
     elif sort_col == 'vszp_debt':
         sort_expr = "vd.max_debt"
+    elif sort_col in ('ruz_established', 'ruz_org_size_id'):
+        sort_expr = f"ruz.{'established_on' if sort_col == 'ruz_established' else 'organization_size_id'}"
     else:
         sort_expr = f"z.{sort_col}"
 
@@ -992,7 +1016,13 @@ def api_browse(db, params):
             rf.flag_labels,
             tr.status as dodavatel_tax_status,
             vd.max_debt as vszp_debt,
-            spd.detail as socpoist_debt_detail
+            spd.detail as socpoist_debt_detail,
+            ruz.established_on as ruz_established,
+            ruz.terminated_on as ruz_terminated,
+            ruz.legal_form as ruz_legal_form,
+            ruz.organization_size as ruz_org_size,
+            ruz.organization_size_id as ruz_org_size_id,
+            ruz.nace_category as ruz_nace
         FROM zmluvy z {join}
         WHERE {where}
         ORDER BY {sort_expr} {sort_dir}
