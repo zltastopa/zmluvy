@@ -1,10 +1,12 @@
 """Download PDF attachments from CRZ for extraction.
 
 Usage:
-    python download_sample_pdfs.py                  # default: 1000 March 2026 PDFs
-    python download_sample_pdfs.py --limit 500      # limit count
-    python download_sample_pdfs.py --month 2026-02  # different month
-    python download_sample_pdfs.py --all             # all PDFs for the month
+    python download_sample_pdfs.py                          # default: 1000 PDFs for current month
+    python download_sample_pdfs.py --limit 500              # limit count
+    python download_sample_pdfs.py --month 2026-02          # single month
+    python download_sample_pdfs.py --from 2026-01-01 --to 2026-01-15  # date range
+    python download_sample_pdfs.py --from 2026-01 --to 2026-03        # month range
+    python download_sample_pdfs.py --all                    # all PDFs for the period (ignores --limit)
 """
 import sqlite_utils
 import httpx
@@ -31,13 +33,52 @@ def main():
         "--month",
         type=str,
         default=default_month,
-        help=f"Month to download (YYYY-MM, default: {default_month})",
+        help=f"Month to download (YYYY-MM, default: {default_month}). Ignored if --from is used.",
     )
-    parser.add_argument("--all", action="store_true", help="Download all PDFs for the month (ignores --limit)")
+    parser.add_argument(
+        "--from",
+        type=str,
+        dest="date_from",
+        help="Start date (YYYY-MM-DD) or month (YYYY-MM). Inclusive.",
+    )
+    parser.add_argument(
+        "--to",
+        type=str,
+        dest="date_to",
+        help="End date (YYYY-MM-DD) or month (YYYY-MM). Inclusive.",
+    )
+    parser.add_argument("--all", action="store_true", help="Download all PDFs for the period (ignores --limit)")
     parser.add_argument("--workers", type=int, default=16, help="Parallel workers (default: 16)")
     args = parser.parse_args()
 
     limit = 0 if args.all else args.limit
+
+    # Resolve date range
+    if args.date_from:
+        date_from = args.date_from + "-01" if len(args.date_from) == 7 else args.date_from
+        if args.date_to:
+            # If --to is a month (YYYY-MM), make it the last day by using first of next month
+            if len(args.date_to) == 7:
+                date_to_exclusive = args.date_to + "-01"
+                use_date_to_month = True
+            else:
+                # Specific date — make it inclusive by adding 1 day
+                date_to_exclusive = args.date_to
+                use_date_to_month = False
+        else:
+            # Only --from given, use single day or month
+            if len(args.date_from) == 7:
+                date_to_exclusive = args.date_from + "-01"
+                use_date_to_month = True
+            else:
+                date_to_exclusive = args.date_from
+                use_date_to_month = False
+        period_label = f"{args.date_from} to {args.date_to or args.date_from}"
+    else:
+        date_from = args.month + "-01"
+        date_to_exclusive = args.month + "-01"
+        use_date_to_month = True
+        period_label = args.month
 
     db = sqlite_utils.Database(get_path("CRZ_DB_PATH", "crz.db"))
     out_dir = get_path("CRZ_PDF_DIR", "data/pdfs")
@@ -46,16 +87,21 @@ def main():
     # Already downloaded files
     existing = set(f for f in os.listdir(out_dir) if f.endswith(".pdf") and os.path.getsize(os.path.join(out_dir, f)) > 0)
 
-    query = '''
+    if use_date_to_month:
+        date_filter = "z.datum_zverejnenia >= ? AND z.datum_zverejnenia < date(?, '+1 month')"
+    else:
+        date_filter = "z.datum_zverejnenia >= ? AND z.datum_zverejnenia <= ?"
+
+    query = f'''
         select p.url, p.subor, z.nazov_zmluvy, z.suma, z.rezort, z.id as zmluva_id
         from prilohy p
         join zmluvy z on p.zmluva_id = z.id
         where p.subor like '%.pdf'
-          and z.datum_zverejnenia >= ? and z.datum_zverejnenia < date(?, '+1 month')
+          and {date_filter}
         group by z.id
         order by random()
     '''
-    params = [args.month + "-01", args.month + "-01"]
+    params = [date_from, date_to_exclusive]
     if limit > 0:
         query += " limit ?"
         params.append(limit + len(existing))  # overfetch to account for skips
@@ -72,7 +118,7 @@ def main():
 
     already = len(rows) - len(to_download)
     total = len(to_download)
-    print(f"Month {args.month}: {len(rows)} PDFs queried, {already} already downloaded, {total} to download")
+    print(f"Period {period_label}: {len(rows)} PDFs queried, {already} already downloaded, {total} to download")
 
     if total == 0:
         print("Nothing to download.")

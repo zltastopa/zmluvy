@@ -45,8 +45,8 @@ unzip data.zip
 # Parse into SQLite
 uv run python load_crz.py 2026-03-05.xml
 
-# Browse
-uv run datasette crz.db
+# Browse (dashboard + datasette on one port)
+uv run python serve.py
 ```
 
 Environment is loaded automatically from `.env` by all Python

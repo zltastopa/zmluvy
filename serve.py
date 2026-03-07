@@ -245,6 +245,18 @@ def api_detail(db, params):
         ).fetchall()
         contract["red_flags"] = [dict(f) for f in flags]
 
+        # Tax reliability for both parties
+        for ico_col, key in [("dodavatel_ico", "dodavatel_tax_status"),
+                             ("objednavatel_ico", "objednavatel_tax_status")]:
+            ico_val = contract.get(ico_col)
+            if ico_val:
+                tr = db.execute(
+                    "SELECT status FROM tax_reliability WHERE ico = ?", [ico_val]
+                ).fetchone()
+                contract[key] = tr["status"] if tr else None
+            else:
+                contract[key] = None
+
         return {"kind": "contract", "data": contract}
 
     # Supplier or buyer detail — same logic, different columns
@@ -772,7 +784,7 @@ _BROWSE_SORT_COLS = {
     'service_category', 'actual_subject', 'penalty_asymmetry',
     'auto_renewal', 'bezodplatne', 'funding_type', 'grant_amount',
     'hidden_entity_count', 'penalty_count', 'iban_count',
-    'flag_count',
+    'flag_count', 'dodavatel_tax_status',
 }
 
 
@@ -860,6 +872,12 @@ def _browse_where(params):
     elif v == '0':
         clauses.append("e.zmluva_id IS NULL")
 
+    # Tax reliability
+    v = params.get('dodavatel_tax_status')
+    if v:
+        clauses.append("z.dodavatel_ico IN (SELECT ico FROM tax_reliability WHERE status = ?)")
+        bindings.append(v)
+
     # Red flags
     if params.get('flag'):
         clauses.append("z.id IN (SELECT zmluva_id FROM red_flags WHERE flag_type = ?)")
@@ -887,13 +905,14 @@ def api_browse(db, params):
     """Full browse endpoint with all fields, pagination, sorting."""
     where, bindings = _browse_where(params)
 
-    # Always join extractions + red flag counts for the browse view
+    # Always join extractions + red flag counts + tax reliability for the browse view
     join = """LEFT JOIN extractions e ON e.zmluva_id = z.id
               LEFT JOIN (
                   SELECT zmluva_id, count(*) as flag_count,
                          group_concat(flag_type, ', ') as flag_labels
                   FROM red_flags GROUP BY zmluva_id
-              ) rf ON rf.zmluva_id = z.id"""
+              ) rf ON rf.zmluva_id = z.id
+              LEFT JOIN tax_reliability tr ON tr.ico = z.dodavatel_ico"""
 
     # Sort
     sort_col = params.get('sort', 'datum_zverejnenia')
@@ -907,6 +926,8 @@ def api_browse(db, params):
         sort_expr = f"e.{sort_col}"
     elif sort_col == 'flag_count':
         sort_expr = "rf.flag_count"
+    elif sort_col == 'dodavatel_tax_status':
+        sort_expr = "tr.status"
     else:
         sort_expr = f"z.{sort_col}"
 
@@ -928,7 +949,8 @@ def api_browse(db, params):
             e.hidden_entity_count, e.penalty_count, e.iban_count,
             e.extraction_json,
             COALESCE(rf.flag_count, 0) as flag_count,
-            rf.flag_labels
+            rf.flag_labels,
+            tr.status as dodavatel_tax_status
         FROM zmluvy z {join}
         WHERE {where}
         ORDER BY {sort_expr} {sort_dir}

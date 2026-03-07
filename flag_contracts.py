@@ -9,6 +9,7 @@ Usage:
 """
 
 import argparse
+import json
 import sqlite3
 import time
 
@@ -76,6 +77,22 @@ DEFAULT_RULES = [
         "sql_condition": "z.dodavatel_ico IS NULL OR z.dodavatel_ico = ''",
         "needs_extraction": 0,
     },
+    {
+        "id": "tax_unreliable",
+        "label": "Danovo nespolahlivy dodavatel",
+        "description": "Dodavatel ma status 'menej spolahlivy' podla Financnej spravy SR",
+        "severity": "danger",
+        "sql_condition": "z.dodavatel_ico IN (SELECT ico FROM tax_reliability WHERE status = 'menej spoľahlivý')",
+        "needs_extraction": 0,
+    },
+    {
+        "id": "tax_unreliable_entity",
+        "label": "Danovo nespolahlivy subjekt v zmluve",
+        "description": "Zmluva obsahuje tretiu stranu (skrytu entitu) s ICO, ktora je 'menej spolahlivy' podla Financnej spravy SR",
+        "severity": "danger",
+        "sql_condition": "__custom__",
+        "needs_extraction": 1,
+    },
 ]
 
 
@@ -134,6 +151,10 @@ def evaluate_rule(db, rule):
     condition = rule["sql_condition"]
     needs_ext = rule["needs_extraction"]
 
+    # Custom evaluation for rules that can't be expressed as pure SQL
+    if condition == "__custom__":
+        return evaluate_custom_rule(db, rule)
+
     join = "LEFT JOIN extractions e ON e.zmluva_id = z.id" if needs_ext else ""
 
     # Find contracts matching this rule that don't already have this flag
@@ -156,6 +177,66 @@ def evaluate_rule(db, rule):
         )
     """
     cursor2 = db.execute(remove_query, (rule_id,))
+    removed = cursor2.rowcount
+
+    return inserted, removed
+
+
+def evaluate_custom_rule(db, rule):
+    """Evaluate custom rules that require Python logic (e.g. JSON parsing)."""
+    rule_id = rule["id"]
+
+    if rule_id == "tax_unreliable_entity":
+        return _eval_tax_unreliable_entity(db)
+
+    raise ValueError(f"Unknown custom rule: {rule_id}")
+
+
+def _eval_tax_unreliable_entity(db):
+    """Flag contracts where a hidden entity ICO is 'menej spoľahlivý'."""
+    # Load all unreliable ICOs into a set for fast lookup
+    unreliable = set(
+        r[0] for r in db.execute(
+            "SELECT ico FROM tax_reliability WHERE status = 'menej spoľahlivý'"
+        ).fetchall()
+    )
+
+    # Get all extractions with hidden entities
+    rows = db.execute("""
+        SELECT e.zmluva_id, e.extraction_json
+        FROM extractions e
+        WHERE e.hidden_entity_count > 0 AND e.extraction_json IS NOT NULL
+    """).fetchall()
+
+    matching_ids = set()
+    details = {}
+    for row in rows:
+        try:
+            ej = json.loads(row["extraction_json"])
+        except Exception:
+            continue
+        for he in (ej.get("hidden_entities") or []):
+            ico = (he.get("ico") or "").strip()
+            if ico and ico in unreliable:
+                matching_ids.add(row["zmluva_id"])
+                name = he.get("name") or ico
+                details[row["zmluva_id"]] = f"{name} (ICO: {ico})"
+
+    # Insert flags
+    inserted = 0
+    for zmluva_id in matching_ids:
+        cursor = db.execute(
+            "INSERT OR IGNORE INTO red_flags (zmluva_id, flag_type, detail) VALUES (?, ?, ?)",
+            (zmluva_id, "tax_unreliable_entity", details.get(zmluva_id)),
+        )
+        inserted += cursor.rowcount
+
+    # Remove flags for contracts that no longer match
+    cursor2 = db.execute(
+        "DELETE FROM red_flags WHERE flag_type = 'tax_unreliable_entity' AND zmluva_id NOT IN ({})".format(
+            ",".join(str(i) for i in matching_ids) if matching_ids else "0"
+        )
+    )
     removed = cursor2.rowcount
 
     return inserted, removed

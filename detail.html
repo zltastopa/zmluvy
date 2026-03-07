@@ -98,6 +98,7 @@
   .entity-name { font-size: 16px; font-weight: 600; margin-bottom: 4px; }
   .entity-ico { font-family: 'SF Mono', 'Fira Code', monospace; font-size: 13px; color: var(--info); }
   .entity-address { font-size: 12px; color: var(--muted); margin-top: 4px; }
+  .tax-tag { margin-top: 8px; }
 
   /* Flag badges */
   .flag-list { display: flex; flex-direction: column; gap: 10px; }
@@ -374,6 +375,11 @@ function renderDetail(result) {
     dodCard.appendChild(icoLink);
   }
   if (d.dodavatel_adresa) dodCard.appendChild(el('div', 'entity-address', d.dodavatel_adresa));
+  if (d.dodavatel_tax_status) {
+    var taxCls = d.dodavatel_tax_status === 'vysoko spoľahlivý' ? 'tag-active' :
+                 d.dodavatel_tax_status === 'spoľahlivý' ? 'tag-zmluva' : 'tag-cancelled';
+    dodCard.appendChild(el('span', 'tag ' + taxCls + ' tax-tag', d.dodavatel_tax_status));
+  }
   partiesGrid.appendChild(dodCard);
 
   // Objednavatel
@@ -386,6 +392,11 @@ function renderDetail(result) {
     objCard.appendChild(icoLink2);
   }
   if (d.objednavatel_adresa) objCard.appendChild(el('div', 'entity-address', d.objednavatel_adresa));
+  if (d.objednavatel_tax_status) {
+    var taxCls2 = d.objednavatel_tax_status === 'vysoko spoľahlivý' ? 'tag-active' :
+                  d.objednavatel_tax_status === 'spoľahlivý' ? 'tag-zmluva' : 'tag-cancelled';
+    objCard.appendChild(el('span', 'tag ' + taxCls2 + ' tax-tag', d.objednavatel_tax_status));
+  }
   partiesGrid.appendChild(objCard);
   container.appendChild(partiesGrid);
 
@@ -426,7 +437,15 @@ function renderDetail(result) {
       var sCard = card('Dodavatel', 'card-accent');
       supplierSigs.forEach(function(s) {
         var ic = el('div', 'item-card');
-        ic.appendChild(el('div', 'item-name', s.name || '-'));
+        if (s.name) {
+          var nameLink = el('a', 'item-name', s.name);
+          nameLink.href = 'https://www.foaf.sk/search?searchString=' + encodeURIComponent(s.name);
+          nameLink.target = '_blank';
+          nameLink.rel = 'noopener';
+          ic.appendChild(nameLink);
+        } else {
+          ic.appendChild(el('div', 'item-name', '-'));
+        }
         var meta = [];
         if (s.role) meta.push(s.role);
         if (s.delegation) meta.push(s.delegation);
@@ -440,7 +459,15 @@ function renderDetail(result) {
       var bCard = card('Objednavatel', 'card-info');
       buyerSigs.forEach(function(s) {
         var ic = el('div', 'item-card');
-        ic.appendChild(el('div', 'item-name', s.name || '-'));
+        if (s.name) {
+          var nameLink2 = el('a', 'item-name', s.name);
+          nameLink2.href = 'https://www.foaf.sk/search?searchString=' + encodeURIComponent(s.name);
+          nameLink2.target = '_blank';
+          nameLink2.rel = 'noopener';
+          ic.appendChild(nameLink2);
+        } else {
+          ic.appendChild(el('div', 'item-name', '-'));
+        }
         var meta = [];
         if (s.role) meta.push(s.role);
         if (s.delegation) meta.push(s.delegation);

@@ -383,6 +383,19 @@
       </div>
     </div>
 
+    <div class="filter-section">
+      <h3>Danova spolahlivost</h3>
+      <div class="filter-row">
+        <label>Dodavatel</label>
+        <select data-filter="dodavatel_tax_status">
+          <option value="">--</option>
+          <option value="vysoko spoľahlivý">vysoko spoľahlivý</option>
+          <option value="spoľahlivý">spoľahlivý</option>
+          <option value="menej spoľahlivý">menej spoľahlivý</option>
+        </select>
+      </div>
+    </div>
+
     <div class="filter-actions">
       <button class="btn btn-primary" onclick="browseApplyFilters()">Hladat</button>
       <button class="btn btn-secondary" onclick="browseResetFilters()">Reset</button>
@@ -857,6 +870,7 @@ const COLUMNS = [
   { key: 'zdroj', label: 'Zdroj', on: false },
   { key: 'uvo_url', label: 'UVO', on: false },
   { key: 'crz_url', label: 'CRZ link', on: false },
+  { key: 'dodavatel_tax_status', label: 'Dan. spolahlivost', on: true },
   { key: 'signatories', label: 'Podpisujuci', on: true },
   { key: 'service_category', label: 'Kategoria', ext: true, on: true },
   { key: 'penalty_asymmetry', label: 'Pokuty asym.', ext: true, on: true },
