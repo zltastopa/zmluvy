@@ -178,6 +178,9 @@
     <a class="tab" href="/search">
       <span class="tab-icon">&#128269;</span> Hladat
     </a>
+    <a class="tab" href="/methodology">
+      <span class="tab-icon">&#9888;</span> Metodika
+    </a>
   </div>
   <div class="spacer"></div>
   <div class="links">
@@ -338,10 +341,6 @@ function renderDetail(result) {
     s5.appendChild(el('div', 'stat-value', String(extraction.hidden_entity_count || 0)));
     s5.appendChild(el('div', 'stat-label', 'Skryte entity'));
     stats.appendChild(s5);
-    var s6 = el('div', 'stat-block');
-    s6.appendChild(el('div', 'stat-value', String(extraction.penalty_count || 0)));
-    s6.appendChild(el('div', 'stat-label', 'Pokuty'));
-    stats.appendChild(s6);
   }
   container.appendChild(stats);
 
@@ -431,10 +430,12 @@ function renderDetail(result) {
   partiesGrid.appendChild(objCard);
   container.appendChild(partiesGrid);
 
-  // Hidden entities (right after parties)
+  // Hidden entities (includes subcontractors)
   if (ej && ej.hidden_entities && ej.hidden_entities.length > 0) {
     container.appendChild(el('div', 'section-title', 'Skryte entity (' + ej.hidden_entities.length + ')'));
     var heCard = card(null, 'card-warn');
+    var maxPctVal = extraction ? parseFloat(extraction.subcontractor_max_percentage) : NaN;
+    var maxPctStr = (maxPctVal > 0 && maxPctVal <= 100) ? maxPctVal.toFixed(1) + '%' : null;
     ej.hidden_entities.forEach(function(he) {
       var ic = el('div', 'item-card');
       var nameEl;
@@ -451,6 +452,7 @@ function renderDetail(result) {
       var metaParts = [];
       if (he.ico) metaParts.push('ICO: ' + he.ico);
       if (he.role) metaParts.push('Rola: ' + he.role);
+      if (he.role === 'subcontractor' && maxPctStr) metaParts.push('Max. podiel: ' + maxPctStr);
       if (metaParts.length) ic.appendChild(el('div', 'item-meta', metaParts.join('  |  ')));
       heCard.appendChild(ic);
     });
@@ -546,6 +548,7 @@ function renderDetail(result) {
       });
     }
     extGrid.appendChild(penCard);
+
     container.appendChild(extGrid);
 
     // Termination
@@ -662,7 +665,19 @@ function renderDetail(result) {
 
   // Related contracts
   if (d.related_supplier_contracts && d.related_supplier_contracts.length > 0) {
-    container.appendChild(el('div', 'section-title', 'Dalsie zmluvy s rovnakym dodavatelom (' + d.related_supplier_contracts.length + ')'));
+    container.appendChild(el('div', 'section-title', 'Dalsie zmluvy s rovnakym dodavatelom'));
+    if (d.supplier_total_count) {
+      var relStats = el('div', 'stat-row');
+      var rs1 = el('div', 'stat-block info');
+      rs1.appendChild(el('div', 'stat-value', String(d.supplier_total_count)));
+      rs1.appendChild(el('div', 'stat-label', 'Celkom zmluv'));
+      relStats.appendChild(rs1);
+      var rs2 = el('div', 'stat-block accent');
+      rs2.appendChild(el('div', 'stat-value', formatEur(d.supplier_total_sum)));
+      rs2.appendChild(el('div', 'stat-label', 'Celkova suma'));
+      relStats.appendChild(rs2);
+      container.appendChild(relStats);
+    }
     var relCard = card(null, null);
     var relTable = el('table', 'mini-table');
     var relHead = document.createElement('thead');

@@ -140,6 +140,28 @@
   #view-browse.active { display: block; }
   #view-search { display: none; }
   #view-search.active { display: block; }
+  #view-methodology { display: none; padding: 24px; }
+  #view-methodology.active { display: block; }
+  .methodology-container { max-width: 900px; margin: 0 auto; }
+  .methodology-container h2 { font-size: 18px; margin-bottom: 12px; }
+  .methodology-container h3 { font-size: 14px; color: var(--accent); margin: 20px 0 10px; }
+  .methodology-intro { color: var(--muted); margin-bottom: 16px; line-height: 1.7; }
+  .methodology-sources { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 12px; margin-bottom: 8px; }
+  .source-card { background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 14px; }
+  .source-card strong { display: block; margin-bottom: 4px; color: var(--accent2); }
+  .source-card p { font-size: 12px; color: var(--muted); }
+  .methodology-rules { display: flex; flex-direction: column; gap: 10px; }
+  .rule-card { background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 14px; display: flex; align-items: flex-start; gap: 12px; }
+  .rule-severity { font-size: 11px; font-weight: 600; padding: 2px 8px; border-radius: 4px; white-space: nowrap; margin-top: 2px; }
+  .rule-severity.danger { background: rgba(225,91,91,0.15); color: var(--danger); }
+  .rule-severity.warning { background: rgba(230,164,78,0.15); color: var(--accent2); }
+  .rule-severity.info { background: rgba(91,184,225,0.15); color: var(--info); }
+  .rule-body { flex: 1; }
+  .rule-body .rule-label { font-weight: 600; font-size: 13px; }
+  .rule-body .rule-desc { font-size: 12px; color: var(--muted); margin-top: 2px; }
+  .rule-count { font-size: 12px; color: var(--muted); white-space: nowrap; margin-top: 2px; }
+  .rule-card.clickable { cursor: pointer; transition: border-color 0.15s, background 0.15s; }
+  .rule-card.clickable:hover { border-color: var(--accent); background: var(--surface2); }
 
   .table-info {
     padding: 10px 16px; background: var(--surface); border-bottom: 1px solid var(--border);
@@ -252,6 +274,9 @@
     </div>
     <div class="tab" id="tab-search" onclick="switchTab('search')">
       <span class="tab-icon">&#128269;</span> Hladat
+    </div>
+    <div class="tab" id="tab-methodology" onclick="switchTab('methodology')">
+      <span class="tab-icon">&#9888;</span> Metodika
     </div>
   </div>
   <div class="spacer"></div>
@@ -600,6 +625,51 @@
       </div>
     </div>
 
+    <!-- ===== METHODOLOGY ===== -->
+    <div id="view-methodology">
+      <div class="methodology-container">
+        <h2>Metodika hodnotenia red flags</h2>
+        <p class="methodology-intro">
+          CRZ Explorer automaticky vyhodnocuje zmluvy podla sady pravidiel (red flags).
+          Kazde pravidlo kontroluje specificku vlastnost alebo kombinaciu dat z viacerych zdrojov.
+          Nizka zavaznost (info) znamena pozorovanie, stredna (warning) znamena podozrenie a vysoka (danger) znamena zavazny problem.
+        </p>
+
+        <h3>Zdroje dat</h3>
+        <div class="methodology-sources">
+          <div class="source-card">
+            <strong>CRZ</strong>
+            <p>Centralny register zmluv — zmluvy, dodatky, prilohy, zmluvne strany</p>
+          </div>
+          <div class="source-card">
+            <strong>LLM extrakcia</strong>
+            <p>Automaticka analyza textu zmluv — skryte entity, pokuty, podpisujuci, kategoria sluzieb</p>
+          </div>
+          <div class="source-card">
+            <strong>RUZ</strong>
+            <p>Register uctovnych zavierok — pravna forma, velkost, NACE odvetvie, datum zalozenia/zaniku</p>
+          </div>
+          <div class="source-card">
+            <strong>Financna sprava SR</strong>
+            <p>Danova spolahlivost subjektov — vysoko spolahlivy, spolahlivy, menej spolahlivy</p>
+          </div>
+          <div class="source-card">
+            <strong>VSZP</strong>
+            <p>Vseobecna zdravotna poistovna — register dlznikov</p>
+          </div>
+          <div class="source-card">
+            <strong>Socialna poistovna</strong>
+            <p>Register dlznikov Socialnej poistovne</p>
+          </div>
+        </div>
+
+        <h3>Prehlad pravidiel</h3>
+        <div id="methodologyRules" class="methodology-rules">
+          <p>Nacitavam pravidla...</p>
+        </div>
+      </div>
+    </div>
+
   </div>
 </div>
 
@@ -617,10 +687,11 @@ function switchTab(tab) {
   document.getElementById('view-overview').classList.toggle('active', tab === 'overview');
   document.getElementById('view-browse').classList.toggle('active', tab === 'browse');
   document.getElementById('view-search').classList.toggle('active', tab === 'search');
+  document.getElementById('view-methodology').classList.toggle('active', tab === 'methodology');
   document.getElementById('filtersPanel').classList.toggle('visible', tab === 'browse');
 
   // Update URL without reload
-  var pathMap = { overview: '/', browse: '/browse', search: '/search' };
+  var pathMap = { overview: '/', browse: '/browse', search: '/search', methodology: '/methodology' };
   var newPath = pathMap[tab] || '/';
   if (tab === 'browse') {
     var qs = window.location.search;
@@ -647,6 +718,47 @@ function switchTab(tab) {
       }
     }
   }
+  if (tab === 'methodology' && !methodologyLoaded) { loadMethodology(); }
+}
+
+var methodologyLoaded = false;
+async function loadMethodology() {
+  methodologyLoaded = true;
+  var data = await api('/api/flags');
+  var el = document.getElementById('methodologyRules');
+  if (!data.rules || data.rules.length === 0) {
+    el.innerHTML = '<p>Ziadne pravidla.</p>';
+    return;
+  }
+  var html = '';
+  data.rules.forEach(function(r) {
+    var sev = r.severity || 'info';
+    var sevLabel = sev === 'danger' ? 'Vysoka' : sev === 'warning' ? 'Stredna' : 'Nizka';
+    var clickable = (r.count || 0) > 0;
+    html += '<div class="rule-card' + (clickable ? ' clickable' : '') + '"' +
+      (clickable ? ' onclick="browseByFlag(\'' + r.id + '\')"' : '') + '>' +
+      '<span class="rule-severity ' + sev + '">' + sevLabel + '</span>' +
+      '<div class="rule-body"><div class="rule-label">' + (r.label || r.id) + '</div>' +
+      (r.description ? '<div class="rule-desc">' + r.description + '</div>' : '') +
+      '</div>' +
+      '<span class="rule-count">' + (r.count || 0).toLocaleString() + ' zmluv</span>' +
+      '</div>';
+  });
+  el.innerHTML = html;
+}
+
+var pendingFlagFilter = null;
+function browseByFlag(flagId) {
+  browseResetFilters(true);
+  pendingFlagFilter = flagId;
+  var sel = document.getElementById('flagSelect');
+  if (sel && sel.options.length > 1) {
+    sel.value = flagId;
+    pendingFlagFilter = null;
+  }
+  switchTab('browse');
+  browsePage = 0;
+  browseFetchData();
 }
 
 async function api(path, params) {
@@ -1011,6 +1123,9 @@ const COLUMNS = [
   { key: 'hidden_entity_count', label: 'Skryte entity', ext: true, type: 'num', on: true },
   { key: 'penalty_count', label: 'Pocet pokut', ext: true, type: 'num', on: true },
   { key: 'iban_count', label: 'Pocet IBAN', ext: true, type: 'num', on: false },
+  { key: 'subcontracting_mentioned', label: 'Subdodavky', ext: true, on: false },
+  { key: 'subcontractor_count', label: 'Pocet subdod.', ext: true, type: 'num', on: false },
+  { key: 'subcontractor_max_percentage', label: 'Max % subdod.', ext: true, type: 'num', on: true },
   { key: 'flag_count', label: 'Flagy', type: 'num', on: true },
   { key: 'flag_labels', label: 'Flag typy', on: false },
 ];
@@ -1053,6 +1168,7 @@ function browseGetFilterParams() {
     }
   });
   Object.keys(extraParams).forEach(function(k) { params.set(k, extraParams[k]); });
+  if (pendingFlagFilter && !params.get('flag')) params.set('flag', pendingFlagFilter);
   params.set('sort', browseSortCol);
   params.set('sort_dir', browseSortDir);
   params.set('offset', String(browsePage * PAGE_SIZE));
@@ -1116,6 +1232,12 @@ function browseLoadFilterOptions() {
         var o = document.createElement('option'); o.value = f.id; o.textContent = f.label;
         flagSel.appendChild(o);
       });
+      if (pendingFlagFilter) {
+        flagSel.value = pendingFlagFilter;
+        pendingFlagFilter = null;
+        browsePage = 0;
+        browseFetchData();
+      }
     });
 }
 
@@ -1169,6 +1291,17 @@ function browseRenderCell(col, row) {
     span.className = 'tag ' + (v === 'zru\u0161en\u00e1' ? 'tag-cancelled' : 'tag-active');
     span.textContent = v || '';
     td.appendChild(span);
+  } else if (col.key === 'subcontracting_mentioned') {
+    td.textContent = v === 1 ? 'ano' : v === 0 ? 'nie' : '';
+  } else if (col.key === 'subcontractor_max_percentage') {
+    if (v != null && v !== '') {
+      var pct = parseFloat(v);
+      if (pct > 0 && pct <= 100) {
+        td.textContent = pct.toFixed(1) + '%';
+        if (pct >= 80) { td.style.color = '#e15b5b'; td.style.fontWeight = 'bold'; }
+        else if (pct >= 30) { td.style.color = '#e89b3a'; }
+      }
+    }
   } else if (col.key === 'auto_renewal' || col.key === 'bezodplatne') {
     td.textContent = v === 1 ? 'ano' : v === 0 ? 'nie' : '';
   } else if (col.type === 'num') {
@@ -1517,6 +1650,8 @@ function searchRenderCard(row) {
   var hasParams = window.location.search.length > 1;
   if (path === '/search') {
     switchTab('search');
+  } else if (path === '/methodology') {
+    switchTab('methodology');
   } else if (path === '/browse' || (path === '/' && hasParams)) {
     switchTab('browse');
   } else {

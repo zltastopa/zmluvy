@@ -236,6 +236,15 @@ def api_detail(db, params):
         ).fetchall()
         contract["related_supplier_contracts"] = [dict(r) for r in related]
 
+        # Total supplier stats (all contracts including current)
+        supplier_stats = db.execute(
+            """SELECT count(*) as total_count, coalesce(sum(suma), 0) as total_sum
+            FROM zmluvy WHERE dodavatel_ico = ? AND dodavatel_ico != ''""",
+            [contract["dodavatel_ico"]]
+        ).fetchone()
+        contract["supplier_total_count"] = supplier_stats["total_count"] if supplier_stats else 0
+        contract["supplier_total_sum"] = supplier_stats["total_sum"] if supplier_stats else 0
+
         # Red flags
         flags = db.execute(
             """SELECT rf.flag_type, fr.label, fr.severity, fr.description, rf.detail
@@ -819,6 +828,7 @@ _BROWSE_SORT_COLS = {
     'service_category', 'actual_subject', 'penalty_asymmetry',
     'auto_renewal', 'bezodplatne', 'funding_type', 'grant_amount',
     'hidden_entity_count', 'penalty_count', 'iban_count',
+    'subcontracting_mentioned', 'subcontractor_count', 'subcontractor_max_percentage',
     'flag_count', 'dodavatel_tax_status', 'vszp_debt',
     'ruz_established', 'ruz_org_size_id',
 }
@@ -982,7 +992,9 @@ def api_browse(db, params):
     # Map sort col to table prefix
     if sort_col in ('service_category', 'actual_subject', 'penalty_asymmetry',
                      'auto_renewal', 'bezodplatne', 'funding_type', 'grant_amount',
-                     'hidden_entity_count', 'penalty_count', 'iban_count'):
+                     'hidden_entity_count', 'penalty_count', 'iban_count',
+                     'subcontracting_mentioned', 'subcontractor_count',
+                     'subcontractor_max_percentage'):
         sort_expr = f"e.{sort_col}"
     elif sort_col == 'flag_count':
         sort_expr = "rf.flag_count"
@@ -1011,6 +1023,8 @@ def api_browse(db, params):
             e.service_category, e.actual_subject, e.penalty_asymmetry,
             e.auto_renewal, e.bezodplatne, e.funding_type, e.grant_amount,
             e.hidden_entity_count, e.penalty_count, e.iban_count,
+            e.subcontracting_mentioned, e.subcontractor_count,
+            e.subcontractor_max_percentage,
             e.extraction_json,
             COALESCE(rf.flag_count, 0) as flag_count,
             rf.flag_labels,
@@ -1305,7 +1319,7 @@ class CRZApp:
             return
 
         # Browse / Search page (same SPA)
-        if path == "/browse" or path == "/search":
+        if path in ("/browse", "/search", "/methodology"):
             await handle_dashboard(scope, receive, send)
             return
 

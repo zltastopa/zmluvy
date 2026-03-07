@@ -12,6 +12,8 @@ import argparse
 import json
 import sqlite3
 import time
+from collections import defaultdict
+from datetime import datetime, timedelta
 
 from settings import get_path, normalize_company_name
 
@@ -149,6 +151,139 @@ DEFAULT_RULES = [
         "sql_condition": "__custom__",
         "needs_extraction": 0,
     },
+    # --- New flags: contract patterns ---
+    {
+        "id": "weekend_signing",
+        "label": "Podpis cez vikend",
+        "description": "Zmluva bola podpisana v sobotu alebo nedelu",
+        "severity": "info",
+        "sql_condition": "z.datum_podpisu IS NOT NULL AND z.datum_podpisu != '' AND cast(strftime('%w', z.datum_podpisu) as integer) IN (0, 6)",
+        "needs_extraction": 0,
+    },
+    {
+        "id": "missing_attachment",
+        "label": "Chybajuca priloha",
+        "description": "Zmluva nema ziadnu prilohu — dokument zmluvy nebol zverejneny",
+        "severity": "warning",
+        "sql_condition": "z.id NOT IN (SELECT zmluva_id FROM prilohy)",
+        "needs_extraction": 0,
+    },
+    {
+        "id": "dodatok_price_inflation",
+        "label": "Navysenie ceny dodatkami",
+        "description": "Celkova suma zmluvy je o viac ako 50% vyssia nez povodna suma a navysenie presahuje 50 000 EUR",
+        "severity": "warning",
+        "sql_condition": "z.suma_celkom IS NOT NULL AND z.suma IS NOT NULL AND z.suma > 0 AND z.suma_celkom > z.suma * 1.5 AND (z.suma_celkom - z.suma) > 50000",
+        "needs_extraction": 0,
+    },
+    {
+        "id": "contract_splitting",
+        "label": "Delenie zakazky",
+        "description": "Dodavatel ma 5+ zmluv pod 15 000 EUR s rovnakym objednavatelom za rok, spolu nad 15 000 EUR",
+        "severity": "warning",
+        "sql_condition": "__custom__",
+        "needs_extraction": 0,
+    },
+    {
+        "id": "supplier_monopoly",
+        "label": "Monopolny dodavatel",
+        "description": "Dodavatel ma 10+ zmluv s rovnakym objednavatelom",
+        "severity": "info",
+        "sql_condition": "__custom__",
+        "needs_extraction": 0,
+    },
+    {
+        "id": "rapid_succession",
+        "label": "Zmluvy v rychlom slede",
+        "description": "Dodavatel dostal 3+ zmluvy od rovnakeho objednavatela v priebehu 14 dni",
+        "severity": "warning",
+        "sql_condition": "__custom__",
+        "needs_extraction": 0,
+    },
+    # --- New flags: RUZ cross-references ---
+    {
+        "id": "foreign_supplier",
+        "label": "Zahranicny dodavatel",
+        "description": "Dodavatel je registrovany v zahranici podla registra uctovnych zavierok (RUZ)",
+        "severity": "info",
+        "sql_condition": "z.dodavatel_ico IS NOT NULL AND z.dodavatel_ico != '' AND z.dodavatel_ico IN (SELECT cin FROM ruz_entities WHERE region = 'Zahraničie' AND cin IS NOT NULL)",
+        "needs_extraction": 0,
+    },
+    {
+        "id": "nonprofit_large_contract",
+        "label": "Neziskovka s velkou zmluvou",
+        "description": "Dodavatel je neziskova organizacia, nadacia alebo fond s zmluvou nad 100 000 EUR",
+        "severity": "warning",
+        "sql_condition": "z.suma > 100000 AND z.dodavatel_ico IS NOT NULL AND z.dodavatel_ico != '' AND z.dodavatel_ico IN (SELECT cin FROM ruz_entities WHERE legal_form_id IN (117, 118, 119) AND cin IS NOT NULL)",
+        "needs_extraction": 0,
+    },
+    {
+        "id": "nace_mismatch",
+        "label": "Nesulad odvetvia",
+        "description": "Registrovane odvetvie dodavatela (NACE) nezodpoveda predmetu zmluvy",
+        "severity": "warning",
+        "sql_condition": "__custom__",
+        "needs_extraction": 1,
+    },
+    # --- New flags: extraction cross-references ---
+    {
+        "id": "signatory_overlap",
+        "label": "Zdielany podpisujuci",
+        "description": "Osoba podpisujuca zmluvu za dodavatela sa nachadza aj v zmluvach inych dodavatelov (3+ firmy)",
+        "severity": "warning",
+        "sql_condition": "__custom__",
+        "needs_extraction": 1,
+    },
+    {
+        "id": "hidden_entity_is_supplier",
+        "label": "Skryta entita je dodavatel",
+        "description": "Skryta entita v zmluve (ICO) je zaroven dodavatelom v inych zmluvach",
+        "severity": "warning",
+        "sql_condition": "__custom__",
+        "needs_extraction": 1,
+    },
+    {
+        "id": "excessive_penalties",
+        "label": "Nadmerny pocet pokut",
+        "description": "Zmluva obsahuje neobvykle vysoky pocet zmluvnych pokut (viac ako 5)",
+        "severity": "info",
+        "sql_condition": "e.penalty_count > 5",
+        "needs_extraction": 1,
+    },
+    {
+        "id": "amount_outlier",
+        "label": "Neobvykle vysoka suma",
+        "description": "Suma zmluvy je viac ako 3 standardne odchylky nad priemerom pre danu kategoriu sluzieb",
+        "severity": "warning",
+        "sql_condition": "__custom__",
+        "needs_extraction": 1,
+    },
+    # --- New flags: statistical / dormancy ---
+    {
+        "id": "dormant_then_active",
+        "label": "Spaca firma",
+        "description": "Dodavatel nemal ziadnu zmluvu 2+ roky a naraz dostal velku zakazku (nad 50 000 EUR)",
+        "severity": "warning",
+        "sql_condition": "__custom__",
+        "needs_extraction": 0,
+    },
+    # --- New flags: multi-source combinations ---
+    {
+        "id": "fresh_micro_large",
+        "label": "Nova mikro firma, velka zmluva",
+        "description": "Dodavatel bol zalozeny menej ako 1 rok pred podpisom, ma 0-1 zamestnancov a zmluva je nad 50 000 EUR",
+        "severity": "danger",
+        "sql_condition": "z.suma > 50000 AND z.id IN (SELECT zmluva_id FROM red_flags WHERE flag_type = 'fresh_company') AND z.dodavatel_ico IN (SELECT cin FROM ruz_entities WHERE organization_size_id IN (1, 2) AND cin IS NOT NULL AND terminated_on IS NULL)",
+        "needs_extraction": 0,
+    },
+    {
+        "id": "high_subcontracting",
+        "label": "Vysoka miera subdodavok",
+        "description": "Maximalny podiel subdodavatela je 80% a viac — dodavatel vykonava len malu cast zakazky sam",
+        "severity": "warning",
+        "sql_condition": "CAST(e.subcontractor_max_percentage AS REAL) >= 80",
+        "needs_extraction": 1,
+    },
 ]
 
 
@@ -238,40 +373,51 @@ def evaluate_rule(db, rule):
     return inserted, removed
 
 
-def evaluate_custom_rule(db, rule):
-    """Evaluate custom rules that require Python logic (e.g. JSON parsing)."""
-    rule_id = rule["id"]
-
-    if rule_id == "tax_unreliable_entity":
-        return _eval_tax_unreliable_entity(db)
-    if rule_id == "socpoist_debtor":
-        return _eval_socpoist_debtor(db)
-    if rule_id == "vszp_debtor_entity":
-        return _eval_vszp_debtor_entity(db)
-    if rule_id == "fresh_company":
-        return _eval_fresh_company(db)
-
-    raise ValueError(f"Unknown custom rule: {rule_id}")
-
-
-def _eval_tax_unreliable_entity(db):
-    """Flag contracts where a hidden entity ICO is 'menej spoľahlivý'."""
-    # Load all unreliable ICOs into a set for fast lookup
-    unreliable = set(
-        r[0] for r in db.execute(
-            "SELECT ico FROM tax_reliability WHERE status = 'menej spoľahlivý'"
-        ).fetchall()
+def _insert_remove_flags(db, flag_type, matching_ids, details=None):
+    """Insert new flags and remove stale ones. Returns (inserted, removed)."""
+    inserted = 0
+    for zmluva_id in matching_ids:
+        detail = details.get(zmluva_id) if details else None
+        cursor = db.execute(
+            "INSERT OR IGNORE INTO red_flags (zmluva_id, flag_type, detail) VALUES (?, ?, ?)",
+            (zmluva_id, flag_type, detail),
+        )
+        inserted += cursor.rowcount
+    placeholder = ",".join(str(i) for i in matching_ids) if matching_ids else "0"
+    cursor2 = db.execute(
+        f"DELETE FROM red_flags WHERE flag_type = ? AND zmluva_id NOT IN ({placeholder})",
+        (flag_type,),
     )
+    return inserted, cursor2.rowcount
 
-    # Get all extractions with hidden entities
+
+_CUSTOM_EVALUATORS = {}
+
+
+def _custom(rule_id):
+    """Decorator to register a custom evaluator."""
+    def decorator(fn):
+        _CUSTOM_EVALUATORS[rule_id] = fn
+        return fn
+    return decorator
+
+
+def evaluate_custom_rule(db, rule):
+    """Evaluate custom rules that require Python logic."""
+    fn = _CUSTOM_EVALUATORS.get(rule["id"])
+    if fn:
+        return fn(db)
+    raise ValueError(f"Unknown custom rule: {rule['id']}")
+
+
+def _get_hidden_entities(db):
+    """Load all extractions with hidden entities, parsed. Cached-style helper."""
     rows = db.execute("""
         SELECT e.zmluva_id, e.extraction_json
         FROM extractions e
         WHERE e.hidden_entity_count > 0 AND e.extraction_json IS NOT NULL
     """).fetchall()
-
-    matching_ids = set()
-    details = {}
+    results = []
     for row in rows:
         try:
             ej = json.loads(row["extraction_json"])
@@ -279,45 +425,51 @@ def _eval_tax_unreliable_entity(db):
             continue
         for he in (ej.get("hidden_entities") or []):
             ico = (he.get("ico") or "").strip()
-            if ico and ico in unreliable:
-                matching_ids.add(row["zmluva_id"])
-                name = he.get("name") or ico
-                details[row["zmluva_id"]] = f"{name} (ICO: {ico})"
+            results.append((row["zmluva_id"], he.get("name", ""), ico))
+    return results
 
-    # Insert flags
-    inserted = 0
-    for zmluva_id in matching_ids:
-        cursor = db.execute(
-            "INSERT OR IGNORE INTO red_flags (zmluva_id, flag_type, detail) VALUES (?, ?, ?)",
-            (zmluva_id, "tax_unreliable_entity", details.get(zmluva_id)),
-        )
-        inserted += cursor.rowcount
 
-    # Remove flags for contracts that no longer match
-    cursor2 = db.execute(
-        "DELETE FROM red_flags WHERE flag_type = 'tax_unreliable_entity' AND zmluva_id NOT IN ({})".format(
-            ",".join(str(i) for i in matching_ids) if matching_ids else "0"
-        )
+def _parse_date(s):
+    """Parse a date string, return datetime or None."""
+    if not s:
+        return None
+    try:
+        return datetime.strptime(s[:10], "%Y-%m-%d")
+    except (ValueError, TypeError):
+        return None
+
+
+# -----------------------------------------------------------------------
+# Custom evaluators — registered via @_custom decorator
+# -----------------------------------------------------------------------
+
+@_custom("tax_unreliable_entity")
+def _eval_tax_unreliable_entity(db):
+    unreliable = set(
+        r[0] for r in db.execute(
+            "SELECT ico FROM tax_reliability WHERE status = 'menej spoľahlivý'"
+        ).fetchall()
     )
-    removed = cursor2.rowcount
+    matching_ids = set()
+    details = {}
+    for zmluva_id, name, ico in _get_hidden_entities(db):
+        if ico and ico in unreliable:
+            matching_ids.add(zmluva_id)
+            details[zmluva_id] = f"{name or ico} (ICO: {ico})"
+    return _insert_remove_flags(db, "tax_unreliable_entity", matching_ids, details)
 
-    return inserted, removed
 
-
+@_custom("socpoist_debtor")
 def _eval_socpoist_debtor(db):
-    """Flag contracts where dodavatel name matches a Socpoist debtor company."""
-    # Build lookup of normalized socpoist company names -> (name, amount)
     socpoist_rows = db.execute(
         "SELECT name_normalized, name, amount FROM socpoist_debtors WHERE name_normalized IS NOT NULL"
     ).fetchall()
     socpoist_map = {}
     for r in socpoist_rows:
         key = r["name_normalized"]
-        # Keep the one with highest debt
         if key not in socpoist_map or r["amount"] > socpoist_map[key][1]:
             socpoist_map[key] = (r["name"], r["amount"])
 
-    # Get all distinct dodavatel names
     contracts = db.execute(
         "SELECT id, dodavatel FROM zmluvy WHERE dodavatel IS NOT NULL AND dodavatel != ''"
     ).fetchall()
@@ -330,101 +482,41 @@ def _eval_socpoist_debtor(db):
             matching_ids.add(c["id"])
             orig_name, amount = socpoist_map[norm]
             details[c["id"]] = f"{orig_name} (dlh: {amount:,.2f} EUR)"
-
-    # Insert flags
-    inserted = 0
-    for zmluva_id in matching_ids:
-        cursor = db.execute(
-            "INSERT OR IGNORE INTO red_flags (zmluva_id, flag_type, detail) VALUES (?, ?, ?)",
-            (zmluva_id, "socpoist_debtor", details.get(zmluva_id)),
-        )
-        inserted += cursor.rowcount
-
-    # Remove stale flags
-    cursor2 = db.execute(
-        "DELETE FROM red_flags WHERE flag_type = 'socpoist_debtor' AND zmluva_id NOT IN ({})".format(
-            ",".join(str(i) for i in matching_ids) if matching_ids else "0"
-        )
-    )
-    removed = cursor2.rowcount
-    return inserted, removed
+    return _insert_remove_flags(db, "socpoist_debtor", matching_ids, details)
 
 
+@_custom("vszp_debtor_entity")
 def _eval_vszp_debtor_entity(db):
-    """Flag contracts where a hidden entity ICO is a VSZP debtor."""
-    # Load all VSZP debtor CINs into a set
     vszp_cins = {}
     for r in db.execute("SELECT cin, name, amount FROM vszp_debtors WHERE cin IS NOT NULL").fetchall():
         cin = r["cin"].strip()
-        if cin:
-            if cin not in vszp_cins or r["amount"] > vszp_cins[cin][1]:
-                vszp_cins[cin] = (r["name"], r["amount"])
-
-    # Get all extractions with hidden entities
-    rows = db.execute("""
-        SELECT e.zmluva_id, e.extraction_json
-        FROM extractions e
-        WHERE e.hidden_entity_count > 0 AND e.extraction_json IS NOT NULL
-    """).fetchall()
+        if cin and (cin not in vszp_cins or r["amount"] > vszp_cins[cin][1]):
+            vszp_cins[cin] = (r["name"], r["amount"])
 
     matching_ids = set()
     details = {}
-    for row in rows:
-        try:
-            ej = json.loads(row["extraction_json"])
-        except Exception:
-            continue
-        for he in (ej.get("hidden_entities") or []):
-            ico = (he.get("ico") or "").strip()
-            if ico and ico in vszp_cins:
-                matching_ids.add(row["zmluva_id"])
-                name, amount = vszp_cins[ico]
-                entity_name = he.get("name") or name
-                details[row["zmluva_id"]] = f"{entity_name} (ICO: {ico}, dlh VSZP: {amount:,.2f} EUR)"
-
-    # Insert flags
-    inserted = 0
-    for zmluva_id in matching_ids:
-        cursor = db.execute(
-            "INSERT OR IGNORE INTO red_flags (zmluva_id, flag_type, detail) VALUES (?, ?, ?)",
-            (zmluva_id, "vszp_debtor_entity", details.get(zmluva_id)),
-        )
-        inserted += cursor.rowcount
-
-    # Remove stale flags
-    cursor2 = db.execute(
-        "DELETE FROM red_flags WHERE flag_type = 'vszp_debtor_entity' AND zmluva_id NOT IN ({})".format(
-            ",".join(str(i) for i in matching_ids) if matching_ids else "0"
-        )
-    )
-    removed = cursor2.rowcount
-    return inserted, removed
+    for zmluva_id, name, ico in _get_hidden_entities(db):
+        if ico and ico in vszp_cins:
+            matching_ids.add(zmluva_id)
+            vname, amount = vszp_cins[ico]
+            details[zmluva_id] = f"{name or vname} (ICO: {ico}, dlh VSZP: {amount:,.2f} EUR)"
+    return _insert_remove_flags(db, "vszp_debtor_entity", matching_ids, details)
 
 
+@_custom("fresh_company")
 def _eval_fresh_company(db):
-    """Flag contracts where supplier was established <1 year before contract signing."""
-    from datetime import datetime, timedelta
-
-    # Get all RUZ entities with CIN and established_on
     ruz_rows = db.execute(
         "SELECT cin, established_on, name FROM ruz_entities WHERE cin IS NOT NULL AND established_on IS NOT NULL AND terminated_on IS NULL"
     ).fetchall()
     ruz_map = {}
     for r in ruz_rows:
-        cin = r["cin"]
-        try:
-            est = datetime.strptime(r["established_on"], "%Y-%m-%d")
-        except (ValueError, TypeError):
-            continue
-        # Keep the earliest established_on per CIN (some entities may have duplicates)
-        if cin not in ruz_map or est < ruz_map[cin][0]:
-            ruz_map[cin] = (est, r["name"])
+        est = _parse_date(r["established_on"])
+        if est and (r["cin"] not in ruz_map or est < ruz_map[r["cin"]][0]):
+            ruz_map[r["cin"]] = (est, r["name"])
 
-    # Get contracts with valid ICO and signing date
     contracts = db.execute("""
         SELECT id, dodavatel_ico, datum_podpisu, datum_zverejnenia
-        FROM zmluvy
-        WHERE dodavatel_ico IS NOT NULL AND dodavatel_ico != '' AND length(dodavatel_ico) = 8
+        FROM zmluvy WHERE dodavatel_ico IS NOT NULL AND dodavatel_ico != '' AND length(dodavatel_ico) = 8
     """).fetchall()
 
     matching_ids = set()
@@ -434,37 +526,303 @@ def _eval_fresh_company(db):
         if ico not in ruz_map:
             continue
         est_date, company_name = ruz_map[ico]
-        # Use datum_podpisu if available, otherwise datum_zverejnenia
-        date_str = c["datum_podpisu"] or c["datum_zverejnenia"]
-        if not date_str:
-            continue
-        try:
-            contract_date = datetime.strptime(date_str[:10], "%Y-%m-%d")
-        except (ValueError, TypeError):
+        contract_date = _parse_date(c["datum_podpisu"] or c["datum_zverejnenia"])
+        if not contract_date:
             continue
         days_diff = (contract_date - est_date).days
         if 0 <= days_diff < 365:
             matching_ids.add(c["id"])
-            months = days_diff // 30
-            details[c["id"]] = f"{company_name} (zalozena {est_date.strftime('%d.%m.%Y')}, {months} mes. pred zmluvou)"
+            details[c["id"]] = f"{company_name} (zalozena {est_date.strftime('%d.%m.%Y')}, {days_diff // 30} mes. pred zmluvou)"
+    return _insert_remove_flags(db, "fresh_company", matching_ids, details)
 
-    # Insert flags
-    inserted = 0
-    for zmluva_id in matching_ids:
-        cursor = db.execute(
-            "INSERT OR IGNORE INTO red_flags (zmluva_id, flag_type, detail) VALUES (?, ?, ?)",
-            (zmluva_id, "fresh_company", details.get(zmluva_id)),
-        )
-        inserted += cursor.rowcount
 
-    # Remove stale flags
-    cursor2 = db.execute(
-        "DELETE FROM red_flags WHERE flag_type = 'fresh_company' AND zmluva_id NOT IN ({})".format(
-            ",".join(str(i) for i in matching_ids) if matching_ids else "0"
+@_custom("contract_splitting")
+def _eval_contract_splitting(db):
+    """Flag contracts that appear to be split to avoid procurement thresholds."""
+    rows = db.execute("""
+        SELECT id, dodavatel_ico, objednavatel_ico, suma, datum_podpisu, datum_zverejnenia
+        FROM zmluvy
+        WHERE dodavatel_ico IS NOT NULL AND dodavatel_ico != ''
+        AND objednavatel_ico IS NOT NULL AND objednavatel_ico != ''
+        AND suma IS NOT NULL AND suma > 0 AND suma < 15000
+        AND typ = 'zmluva'
+    """).fetchall()
+
+    # Group by (dodavatel_ico, objednavatel_ico, year)
+    groups = defaultdict(list)
+    for r in rows:
+        date_str = r["datum_podpisu"] or r["datum_zverejnenia"] or ""
+        year = date_str[:4] if len(date_str) >= 4 else "0000"
+        groups[(r["dodavatel_ico"], r["objednavatel_ico"], year)].append(
+            (r["id"], r["suma"])
         )
+
+    matching_ids = set()
+    details = {}
+    for (dod, obj, year), contracts in groups.items():
+        if len(contracts) >= 5:
+            total = sum(c[1] for c in contracts)
+            if total > 15000:
+                for cid, _ in contracts:
+                    matching_ids.add(cid)
+                    details[cid] = f"{len(contracts)} zmluv za {total:,.0f} EUR v {year} (ICO dod: {dod}, obj: {obj})"
+    return _insert_remove_flags(db, "contract_splitting", matching_ids, details)
+
+
+@_custom("supplier_monopoly")
+def _eval_supplier_monopoly(db):
+    """Flag contracts where supplier has 10+ contracts with same buyer."""
+    rows = db.execute("""
+        SELECT dodavatel_ico, objednavatel_ico, count(*) as cnt, group_concat(id) as ids
+        FROM zmluvy
+        WHERE dodavatel_ico IS NOT NULL AND dodavatel_ico != ''
+        AND objednavatel_ico IS NOT NULL AND objednavatel_ico != ''
+        GROUP BY dodavatel_ico, objednavatel_ico
+        HAVING count(*) >= 10
+    """).fetchall()
+
+    matching_ids = set()
+    details = {}
+    for r in rows:
+        for cid_str in r["ids"].split(","):
+            cid = int(cid_str)
+            matching_ids.add(cid)
+            details[cid] = f"{r['cnt']} zmluv medzi ICO {r['dodavatel_ico']} a {r['objednavatel_ico']}"
+    return _insert_remove_flags(db, "supplier_monopoly", matching_ids, details)
+
+
+@_custom("rapid_succession")
+def _eval_rapid_succession(db):
+    """Flag contracts where same supplier+buyer have 3+ contracts within 14 days."""
+    rows = db.execute("""
+        SELECT id, dodavatel_ico, objednavatel_ico, datum_podpisu, datum_zverejnenia
+        FROM zmluvy
+        WHERE dodavatel_ico IS NOT NULL AND dodavatel_ico != ''
+        AND objednavatel_ico IS NOT NULL AND objednavatel_ico != ''
+        ORDER BY dodavatel_ico, objednavatel_ico, datum_podpisu
+    """).fetchall()
+
+    # Group by pair
+    groups = defaultdict(list)
+    for r in rows:
+        dt = _parse_date(r["datum_podpisu"] or r["datum_zverejnenia"])
+        if dt:
+            groups[(r["dodavatel_ico"], r["objednavatel_ico"])].append((r["id"], dt))
+
+    matching_ids = set()
+    details = {}
+    for (dod, obj), contracts in groups.items():
+        contracts.sort(key=lambda x: x[1])
+        # Sliding window: find clusters of 3+ within 14 days
+        for i in range(len(contracts)):
+            cluster = [contracts[i]]
+            for j in range(i + 1, len(contracts)):
+                if (contracts[j][1] - contracts[i][1]).days <= 14:
+                    cluster.append(contracts[j])
+                else:
+                    break
+            if len(cluster) >= 3:
+                for cid, dt in cluster:
+                    matching_ids.add(cid)
+                    details[cid] = f"{len(cluster)} zmluv za 14 dni (ICO dod: {dod}, obj: {obj})"
+    return _insert_remove_flags(db, "rapid_succession", matching_ids, details)
+
+
+# NACE sector -> compatible service categories
+_NACE_COMPATIBLE = {
+    'software_it': {58, 59, 60, 61, 62, 63, 70, 71, 72, 74},
+    'construction_renovation': {41, 42, 43, 71},
+    'legal_services': {69},
+    'media_marketing': {58, 59, 60, 63, 70, 73, 74, 90},
+    'insurance': {65, 66},
+    'transport': {49, 50, 51, 52, 53},
+    'transportation': {49, 50, 51, 52, 53},
+    'cleaning_facility': {81, 82},
+    'pharmaceutical_clinical': {21, 46, 72, 86},
+    'property_lease': {68, 77},
+    'professional_consulting': {69, 70, 71, 72, 73, 74, 78, 82},
+    'waste_management': {38, 39},
+    'utilities': {35, 36},
+    'hr_payroll_outsourcing': {69, 70, 78, 82},
+    'accommodation': {55, 56},
+    'vehicle_use': {45, 49, 77},
+}
+
+
+@_custom("nace_mismatch")
+def _eval_nace_mismatch(db):
+    """Flag contracts where supplier NACE sector doesn't match service category."""
+    rows = db.execute("""
+        SELECT z.id, z.dodavatel_ico, e.service_category, r.nace_code, r.nace_category
+        FROM zmluvy z
+        JOIN extractions e ON e.zmluva_id = z.id
+        JOIN ruz_entities r ON r.cin = z.dodavatel_ico
+        WHERE e.service_category IS NOT NULL AND e.service_category != 'other'
+        AND r.nace_code IS NOT NULL AND r.nace_code != ''
+        AND z.dodavatel_ico IS NOT NULL AND z.dodavatel_ico != ''
+    """).fetchall()
+
+    matching_ids = set()
+    details = {}
+    for r in rows:
+        cat = r["service_category"]
+        if cat not in _NACE_COMPATIBLE:
+            continue  # Skip categories we don't have a mapping for
+        try:
+            nace_sector = int(r["nace_code"][:2])
+        except (ValueError, TypeError):
+            continue
+        if nace_sector not in _NACE_COMPATIBLE[cat]:
+            matching_ids.add(r["id"])
+            details[r["id"]] = f"NACE: {r['nace_category']} ({r['nace_code']}), zmluva: {cat}"
+    return _insert_remove_flags(db, "nace_mismatch", matching_ids, details)
+
+
+@_custom("signatory_overlap")
+def _eval_signatory_overlap(db):
+    """Flag contracts where a signatory signs for 3+ different supplier ICOs."""
+    rows = db.execute("""
+        SELECT e.zmluva_id, e.extraction_json, z.dodavatel_ico
+        FROM extractions e
+        JOIN zmluvy z ON z.id = e.zmluva_id
+        WHERE e.extraction_json IS NOT NULL
+        AND z.dodavatel_ico IS NOT NULL AND z.dodavatel_ico != ''
+    """).fetchall()
+
+    # Build: signatory_name -> set of (dodavatel_ico, zmluva_id)
+    sig_map = defaultdict(set)
+    sig_contracts = defaultdict(set)
+    for r in rows:
+        try:
+            ej = json.loads(r["extraction_json"])
+        except Exception:
+            continue
+        for sig in (ej.get("signatories") or []):
+            name = (sig.get("name") or "").strip().lower()
+            if name and len(name) > 5:  # Skip very short names
+                sig_map[name].add(r["dodavatel_ico"])
+                sig_contracts[name].add(r["zmluva_id"])
+
+    # Find signatories appearing with 3+ different supplier ICOs
+    suspicious_sigs = {name: icos for name, icos in sig_map.items() if len(icos) >= 3}
+
+    matching_ids = set()
+    details = {}
+    for name, icos in suspicious_sigs.items():
+        for zmluva_id in sig_contracts[name]:
+            matching_ids.add(zmluva_id)
+            details[zmluva_id] = f"{name.title()} podpisuje za {len(icos)} roznych dodavatelov"
+    return _insert_remove_flags(db, "signatory_overlap", matching_ids, details)
+
+
+@_custom("hidden_entity_is_supplier")
+def _eval_hidden_entity_is_supplier(db):
+    """Flag contracts where a hidden entity ICO is also a dodavatel in other contracts."""
+    all_dodavatel_icos = set(
+        r[0] for r in db.execute(
+            "SELECT DISTINCT dodavatel_ico FROM zmluvy WHERE dodavatel_ico IS NOT NULL AND dodavatel_ico != ''"
+        ).fetchall()
     )
-    removed = cursor2.rowcount
-    return inserted, removed
+
+    matching_ids = set()
+    details = {}
+    for zmluva_id, name, ico in _get_hidden_entities(db):
+        if ico and ico in all_dodavatel_icos:
+            matching_ids.add(zmluva_id)
+            details[zmluva_id] = f"{name or ico} (ICO: {ico}) je tiez dodavatel v inych zmluvach"
+    return _insert_remove_flags(db, "hidden_entity_is_supplier", matching_ids, details)
+
+
+@_custom("amount_outlier")
+def _eval_amount_outlier(db):
+    """Flag contracts where suma is >3 std deviations above mean for the service category."""
+    # Compute stats per category
+    stats = db.execute("""
+        SELECT e.service_category, avg(z.suma) as mean, avg(z.suma * z.suma) as mean_sq, count(*) as cnt
+        FROM zmluvy z JOIN extractions e ON e.zmluva_id = z.id
+        WHERE z.suma IS NOT NULL AND z.suma > 0 AND e.service_category IS NOT NULL
+        GROUP BY e.service_category HAVING count(*) >= 10
+    """).fetchall()
+
+    # stddev = sqrt(mean_sq - mean^2)
+    import math
+    thresholds = {}
+    for r in stats:
+        mean = r["mean"]
+        variance = r["mean_sq"] - mean * mean
+        stddev = math.sqrt(max(variance, 0))
+        threshold = mean + 3 * stddev
+        if threshold > 0:
+            thresholds[r["service_category"]] = (threshold, mean, stddev)
+
+    rows = db.execute("""
+        SELECT z.id, z.suma, e.service_category
+        FROM zmluvy z JOIN extractions e ON e.zmluva_id = z.id
+        WHERE z.suma IS NOT NULL AND z.suma > 0 AND e.service_category IS NOT NULL
+    """).fetchall()
+
+    matching_ids = set()
+    details = {}
+    for r in rows:
+        cat = r["service_category"]
+        if cat in thresholds and r["suma"] > thresholds[cat][0]:
+            matching_ids.add(r["id"])
+            mean, stddev = thresholds[cat][1], thresholds[cat][2]
+            n_sigma = (r["suma"] - mean) / stddev if stddev > 0 else 0
+            details[r["id"]] = f"{r['suma']:,.0f} EUR ({n_sigma:.1f}x stddev pre {cat}, priemer: {mean:,.0f} EUR)"
+    return _insert_remove_flags(db, "amount_outlier", matching_ids, details)
+
+
+@_custom("dormant_then_active")
+def _eval_dormant_then_active(db):
+    """Flag contracts where supplier had no contracts for 2+ years then got a big one."""
+    rows = db.execute("""
+        SELECT id, dodavatel_ico, datum_podpisu, datum_zverejnenia, suma
+        FROM zmluvy
+        WHERE dodavatel_ico IS NOT NULL AND dodavatel_ico != ''
+        AND suma IS NOT NULL AND suma > 50000
+        ORDER BY dodavatel_ico, datum_zverejnenia
+    """).fetchall()
+
+    # Also get all contract dates per supplier
+    all_contracts = db.execute("""
+        SELECT dodavatel_ico, datum_podpisu, datum_zverejnenia
+        FROM zmluvy
+        WHERE dodavatel_ico IS NOT NULL AND dodavatel_ico != ''
+        ORDER BY dodavatel_ico, datum_zverejnenia
+    """).fetchall()
+
+    # Build: ico -> sorted list of dates
+    ico_dates = defaultdict(list)
+    for r in all_contracts:
+        dt = _parse_date(r["datum_podpisu"] or r["datum_zverejnenia"])
+        if dt:
+            ico_dates[r["dodavatel_ico"]].append(dt)
+    for ico in ico_dates:
+        ico_dates[ico].sort()
+
+    matching_ids = set()
+    details = {}
+    for r in rows:
+        ico = r["dodavatel_ico"]
+        dt = _parse_date(r["datum_podpisu"] or r["datum_zverejnenia"])
+        if not dt or ico not in ico_dates:
+            continue
+        dates = ico_dates[ico]
+        # Find this contract's position and check gap to previous
+        idx = None
+        for i, d in enumerate(dates):
+            if d == dt:
+                idx = i
+                break
+        if idx is None or idx == 0:
+            continue  # First contract or not found
+        gap_days = (dt - dates[idx - 1]).days
+        if gap_days >= 730:  # 2 years
+            matching_ids.add(r["id"])
+            years = gap_days / 365.25
+            details[r["id"]] = f"{r['suma']:,.0f} EUR po {years:.1f} rokoch bez zmluv (ICO: {ico})"
+    return _insert_remove_flags(db, "dormant_then_active", matching_ids, details)
 
 
 def run_rules(db, rule_id=None):
