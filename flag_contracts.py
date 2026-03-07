@@ -284,6 +284,14 @@ DEFAULT_RULES = [
         "sql_condition": "CAST(e.subcontractor_max_percentage AS REAL) >= 80",
         "needs_extraction": 1,
     },
+    {
+        "id": "threshold_gaming",
+        "label": "Tesne pod limitom EU sutaze",
+        "description": "Suma zmluvy je tesne pod hranicou 215 000 EUR pre povinnu EU sutaz (210-215K banda), co moze naznacovat umyselne vyhybanie sa transparentnejsiemu obstaravaniu",
+        "severity": "warning",
+        "sql_condition": "__custom__",
+        "needs_extraction": 0,
+    },
 ]
 
 
@@ -823,6 +831,65 @@ def _eval_dormant_then_active(db):
             years = gap_days / 365.25
             details[r["id"]] = f"{r['suma']:,.0f} EUR po {years:.1f} rokoch bez zmluv (ICO: {ico})"
     return _insert_remove_flags(db, "dormant_then_active", matching_ids, details)
+
+
+@_custom("threshold_gaming")
+def _eval_threshold_gaming(db):
+    """Flag contracts with suma just below the EU procurement threshold (€215K).
+
+    The EU public procurement directive requires open EU-wide tender for
+    contracts above €215,000 (for supplies/services). Contracts clustering
+    in the €210,000–€214,999 band may indicate deliberate threshold gaming
+    to avoid the more transparent procedure.
+
+    We flag a contract if:
+      1. Its suma is in the 210–215K band, AND
+      2. The same buyer has at least one OTHER contract also in the 210–215K
+         band (repeat pattern strengthens the signal), OR the contract is
+         for services/supplies (not grants/dotácie which are naturally set).
+    Single occurrences are still flagged but with weaker detail.
+    """
+    BAND_LO = 210000
+    BAND_HI = 215000
+
+    rows = db.execute("""
+        SELECT id, objednavatel_ico, objednavatel, dodavatel, dodavatel_ico,
+               suma, nazov_zmluvy
+        FROM zmluvy
+        WHERE suma >= ? AND suma < ?
+        AND objednavatel_ico IS NOT NULL AND objednavatel_ico != ''
+    """, (BAND_LO, BAND_HI)).fetchall()
+
+    # Group by buyer to detect repeat offenders
+    buyer_contracts = defaultdict(list)
+    for r in rows:
+        buyer_contracts[r["objednavatel_ico"]].append(r)
+
+    # Exclude grants/dotácie — their amounts are set by policy, not gaming
+    grant_keywords = {'dotáci', 'dotaci', 'príspev', 'prispev', 'grant', 'úver', 'uver', 'záložn', 'zalozn', 'mechanizm', 'poskytnutí nfp', 'nenávratn'}
+
+    matching_ids = set()
+    details = {}
+    for buyer_ico, contracts in buyer_contracts.items():
+        for r in contracts:
+            title_lower = (r["nazov_zmluvy"] or "").lower()
+            is_grant = any(kw in title_lower for kw in grant_keywords)
+            if is_grant:
+                continue
+
+            diff = BAND_HI - r["suma"]
+            if len(contracts) >= 2:
+                detail = (
+                    f"{r['suma']:,.2f} EUR (iba {diff:,.0f} EUR pod EU limitom 215K); "
+                    f"objednavatel {r['objednavatel_ico']} ma {len(contracts)} zmluv v tomto pasme"
+                )
+            else:
+                detail = f"{r['suma']:,.2f} EUR (iba {diff:,.0f} EUR pod EU limitom 215K)"
+
+            matching_ids.add(r["id"])
+            details[r["id"]] = detail
+
+    return _insert_remove_flags(db, "threshold_gaming", matching_ids, details)
 
 
 def run_rules(db, rule_id=None):
