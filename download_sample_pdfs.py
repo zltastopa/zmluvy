@@ -11,6 +11,8 @@ import httpx
 import os
 import argparse
 from datetime import date
+from concurrent.futures import ThreadPoolExecutor, as_completed
+from tqdm import tqdm
 
 from settings import get_env, get_path
 
@@ -32,6 +34,7 @@ def main():
         help=f"Month to download (YYYY-MM, default: {default_month})",
     )
     parser.add_argument("--all", action="store_true", help="Download all PDFs for the month (ignores --limit)")
+    parser.add_argument("--workers", type=int, default=16, help="Parallel workers (default: 16)")
     args = parser.parse_args()
 
     limit = 0 if args.all else args.limit
@@ -76,22 +79,38 @@ def main():
         return
 
     ok, fail = 0, 0
-    with httpx.Client(timeout=30, follow_redirects=True) as client:
-        for i, (url, subor, nazov, suma, rezort, zmluva_id) in enumerate(to_download):
-            dest = os.path.join(out_dir, subor)
-            try:
-                resp = client.get(url)
-                resp.raise_for_status()
-                with open(dest, "wb") as f:
-                    f.write(resp.content)
-                size_kb = len(resp.content) / 1024
-                print(f"  [{i+1}/{total}] {subor} ({size_kb:.0f} KB) - {nazov[:60]}")
-                ok += 1
-            except Exception as e:
-                print(f"  [{i+1}/{total}] FAIL {subor}: {e}")
-                fail += 1
+    total_bytes = 0
 
-    print(f"\nDone: {ok} downloaded, {fail} failed, {already} already had")
+    def download_one(item):
+        url, subor, nazov, suma, rezort, zmluva_id = item
+        dest = os.path.join(out_dir, subor)
+        try:
+            resp = client.get(url)
+            resp.raise_for_status()
+            with open(dest, "wb") as f:
+                f.write(resp.content)
+            return (subor, len(resp.content), None)
+        except Exception as e:
+            return (subor, 0, str(e))
+
+    pbar = tqdm(total=total, desc="Downloading", unit="pdf")
+
+    with httpx.Client(timeout=30, follow_redirects=True) as client:
+        with ThreadPoolExecutor(max_workers=args.workers) as pool:
+            futures = {pool.submit(download_one, item): item for item in to_download}
+            for future in as_completed(futures):
+                subor, size, error = future.result()
+                pbar.update(1)
+                if error:
+                    pbar.write(f"  FAIL {subor}: {error}")
+                    fail += 1
+                else:
+                    ok += 1
+                    total_bytes += size
+                pbar.set_postfix(ok=ok, fail=fail, MB=f"{total_bytes/1024/1024:.0f}")
+
+    pbar.close()
+    print(f"\nDone: {ok} downloaded, {fail} failed, {already} already had, {total_bytes/1024/1024:.0f} MB total")
 
 
 if __name__ == "__main__":
