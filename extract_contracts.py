@@ -409,6 +409,7 @@ def main():
                         db_row,
                         pk="zmluva_id",
                         foreign_keys=[("zmluva_id", "zmluvy", "id")],
+                        alter=True,
                         replace=True,
                     )
                     ok += 1
