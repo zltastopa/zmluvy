@@ -107,7 +107,7 @@ Cross-reference contracts against the Financial Administration's
 to flag contracts with unreliable taxpayers.
 
 ```bash
-# Download the latest ds_iz_ran.zip from the link above, then:
+curl -o ds_iz_ran.zip https://report.financnasprava.sk/ds_iz_ran.zip
 unzip ds_iz_ran.zip
 uv run python load_tax_reliability.py
 ```

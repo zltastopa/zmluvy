@@ -1,7 +1,8 @@
 """Load Financial Administration tax reliability data (ds_iz_ran.xml) into SQLite.
 
 Source: Finančná správa SR (Slovak Financial Administration)
-Download: https://www.financnasprava.sk/sk/elektronicke-sluzby/verejne-sluzby/zoznamy/detail/_5cd6a827-0ee0-4028-8982-4d8bb1de3008
+Download: https://report.financnasprava.sk/ds_iz_ran.zip
+Info: https://www.financnasprava.sk/sk/elektronicke-sluzby/verejne-sluzby/zoznamy/detail/_5cd6a827-0ee0-4028-8982-4d8bb1de3008
 File: ds_iz_ran.zip → ds_iz_ran.xml (CC0 license, ~680K subjects, updated daily)
 
 The file contains the "Index daňovej spoľahlivosti" (Tax Reliability Index)
