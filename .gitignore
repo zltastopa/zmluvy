@@ -15,3 +15,12 @@ data/
 *.zip
 .env
 .openrouter_key
+
+# OS files
+.DS_Store
+
+# Debug screenshots
+*.png
+
+# Database backups
+crz.db.old

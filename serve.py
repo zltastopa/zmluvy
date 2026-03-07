@@ -22,12 +22,11 @@ import io
 ROOT = Path(__file__).parent
 DB_PATH = get_path("CRZ_DB_PATH", "crz.db")
 DASHBOARD_HTML_PATH = ROOT / "dashboard.html"
-BROWSE_HTML_PATH = ROOT / "browse.html"
 DETAIL_HTML_PATH = ROOT / "detail.html"
 
 
 # ---------------------------------------------------------------------------
-# Database helpers (reused from dashboard.py query logic)
+# Database helpers
 # ---------------------------------------------------------------------------
 
 def get_db():
@@ -939,13 +938,12 @@ def api_browse(db, params):
 
     result_rows = [dict(r) for r in rows]
     # Extract signatories as flat string, then remove extraction_json (too large)
-    import json as _json
     for r in result_rows:
         ej_raw = r.pop('extraction_json', None)
         sigs = ''
         if ej_raw:
             try:
-                ej_data = _json.loads(ej_raw)
+                ej_data = json.loads(ej_raw)
                 names = [s['name'] for s in (ej_data.get('signatories') or []) if s.get('name')]
                 sigs = ', '.join(names)
             except Exception:
