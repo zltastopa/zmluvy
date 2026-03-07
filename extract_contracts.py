@@ -34,7 +34,7 @@ Respond ONLY with valid JSON matching this schema — no markdown, no explanatio
 {
   "service_category": one of the categories listed below,
   "actual_subject": short description of what the contract is actually about (1-2 sentences, in Slovak),
-  "hidden_entities": [{"name": "...", "ico": "...", "role": one of the roles listed below}],
+  "hidden_entities": [{"name": "...", "ico": "...", "role": one of the roles listed below, "percentage": number or null, "subcontract_subject": "..." or null}],
   "penalties": [{"penalized_party": "supplier" or "buyer", "trigger": "...", "amount": "..."}],
   "penalty_asymmetry": one of the asymmetry values listed below,
   "penalty_asymmetry_reason": short explanation (1 sentence) of why you chose this asymmetry value, referencing which party faces more/harsher penalties,
@@ -46,6 +46,7 @@ Respond ONLY with valid JSON matching this schema — no markdown, no explanatio
   "bank_accounts": [{"party": "supplier" or "buyer", "iban": "SK..."}],
   "auto_renewal": bool,
   "bezodplatne": bool
+  "subcontracting_mentioned": bool
 }
 
 Service categories (pick the best match):
@@ -80,7 +81,7 @@ Service categories (pick the best match):
 
 Hidden entity roles (pick the best match):
 - manager_operator — správca, prevádzkovateľ: company managing property/facility on behalf of a party (e.g. ByPo, TEZAR, Pohrebníctvo DVONČ managing cemetery for a city)
-- subcontractor — subdodávateľ: entity performing work under the main contract, geodetic companies in property transfers (e.g. GEPRAMS, GEOmark doing surveys)
+- subcontractor — subdodávateľ: entity performing work under the main contract, geodetic companies in property transfers (e.g. GEPRAMS, GEOmark doing surveys). For subcontractors, also extract "percentage" (their share of total contract value, 0-100, or null if not stated) and "subcontract_subject" (what they do, short phrase in Slovak, or null). Look for these in appendix tables ("Zoznam subdodávateľov"), inline text, or anywhere the percentage share is mentioned.
 - consortium_member — člen konzorcia/združenia: member of a group bidding or performing together
 - previous_operator — predchádzajúci prevádzkovateľ/dodávateľ: entity being replaced by this contract
 - co_user — spoluužívateľ: additional authorized user of services/property beyond the main parties
@@ -118,6 +119,9 @@ Rules:
   - Do NOT include generic collecting societies (SOZA, LITA, Literárny fond) unless they are a contractual party.
   - Only use roles from the list above. Never invent new roles like "supplier", "buyer", "owner", "organizer". If an entity does not fit any defined role, skip it.
   - If an IČO looks like garbled text (OCR artifact), set it to null rather than including garbage.
+  - "percentage" and "subcontract_subject" fields ONLY apply to entities with role "subcontractor". Set both to null for all other roles.
+  - For "percentage", extract the numeric share of total contract value (0-100). Ignore percentages that refer to DPH/VAT rates, zmluvná pokuta rates, discount rates, co-financing shares, or Russian sanctions thresholds (Article 5k, Regulation 833/2014).
+- subcontracting_mentioned: set to true if the contract text discusses subcontracting in any way (subdodávateľ, subdodávka, zoznam subdodávateľov), even if no named subcontractor is found. Set to false otherwise.
 - penalties: extract only explicit contractual penalties (zmluvná pokuta, úroky z omeškania with specific rates). Skip generic legal references.
 - bank_accounts: extract IBAN numbers (SK format).
 - If a field has no data, use empty array [] for arrays, null for optional strings/numbers, false for booleans, "none_found" or "none" for enums.
@@ -280,6 +284,7 @@ def main():
         help="Directory for JSON outputs",
     )
     parser.add_argument("--workers", type=int, default=8, help="Parallel workers (default: 8)")
+    parser.add_argument("--force", action="store_true", help="Re-extract even if JSON already exists")
     args = parser.parse_args()
 
     api_key = load_api_key()
@@ -293,8 +298,11 @@ def main():
     else:
         files = sorted(f for f in os.listdir(texts_dir) if f.endswith(".txt"))
 
-    # Skip already-extracted files
-    already_done = set(f.replace(".json", ".txt") for f in os.listdir(output_dir) if f.endswith(".json"))
+    # Skip already-extracted files (unless --force)
+    if args.force:
+        already_done = set()
+    else:
+        already_done = set(f.replace(".json", ".txt") for f in os.listdir(output_dir) if f.endswith(".json"))
     to_process = [f for f in files if f not in already_done]
 
     if args.limit > 0:
@@ -376,6 +384,8 @@ def main():
                     total_tokens += tokens
 
                     # DB upsert in main thread
+                    subcontractors = [e for e in extraction.get("hidden_entities", []) if e.get("role") == "subcontractor"]
+                    sub_pcts = [e["percentage"] for e in subcontractors if e.get("percentage") is not None]
                     zmluva_id = extraction["_zmluva_id"]
                     db_row = {
                         "zmluva_id": int(zmluva_id) if str(zmluva_id).isdigit() else zmluva_id,
@@ -389,6 +399,9 @@ def main():
                         "hidden_entity_count": len(extraction.get("hidden_entities", [])),
                         "penalty_count": len(extraction.get("penalties", [])),
                         "iban_count": len(extraction.get("bank_accounts", [])),
+                        "subcontracting_mentioned": extraction.get("subcontracting_mentioned", False),
+                        "subcontractor_count": len(subcontractors),
+                        "subcontractor_max_percentage": max(sub_pcts) if sub_pcts else None,
                         "extraction_json": json.dumps(extraction, ensure_ascii=False),
                         "model": args.model,
                     }
