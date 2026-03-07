@@ -1,0 +1,114 @@
+title: CRZ Explorer
+description: >
+  Vyhladavanie v zmluvach zverejnenych v Centralnom registri zmluv
+  (crz.gov.sk). Vsetky udaje su verejne podla zakona c. 211/2000 Z. z.
+source: Centralny register zmluv
+source_url: https://www.crz.gov.sk/
+license: Verejne udaje Slovenskej republiky
+
+databases:
+  crz:
+    description: >
+      Zmluvy zverejnene v Centralnom registri zmluv (CRZ).
+      Zdrojom su denne XML exporty z crz.gov.sk/export/YYYY-MM-DD.zip.
+    tables:
+      zmluvy:
+        description: >
+          Zmluvy a dodatky zverejnene na CRZ. Kazdy zaznam je jedna
+          zmluva alebo dodatok.
+        columns:
+          id: Jednoznacny identifikator zmluvy v CRZ
+          nazov_zmluvy: Predmet zmluvy (nazov/titul)
+          cislo_zmluvy: Cislo zmluvy pridelene zmluvnymi stranami
+          dodavatel: Nazov dodavatela (zmluvna strana 2)
+          dodavatel_ico: ICO dodavatela
+          dodavatel_adresa: Adresa sidla dodavatela
+          objednavatel: Nazov objednavatela (zmluvna strana 1)
+          objednavatel_ico: ICO objednavatela
+          objednavatel_adresa: Adresa sidla objednavatela
+          suma: Suma zmluvy v EUR (hodnota jednej zmluvy)
+          suma_celkom: Celkova suma v EUR vratane dodatkov
+          datum_zverejnenia: Datum zverejnenia na CRZ (zmluva nadobuda ucinnost den po zverejneni)
+          datum_podpisu: Datum podpisu zmluvy zmluvnymi stranami
+          datum_ucinnosti: Datum nadobudnutia ucinnosti zmluvy
+          platnost_do: Datum platnosti zmluvy (prazdne ak je neurcita alebo neuvedena)
+          poznamka: Volne poznamky pridane zverejnujucim organom
+          popis: Popis zmluvy (casto prazdne)
+          typ: "'zmluva' (povodna zmluva) alebo 'dodatok' (dodatok k zmluve)"
+          stav: "'aktivna' alebo 'zrusena'"
+          druh: "'zmluva' alebo 'objednavka'"
+          rezort_id: ID rezortu (organu statnej spravy), pod ktory objednavatel patri
+          rezort: Nazov rezortu
+          zdroj: "Zdroj udajov: CRZ, rezort alebo organizacia"
+          uvo_url: Odkaz na oznamenie o verejnom obstaravani (UVO), ak existuje
+          crz_url: Priamy odkaz na zmluvu na crz.gov.sk
+
+      prilohy:
+        description: >
+          Prilohy k zmluvam (PDF subory). Kazda zmluva moze mat jednu
+          alebo viacero priloh — typicky podpisany PDF dokument zmluvy.
+        columns:
+          id: Identifikator prilohy v CRZ
+          zmluva_id: ID nadradenej zmluvy (cudzí kluc na zmluvy.id)
+          nazov: Nazov/popis prilohy
+          subor: Nazov suboru na serveri CRZ
+          url: Priamy odkaz na stiahnutie prilohy (PDF)
+
+      rezorty:
+        description: >
+          Ciselnik rezortov — ministerstva, univerzity, statne
+          organizacie a dalsie verejne organy zverejnujuce zmluvy na CRZ.
+        columns:
+          id: ID rezortu pouzivane v CRZ exportoch
+          nazov: Plny oficialny nazov rezortu/institucie
+
+      extractions:
+        description: >
+          Strukturovane udaje extrahovane z PDF zmluv pomocou LLM.
+          Kazdy zaznam obsahuje klasifikovane polia ziskane spracovanim
+          textu zmluvy cez model na OpenRouter.
+        columns:
+          zmluva_id: ID zmluvy (cudzi kluc na zmluvy.id)
+          service_category: Klasifikovana kategoria sluzby (napr. construction_renovation, software_it, legal_services)
+          actual_subject: Strucny popis skutocneho predmetu zmluvy (v slovencine)
+          penalty_asymmetry: "Kto znasa viac rizika zo zmluvnych pokut: strong_buyer_advantage, balanced, supplier_advantage alebo none_found"
+          auto_renewal: Ci sa zmluva automaticky predlzuje (1=ano, 0=nie)
+          bezodplatne: Ci je zmluva bezodplatna (1=ano, 0=nie)
+          funding_type: "Zdroj financovania: eu_structural_funds, state_budget, none atd."
+          grant_amount: Suma grantu/dotacie ak je relevantna
+          hidden_entity_count: Pocet tretich stran najdenych v texte zmluvy okrem dvoch hlavnych zmluvnych stran
+          penalty_count: Pocet explicitnych zmluvnych pokut
+          iban_count: Pocet bankovych uctov (IBAN) najdenych v zmluve
+          extraction_json: >
+            Kompletny vysledok extrakcie v JSON formate. Obsahuje okrem ineho:
+            hidden_entities (zoznam tretich stran s polami name, ico, role),
+            penalties (zoznam zmluvnych pokut), signatories (podpisujuce osoby),
+            bank_accounts (bankove ucty/IBAN)
+          model: LLM model pouzity na extrakciu (napr. google/gemini-2.5-flash-lite)
+
+      flag_rules:
+        description: >
+          Definicie pravidiel pre cervene vlajky (red flags). Kazde pravidlo
+          obsahuje SQL podmienku, ktora sa vyhodnocuje voci zmluvam.
+          Nove pravidla je mozne pridat cez CLI alebo priamo do tabulky.
+        columns:
+          id: Jedinecny identifikator pravidla (slug)
+          label: Kratky nazov pravidla
+          description: Popis co pravidlo deteguje
+          severity: "Zavaznost: info, warning alebo danger"
+          sql_condition: SQL WHERE podmienka (pouziva z.* pre zmluvy, e.* pre extractions)
+          needs_extraction: Ci pravidlo vyzaduje JOIN na extractions tabulku (1=ano, 0=nie)
+          enabled: Ci je pravidlo aktivne (1=ano, 0=nie)
+          created_at: Datum vytvorenia pravidla
+
+      red_flags:
+        description: >
+          Materializovane cervene vlajky pre jednotlive zmluvy. Kazdy
+          zaznam je jedna vlajka priradena k jednej zmluve na zaklade
+          vyhodnotenia pravidla z flag_rules.
+        columns:
+          id: Automaticky generovany identifikator
+          zmluva_id: ID zmluvy (cudzi kluc na zmluvy.id)
+          flag_type: ID pravidla (cudzi kluc na flag_rules.id)
+          detail: Volitelny doplnkovy detail k vlajke
+          created_at: Datum vytvorenia vlajky

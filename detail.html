@@ -1,0 +1,597 @@
+<!DOCTYPE html>
+<html lang="sk">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>CRZ Detail</title>
+<style>
+  :root {
+    --bg: #0f1117; --surface: #1a1d27; --surface2: #22252f; --border: #2a2d3a;
+    --text: #e1e4ed; --muted: #8b8fa3; --accent: #6c7ee1; --accent2: #e6a44e;
+    --danger: #e15b5b; --success: #4ecb71; --info: #5bb8e1; --warn: #e6a44e;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+    background: var(--bg); color: var(--text); line-height: 1.6; font-size: 14px;
+  }
+  a { color: var(--accent); text-decoration: none; }
+  a:hover { text-decoration: underline; }
+
+  .topbar {
+    background: var(--surface); border-bottom: 1px solid var(--border);
+    padding: 0 20px; display: flex; align-items: center; gap: 0;
+    position: sticky; top: 0; z-index: 100; height: 48px;
+  }
+  .topbar .logo {
+    font-size: 15px; font-weight: 700; white-space: nowrap; margin-right: 24px;
+    color: var(--text);
+  }
+  .topbar .tabs { display: flex; height: 100%; }
+  .topbar .tab {
+    padding: 0 16px; display: flex; align-items: center; gap: 6px;
+    font-size: 13px; font-weight: 500; color: var(--muted);
+    cursor: pointer; border-bottom: 2px solid transparent;
+    transition: color 0.15s, border-color 0.15s;
+    text-decoration: none;
+  }
+  .topbar .tab:hover { color: var(--text); text-decoration: none; }
+  .topbar .tab-icon { font-size: 14px; }
+  .topbar .spacer { flex: 1; }
+  .topbar .links { display: flex; gap: 12px; }
+  .topbar .links a { color: var(--muted); font-size: 12px; }
+  .topbar .links a:hover { color: var(--text); text-decoration: none; }
+
+  .container { max-width: 1100px; margin: 0 auto; padding: 24px; }
+
+  /* Header */
+  .contract-header { margin-bottom: 32px; }
+  .contract-header .id-line {
+    display: flex; align-items: center; gap: 10px; margin-bottom: 8px; flex-wrap: wrap;
+  }
+  .contract-header .contract-id { font-size: 12px; color: var(--muted); font-weight: 600; }
+  .tag {
+    display: inline-block; padding: 2px 8px; border-radius: 4px;
+    font-size: 11px; font-weight: 600; letter-spacing: 0.02em;
+  }
+  .tag-zmluva { background: rgba(108,126,225,0.15); color: var(--accent); }
+  .tag-dodatok { background: rgba(230,164,78,0.15); color: var(--accent2); }
+  .tag-active { background: rgba(78,203,113,0.15); color: var(--success); }
+  .tag-cancelled { background: rgba(225,91,91,0.15); color: var(--danger); }
+  .contract-header h2 { font-size: 22px; font-weight: 600; line-height: 1.3; margin-bottom: 12px; }
+
+  /* Cards */
+  .grid { display: grid; gap: 20px; margin-bottom: 28px; }
+  .grid-2 { grid-template-columns: 1fr 1fr; }
+  .grid-3 { grid-template-columns: 1fr 1fr 1fr; }
+  @media (max-width: 768px) { .grid-2, .grid-3 { grid-template-columns: 1fr; } }
+
+  .card {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: 10px; padding: 20px; overflow: hidden;
+  }
+  .card-header {
+    font-size: 11px; font-weight: 700; text-transform: uppercase;
+    letter-spacing: 0.06em; color: var(--muted); margin-bottom: 14px;
+    padding-bottom: 10px; border-bottom: 1px solid var(--border);
+  }
+  .card-accent { border-left: 3px solid var(--accent); }
+  .card-warn { border-left: 3px solid var(--warn); }
+  .card-danger { border-left: 3px solid var(--danger); }
+  .card-info { border-left: 3px solid var(--info); }
+  .card-success { border-left: 3px solid var(--success); }
+
+  /* Key-value pairs */
+  .kv { margin-bottom: 10px; }
+  .kv:last-child { margin-bottom: 0; }
+  .kv-label { font-size: 11px; color: var(--muted); font-weight: 600; text-transform: uppercase; letter-spacing: 0.04em; margin-bottom: 1px; }
+  .kv-value { font-size: 14px; word-break: break-word; }
+  .kv-value.large { font-size: 22px; font-weight: 700; }
+  .kv-value.mono { font-family: 'SF Mono', 'Fira Code', monospace; font-size: 13px; }
+  .kv-value a { color: var(--accent); }
+
+  /* Entity cards */
+  .entity-name { font-size: 16px; font-weight: 600; margin-bottom: 4px; }
+  .entity-ico { font-family: 'SF Mono', 'Fira Code', monospace; font-size: 13px; color: var(--info); }
+  .entity-address { font-size: 12px; color: var(--muted); margin-top: 4px; }
+
+  /* Flag badges */
+  .flag-list { display: flex; flex-direction: column; gap: 10px; }
+  .flag-item {
+    display: flex; align-items: flex-start; gap: 12px;
+    padding: 10px 14px; border-radius: 8px; background: var(--surface2);
+  }
+  .flag-dot {
+    width: 10px; height: 10px; border-radius: 50%; margin-top: 5px; flex-shrink: 0;
+  }
+  .flag-dot.danger { background: var(--danger); }
+  .flag-dot.warning { background: var(--warn); }
+  .flag-dot.info { background: var(--info); }
+  .flag-label { font-weight: 600; font-size: 13px; }
+  .flag-desc { font-size: 12px; color: var(--muted); }
+
+  /* Tables inside cards */
+  .mini-table { width: 100%; border-collapse: collapse; font-size: 12px; }
+  .mini-table th {
+    text-align: left; font-size: 10px; font-weight: 700; text-transform: uppercase;
+    color: var(--muted); padding: 6px 8px; border-bottom: 1px solid var(--border);
+    letter-spacing: 0.04em;
+  }
+  .mini-table td { padding: 8px 8px; border-bottom: 1px solid var(--border); }
+  .mini-table tr:last-child td { border-bottom: none; }
+  .mini-table tr:hover td { background: var(--surface2); }
+  td.num { text-align: right; font-variant-numeric: tabular-nums; }
+
+  /* Hidden entities / extraction items */
+  .item-card {
+    background: var(--surface2); border-radius: 6px; padding: 10px 14px; margin-bottom: 8px;
+  }
+  .item-card:last-child { margin-bottom: 0; }
+  .item-card .item-name { font-weight: 600; font-size: 13px; }
+  .item-card .item-meta { font-size: 11px; color: var(--muted); margin-top: 2px; }
+  .item-card .item-detail { font-size: 12px; margin-top: 4px; }
+
+  /* Stat blocks */
+  .stat-row { display: flex; gap: 16px; flex-wrap: wrap; margin-bottom: 20px; }
+  .stat-block {
+    background: var(--surface); border: 1px solid var(--border); border-radius: 8px;
+    padding: 14px 18px; flex: 1; min-width: 120px; text-align: center;
+  }
+  .stat-block .stat-value { font-size: 26px; font-weight: 700; }
+  .stat-block .stat-label { font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.04em; }
+  .stat-block.accent .stat-value { color: var(--accent); }
+  .stat-block.warn .stat-value { color: var(--warn); }
+  .stat-block.danger .stat-value { color: var(--danger); }
+  .stat-block.info .stat-value { color: var(--info); }
+  .stat-block.success .stat-value { color: var(--success); }
+
+  .empty { color: var(--muted); font-style: italic; font-size: 13px; }
+  .section-title {
+    font-size: 16px; font-weight: 700; margin-bottom: 16px; margin-top: 8px;
+    padding-bottom: 8px; border-bottom: 1px solid var(--border);
+  }
+
+  .loading { padding: 80px; text-align: center; color: var(--muted); font-size: 16px; }
+  .error-state { padding: 80px; text-align: center; }
+  .error-state h2 { font-size: 20px; margin-bottom: 8px; }
+  .error-state p { color: var(--muted); }
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <span class="logo">CRZ Explorer</span>
+  <div class="tabs">
+    <a class="tab" href="/">
+      <span class="tab-icon">&#9776;</span> Prehlad
+    </a>
+    <a class="tab" href="/browse">
+      <span class="tab-icon">&#9634;</span> Browse
+    </a>
+  </div>
+  <div class="spacer"></div>
+  <div class="links">
+    <a href="/data">Datasette</a>
+  </div>
+</div>
+
+<div class="container" id="content">
+  <div class="loading" id="loadingState">Nacitavam zmluvu...</div>
+</div>
+
+<script>
+function esc(s) {
+  if (s == null) return '';
+  var d = document.createElement('div');
+  d.textContent = String(s);
+  return d.innerHTML;
+}
+
+function formatNum(v) {
+  if (v == null) return '';
+  return Number(v).toLocaleString('sk-SK', { maximumFractionDigits: 2 });
+}
+
+function formatEur(v) {
+  if (v == null) return '-';
+  return formatNum(v) + ' EUR';
+}
+
+function formatDate(v) {
+  if (!v) return '-';
+  return String(v).substring(0, 10);
+}
+
+function getContractId() {
+  var parts = window.location.pathname.split('/');
+  return parts[parts.length - 1];
+}
+
+function el(tag, cls, children) {
+  var e = document.createElement(tag);
+  if (cls) e.className = cls;
+  if (typeof children === 'string') e.textContent = children;
+  else if (Array.isArray(children)) children.forEach(function(c) { if (c) e.appendChild(c); });
+  else if (children instanceof Node) e.appendChild(children);
+  return e;
+}
+
+function elHTML(tag, cls, html) {
+  var e = document.createElement(tag);
+  if (cls) e.className = cls;
+  // Only used with pre-escaped content
+  return e;
+}
+
+function kv(label, value, cls) {
+  var d = el('div', 'kv');
+  d.appendChild(el('div', 'kv-label', label));
+  var vEl = el('div', 'kv-value' + (cls ? ' ' + cls : ''));
+  if (value instanceof Node) vEl.appendChild(value);
+  else vEl.textContent = value != null ? String(value) : '-';
+  d.appendChild(vEl);
+  return d;
+}
+
+function kvLink(label, text, href) {
+  var d = el('div', 'kv');
+  d.appendChild(el('div', 'kv-label', label));
+  var vEl = el('div', 'kv-value');
+  if (href) {
+    var a = el('a', null, text);
+    a.href = href;
+    a.target = '_blank';
+    a.rel = 'noopener';
+    vEl.appendChild(a);
+  } else {
+    vEl.textContent = '-';
+  }
+  d.appendChild(vEl);
+  return d;
+}
+
+function card(headerText, accentClass, children) {
+  var c = el('div', 'card' + (accentClass ? ' ' + accentClass : ''));
+  if (headerText) c.appendChild(el('div', 'card-header', headerText));
+  if (Array.isArray(children)) children.forEach(function(ch) { if (ch) c.appendChild(ch); });
+  else if (children instanceof Node) c.appendChild(children);
+  return c;
+}
+
+function renderDetail(result) {
+  var container = document.getElementById('content');
+  container.textContent = '';
+
+  if (result.error) {
+    var err = el('div', 'error-state');
+    err.appendChild(el('h2', null, 'Zmluva nenajdena'));
+    err.appendChild(el('p', null, 'ID ' + getContractId() + ' neexistuje v databaze.'));
+    container.appendChild(err);
+    return;
+  }
+
+  var d = result.data;
+  var extraction = null;
+  var ej = null;
+  if (d.extraction) {
+    extraction = d.extraction;
+    if (extraction.extraction_json) {
+      try { ej = JSON.parse(extraction.extraction_json); } catch(e) {}
+    }
+  }
+
+  // Title
+  document.title = 'CRZ #' + d.id + ' - ' + (d.nazov_zmluvy || '');
+
+  // Header
+  var header = el('div', 'contract-header');
+  var idLine = el('div', 'id-line');
+  idLine.appendChild(el('span', 'contract-id', '#' + d.id));
+  var typTag = el('span', 'tag ' + (d.typ === 'dodatok' ? 'tag-dodatok' : 'tag-zmluva'), d.typ || '');
+  idLine.appendChild(typTag);
+  var stavTag = el('span', 'tag ' + (d.stav === 'zru\u0161en\u00e1' ? 'tag-cancelled' : 'tag-active'), d.stav || '');
+  idLine.appendChild(stavTag);
+  if (d.druh && d.druh !== '0') {
+    idLine.appendChild(el('span', 'tag', d.druh));
+  }
+  header.appendChild(idLine);
+  header.appendChild(el('h2', null, d.nazov_zmluvy || 'Bez nazvu'));
+  container.appendChild(header);
+
+  // Stat blocks
+  var stats = el('div', 'stat-row');
+  var s1 = el('div', 'stat-block accent');
+  s1.appendChild(el('div', 'stat-value', formatEur(d.suma)));
+  s1.appendChild(el('div', 'stat-label', 'Suma'));
+  stats.appendChild(s1);
+  var s2 = el('div', 'stat-block info');
+  s2.appendChild(el('div', 'stat-value', formatEur(d.suma_celkom)));
+  s2.appendChild(el('div', 'stat-label', 'Suma celkom'));
+  stats.appendChild(s2);
+  var s3 = el('div', 'stat-block');
+  s3.appendChild(el('div', 'stat-value', formatDate(d.datum_zverejnenia)));
+  s3.appendChild(el('div', 'stat-label', 'Zverejnene'));
+  stats.appendChild(s3);
+  if (d.red_flags && d.red_flags.length > 0) {
+    var s4 = el('div', 'stat-block danger');
+    s4.appendChild(el('div', 'stat-value', String(d.red_flags.length)));
+    s4.appendChild(el('div', 'stat-label', 'Red flags'));
+    stats.appendChild(s4);
+  }
+  if (extraction) {
+    var s5 = el('div', 'stat-block warn');
+    s5.appendChild(el('div', 'stat-value', String(extraction.hidden_entity_count || 0)));
+    s5.appendChild(el('div', 'stat-label', 'Skryte entity'));
+    stats.appendChild(s5);
+    var s6 = el('div', 'stat-block');
+    s6.appendChild(el('div', 'stat-value', String(extraction.penalty_count || 0)));
+    s6.appendChild(el('div', 'stat-label', 'Pokuty'));
+    stats.appendChild(s6);
+  }
+  container.appendChild(stats);
+
+  // Red flags
+  if (d.red_flags && d.red_flags.length > 0) {
+    container.appendChild(el('div', 'section-title', 'Red Flags'));
+    var flagCard = card(null, 'card-danger');
+    var flagList = el('div', 'flag-list');
+    d.red_flags.forEach(function(f) {
+      var item = el('div', 'flag-item');
+      item.appendChild(el('div', 'flag-dot ' + (f.severity || 'info')));
+      var body = el('div');
+      body.appendChild(el('div', 'flag-label', f.label));
+      if (f.description) body.appendChild(el('div', 'flag-desc', f.description));
+      if (f.detail) body.appendChild(el('div', 'flag-desc', f.detail));
+      item.appendChild(body);
+      flagList.appendChild(item);
+    });
+    flagCard.appendChild(flagList);
+    container.appendChild(flagCard);
+  }
+
+  // Parties grid
+  container.appendChild(el('div', 'section-title', 'Zmluvne strany'));
+  var partiesGrid = el('div', 'grid grid-2');
+
+  // Dodavatel
+  var dodCard = card('Dodavatel', 'card-accent');
+  dodCard.appendChild(el('div', 'entity-name', d.dodavatel || '-'));
+  if (d.dodavatel_ico && d.dodavatel_ico !== '-') {
+    var icoLink = el('a', 'entity-ico');
+    icoLink.textContent = 'ICO: ' + d.dodavatel_ico;
+    icoLink.href = '/browse?dodavatel_ico=' + encodeURIComponent(d.dodavatel_ico);
+    dodCard.appendChild(icoLink);
+  }
+  if (d.dodavatel_adresa) dodCard.appendChild(el('div', 'entity-address', d.dodavatel_adresa));
+  partiesGrid.appendChild(dodCard);
+
+  // Objednavatel
+  var objCard = card('Objednavatel', 'card-info');
+  objCard.appendChild(el('div', 'entity-name', d.objednavatel || '-'));
+  if (d.objednavatel_ico) {
+    var icoLink2 = el('a', 'entity-ico');
+    icoLink2.textContent = 'ICO: ' + d.objednavatel_ico;
+    icoLink2.href = '/browse?objednavatel_ico=' + encodeURIComponent(d.objednavatel_ico);
+    objCard.appendChild(icoLink2);
+  }
+  if (d.objednavatel_adresa) objCard.appendChild(el('div', 'entity-address', d.objednavatel_adresa));
+  partiesGrid.appendChild(objCard);
+  container.appendChild(partiesGrid);
+
+  // Extraction section
+  if (extraction) {
+    container.appendChild(el('div', 'section-title', 'LLM Extrakcia'));
+
+    var extGrid = el('div', 'grid grid-2');
+
+    // Classification
+    var classCard = card('Klasifikacia', 'card-info');
+    classCard.appendChild(kv('Kategoria sluzby', extraction.service_category || '-'));
+    classCard.appendChild(kv('Skutocny predmet', extraction.actual_subject || '-'));
+    classCard.appendChild(kv('Typ financovania', extraction.funding_type || '-'));
+    if (extraction.grant_amount) classCard.appendChild(kv('Grant suma', extraction.grant_amount));
+    classCard.appendChild(kv('Bezodplatne', extraction.bezodplatne ? 'Ano' : 'Nie'));
+    classCard.appendChild(kv('Automaticke predlzenie', extraction.auto_renewal ? 'Ano' : 'Nie'));
+    classCard.appendChild(kv('Model', extraction.model || '-', 'mono'));
+    extGrid.appendChild(classCard);
+
+    // Penalties card
+    var penCard = card('Pokuty & asymetria', extraction.penalty_asymmetry === 'supplier_advantage' ? 'card-danger' : 'card-warn');
+    penCard.appendChild(kv('Asymetria pokut', extraction.penalty_asymmetry || '-'));
+    penCard.appendChild(kv('Pocet pokut', String(extraction.penalty_count || 0)));
+    if (ej && ej.penalties && ej.penalties.length > 0) {
+      var penSep = el('div', 'kv-label', 'Detail pokut');
+      penSep.style.marginTop = '12px';
+      penSep.style.marginBottom = '8px';
+      penCard.appendChild(penSep);
+      ej.penalties.forEach(function(p) {
+        var ic = el('div', 'item-card');
+        ic.appendChild(el('div', 'item-name', (p.penalized_party === 'buyer' ? 'Objednavatel' : p.penalized_party === 'supplier' ? 'Dodavatel' : p.penalized_party || '-')));
+        if (p.trigger) ic.appendChild(el('div', 'item-detail', 'Dovod: ' + p.trigger));
+        if (p.amount) ic.appendChild(el('div', 'item-meta', 'Suma/sadzba: ' + p.amount));
+        penCard.appendChild(ic);
+      });
+    }
+    extGrid.appendChild(penCard);
+    container.appendChild(extGrid);
+
+    // Termination
+    if (ej && ej.termination) {
+      var t = ej.termination;
+      var termCard = card('Ukoncenie zmluvy', null);
+      termCard.appendChild(kv('Objednavatel moze ukoncit bez dovodu', t.buyer_can_terminate_without_cause ? 'Ano' : 'Nie'));
+      termCard.appendChild(kv('Dodavatel moze ukoncit bez dovodu', t.supplier_can_terminate_without_cause ? 'Ano' : 'Nie'));
+      termCard.appendChild(kv('Vypovedna lehota', t.notice_period || '-'));
+      container.appendChild(termCard);
+    }
+
+    // Hidden entities
+    if (ej && ej.hidden_entities && ej.hidden_entities.length > 0) {
+      container.appendChild(el('div', 'section-title', 'Skryte entity (' + ej.hidden_entities.length + ')'));
+      var heCard = card(null, 'card-warn');
+      ej.hidden_entities.forEach(function(he) {
+        var ic = el('div', 'item-card');
+        ic.appendChild(el('div', 'item-name', he.name || '-'));
+        var metaParts = [];
+        if (he.ico) metaParts.push('ICO: ' + he.ico);
+        if (he.role) metaParts.push('Rola: ' + he.role);
+        if (metaParts.length) ic.appendChild(el('div', 'item-meta', metaParts.join('  |  ')));
+        heCard.appendChild(ic);
+      });
+      container.appendChild(heCard);
+    }
+
+    // Bank accounts
+    if (ej && ej.bank_accounts && ej.bank_accounts.length > 0) {
+      container.appendChild(el('div', 'section-title', 'Bankove ucty (' + ej.bank_accounts.length + ')'));
+      var baCard = card(null, null);
+      var baTable = el('table', 'mini-table');
+      var baHead = document.createElement('thead');
+      var baHr = document.createElement('tr');
+      ['Strana', 'IBAN'].forEach(function(h) { baHr.appendChild(el('th', null, h)); });
+      baHead.appendChild(baHr);
+      baTable.appendChild(baHead);
+      var baBody = document.createElement('tbody');
+      ej.bank_accounts.forEach(function(ba) {
+        var tr = document.createElement('tr');
+        tr.appendChild(el('td', null, ba.party === 'buyer' ? 'Objednavatel' : ba.party === 'supplier' ? 'Dodavatel' : (ba.party || '-')));
+        tr.appendChild(el('td', 'mono', ba.iban || '-'));
+        baBody.appendChild(tr);
+      });
+      baTable.appendChild(baBody);
+      baCard.appendChild(baTable);
+      container.appendChild(baCard);
+    }
+
+    // Funding source detail
+    if (ej && ej.funding_source && (ej.funding_source.scheme_reference || ej.funding_source.grant_amount)) {
+      var fsCard = card('Financovanie - detail', 'card-success');
+      fsCard.appendChild(kv('Typ', ej.funding_source.type || '-'));
+      if (ej.funding_source.scheme_reference) fsCard.appendChild(kv('Schema/referencia', ej.funding_source.scheme_reference));
+      if (ej.funding_source.grant_amount) fsCard.appendChild(kv('Suma grantu', ej.funding_source.grant_amount));
+      container.appendChild(fsCard);
+    }
+  } else {
+    container.appendChild(el('div', 'section-title', 'LLM Extrakcia'));
+    container.appendChild(el('div', 'empty', 'Pre tuto zmluvu nie je dostupna LLM extrakcia.'));
+  }
+
+  // Dates + details grid
+  container.appendChild(el('div', 'section-title', 'Detaily zmluvy'));
+  var detailGrid = el('div', 'grid grid-2');
+
+  var datesCard = card('Datumy', 'card-accent');
+  datesCard.appendChild(kv('Datum zverejnenia', d.datum_zverejnenia || '-'));
+  datesCard.appendChild(kv('Datum podpisu', d.datum_podpisu || '-'));
+  datesCard.appendChild(kv('Datum ucinnosti', d.datum_ucinnosti || '-'));
+  datesCard.appendChild(kv('Platnost do', d.platnost_do || '-'));
+  detailGrid.appendChild(datesCard);
+
+  var metaCard = card('Metadata', null);
+  metaCard.appendChild(kv('Cislo zmluvy', d.cislo_zmluvy || '-', 'mono'));
+  metaCard.appendChild(kv('Rezort', d.rezort || '-'));
+  metaCard.appendChild(kv('Zdroj', d.zdroj || '-'));
+  if (d.crz_url) metaCard.appendChild(kvLink('CRZ odkaz', d.crz_url, d.crz_url));
+  if (d.uvo_url && d.uvo_url.indexOf('http') === 0) metaCard.appendChild(kvLink('UVO odkaz', d.uvo_url, d.uvo_url));
+  detailGrid.appendChild(metaCard);
+  container.appendChild(detailGrid);
+
+  // Poznamka / Popis
+  if (d.poznamka || d.popis) {
+    var textGrid = el('div', 'grid grid-2');
+    if (d.poznamka) {
+      var pozCard = card('Poznamka', null);
+      pozCard.appendChild(el('div', null, d.poznamka));
+      textGrid.appendChild(pozCard);
+    }
+    if (d.popis) {
+      var popCard = card('Popis', null);
+      popCard.appendChild(el('div', null, d.popis));
+      textGrid.appendChild(popCard);
+    }
+    container.appendChild(textGrid);
+  }
+
+  // Prilohy
+  if (d.prilohy && d.prilohy.length > 0) {
+    container.appendChild(el('div', 'section-title', 'Prilohy (' + d.prilohy.length + ')'));
+    var priCard = card(null, null);
+    var priTable = el('table', 'mini-table');
+    var priHead = document.createElement('thead');
+    var priHr = document.createElement('tr');
+    ['Nazov', 'Subor', 'Odkaz'].forEach(function(h) { priHr.appendChild(el('th', null, h)); });
+    priHead.appendChild(priHr);
+    priTable.appendChild(priHead);
+    var priBody = document.createElement('tbody');
+    d.prilohy.forEach(function(p) {
+      var tr = document.createElement('tr');
+      tr.appendChild(el('td', null, p.nazov || '-'));
+      tr.appendChild(el('td', 'mono', p.subor || '-'));
+      var linkTd = document.createElement('td');
+      if (p.url) {
+        var a = el('a', null, 'Stiahnut PDF');
+        a.href = p.url;
+        a.target = '_blank';
+        a.rel = 'noopener';
+        linkTd.appendChild(a);
+      }
+      tr.appendChild(linkTd);
+      priBody.appendChild(tr);
+    });
+    priTable.appendChild(priBody);
+    priCard.appendChild(priTable);
+    container.appendChild(priCard);
+  }
+
+  // Related contracts
+  if (d.related_supplier_contracts && d.related_supplier_contracts.length > 0) {
+    container.appendChild(el('div', 'section-title', 'Dalsie zmluvy s rovnakym dodavatelom (' + d.related_supplier_contracts.length + ')'));
+    var relCard = card(null, null);
+    var relTable = el('table', 'mini-table');
+    var relHead = document.createElement('thead');
+    var relHr = document.createElement('tr');
+    ['ID', 'Nazov', 'Suma', 'Datum', 'Typ'].forEach(function(h) { relHr.appendChild(el('th', null, h)); });
+    relHead.appendChild(relHr);
+    relTable.appendChild(relHead);
+    var relBody = document.createElement('tbody');
+    d.related_supplier_contracts.forEach(function(r) {
+      var tr = document.createElement('tr');
+      var idTd = document.createElement('td');
+      var idA = el('a', null, String(r.id));
+      idA.href = '/browse/' + r.id;
+      idTd.appendChild(idA);
+      tr.appendChild(idTd);
+      tr.appendChild(el('td', null, r.nazov_zmluvy || '-'));
+      tr.appendChild(el('td', 'num', formatEur(r.suma)));
+      tr.appendChild(el('td', null, formatDate(r.datum_zverejnenia)));
+      var typTd = document.createElement('td');
+      typTd.appendChild(el('span', 'tag ' + (r.typ === 'dodatok' ? 'tag-dodatok' : 'tag-zmluva'), r.typ || ''));
+      tr.appendChild(typTd);
+      relBody.appendChild(tr);
+    });
+    relTable.appendChild(relBody);
+    relCard.appendChild(relTable);
+    container.appendChild(relCard);
+  }
+
+  // Bottom spacer
+  container.appendChild(el('div', null, ''));
+  container.lastChild.style.height = '40px';
+}
+
+// Load
+var contractId = getContractId();
+fetch('/api/detail?id=' + encodeURIComponent(contractId))
+  .then(function(res) { return res.json(); })
+  .then(function(json) { renderDetail(json); })
+  .catch(function(err) {
+    var container = document.getElementById('content');
+    container.textContent = '';
+    var errDiv = el('div', 'error-state');
+    errDiv.appendChild(el('h2', null, 'Chyba pri nacitavani'));
+    errDiv.appendChild(el('p', null, String(err)));
+    container.appendChild(errDiv);
+  });
+</script>
+</body>
+</html>
