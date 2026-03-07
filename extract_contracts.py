@@ -35,6 +35,9 @@ Respond ONLY with valid JSON matching this schema — no markdown, no explanatio
   "penalty_asymmetry_reason": short explanation (1 sentence) of why you chose this asymmetry value, referencing which party faces more/harsher penalties,
   "termination": {"buyer_can_terminate_without_cause": bool, "supplier_can_terminate_without_cause": bool, "notice_period": "..." or null},
   "funding_source": {"type": one of "eu_recovery_plan", "eu_structural_funds", "erasmus", "de_minimis", "state_budget", "municipal_budget", "other_eu", "none" , "scheme_reference": "..." or null, "grant_amount": number or null},
+  "signatories": [{"party": "supplier" or "buyer", "name": "...", "role": "...", "delegation": "statutory" or "poverenie" or "plnomocenstvo" or "mandatna_zmluva" or null}],
+  "duration_type": one of "fixed_term", "indefinite", "one_time",
+  "duration_end_date": "YYYY-MM-DD" or null (only for fixed_term, extract from "do DD.MM.YYYY" or similar),
   "bank_accounts": [{"party": "supplier" or "buyer", "iban": "SK..."}],
   "auto_renewal": bool,
   "bezodplatne": bool
@@ -76,7 +79,7 @@ Hidden entity roles (pick the best match):
 - consortium_member — člen konzorcia/združenia: member of a group bidding or performing together
 - previous_operator — predchádzajúci prevádzkovateľ/dodávateľ: entity being replaced by this contract
 - co_user — spoluužívateľ: additional authorized user of services/property beyond the main parties
-- insurance_broker — poisťovací maklér/sprostredkovateľ: broker or intermediary in insurance contracts (e.g. Finportal, Brokeria, Respect Slovakia)
+- insurance_broker — poisťovací maklér/sprostredkovateľ: broker or intermediary in insurance contracts (e.g. Finportal, Brokeria, Respect Slovakia, MAXIMA BROKER, RENOMIA)
 - authorized_representative — splnomocnený zástupca: legal representative acting on behalf of a party who is a SEPARATE ORGANIZATION (not an employee or signatory of the contracting parties)
 
 Penalty asymmetry — determined by WHO gets penalized, not who benefits:
@@ -87,6 +90,20 @@ Penalty asymmetry — determined by WHO gets penalized, not who benefits:
 - none_found — no explicit contractual penalties found
 
 Key: "penalized_party" in the penalties array means the party who MUST PAY the penalty (the one being punished). If only the supplier is penalized, that is buyer_advantage. If only the buyer is penalized, that is supplier_advantage.
+
+Duration type:
+- fixed_term — na dobu určitú: contract has a specific end date or defined period
+- indefinite — na dobu neurčitú: contract runs until terminated
+- one_time — jednorazové plnenie: single delivery/event with no ongoing duration (e.g. kúpna zmluva, jednorazová služba)
+
+Signatories — extract the people who actually signed, one per party:
+- "role" = their title (e.g. starosta, konateľ, riaditeľ, generálny riaditeľ, predseda predstavenstva)
+- "delegation" = how they got signing authority:
+  - "statutory" — they ARE the štatutárny zástupca (starosta, konateľ, riaditeľ)
+  - "poverenie" — acting na základe poverenia (internal delegation)
+  - "plnomocenstvo" — acting na základe plnomocenstva (power of attorney)
+  - "mandatna_zmluva" — acting under a mandátna zmluva (e.g. ByPo signing for Mesto Ružomberok)
+  - null — delegation type not stated or unclear
 
 Rules:
 - hidden_entities: ONLY include organizations or persons that are NOT the two main contracting parties (dodávateľ/objednávateľ). Specifically:
