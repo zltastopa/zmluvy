@@ -13,7 +13,7 @@ import json
 import sqlite3
 import time
 
-from settings import get_path
+from settings import get_path, normalize_company_name
 
 DB_PATH = get_path("CRZ_DB_PATH", "crz.db")
 
@@ -89,6 +89,30 @@ DEFAULT_RULES = [
         "id": "tax_unreliable_entity",
         "label": "Danovo nespolahlivy subjekt v zmluve",
         "description": "Zmluva obsahuje tretiu stranu (skrytu entitu) s ICO, ktora je 'menej spolahlivy' podla Financnej spravy SR",
+        "severity": "danger",
+        "sql_condition": "__custom__",
+        "needs_extraction": 1,
+    },
+    {
+        "id": "vszp_debtor",
+        "label": "Dlznik VSZP",
+        "description": "Dodavatel je dlznik Vseobecnej zdravotnej poistovne (podla ICO)",
+        "severity": "danger",
+        "sql_condition": "z.dodavatel_ico IN (SELECT cin FROM vszp_debtors WHERE cin IS NOT NULL)",
+        "needs_extraction": 0,
+    },
+    {
+        "id": "socpoist_debtor",
+        "label": "Dlznik Socialnej poistovne",
+        "description": "Dodavatel je dlznik Socialnej poistovne (podla nazvu firmy)",
+        "severity": "danger",
+        "sql_condition": "__custom__",
+        "needs_extraction": 0,
+    },
+    {
+        "id": "vszp_debtor_entity",
+        "label": "Skryta entita dlznik VSZP",
+        "description": "Zmluva obsahuje skrytu entitu ktora je dlznikom VSZP (podla ICO)",
         "severity": "danger",
         "sql_condition": "__custom__",
         "needs_extraction": 1,
@@ -188,6 +212,10 @@ def evaluate_custom_rule(db, rule):
 
     if rule_id == "tax_unreliable_entity":
         return _eval_tax_unreliable_entity(db)
+    if rule_id == "socpoist_debtor":
+        return _eval_socpoist_debtor(db)
+    if rule_id == "vszp_debtor_entity":
+        return _eval_vszp_debtor_entity(db)
 
     raise ValueError(f"Unknown custom rule: {rule_id}")
 
@@ -239,6 +267,103 @@ def _eval_tax_unreliable_entity(db):
     )
     removed = cursor2.rowcount
 
+    return inserted, removed
+
+
+def _eval_socpoist_debtor(db):
+    """Flag contracts where dodavatel name matches a Socpoist debtor company."""
+    # Build lookup of normalized socpoist company names -> (name, amount)
+    socpoist_rows = db.execute(
+        "SELECT name_normalized, name, amount FROM socpoist_debtors WHERE name_normalized IS NOT NULL"
+    ).fetchall()
+    socpoist_map = {}
+    for r in socpoist_rows:
+        key = r["name_normalized"]
+        # Keep the one with highest debt
+        if key not in socpoist_map or r["amount"] > socpoist_map[key][1]:
+            socpoist_map[key] = (r["name"], r["amount"])
+
+    # Get all distinct dodavatel names
+    contracts = db.execute(
+        "SELECT id, dodavatel FROM zmluvy WHERE dodavatel IS NOT NULL AND dodavatel != ''"
+    ).fetchall()
+
+    matching_ids = set()
+    details = {}
+    for c in contracts:
+        norm = normalize_company_name(c["dodavatel"])
+        if norm in socpoist_map:
+            matching_ids.add(c["id"])
+            orig_name, amount = socpoist_map[norm]
+            details[c["id"]] = f"{orig_name} (dlh: {amount:,.2f} EUR)"
+
+    # Insert flags
+    inserted = 0
+    for zmluva_id in matching_ids:
+        cursor = db.execute(
+            "INSERT OR IGNORE INTO red_flags (zmluva_id, flag_type, detail) VALUES (?, ?, ?)",
+            (zmluva_id, "socpoist_debtor", details.get(zmluva_id)),
+        )
+        inserted += cursor.rowcount
+
+    # Remove stale flags
+    cursor2 = db.execute(
+        "DELETE FROM red_flags WHERE flag_type = 'socpoist_debtor' AND zmluva_id NOT IN ({})".format(
+            ",".join(str(i) for i in matching_ids) if matching_ids else "0"
+        )
+    )
+    removed = cursor2.rowcount
+    return inserted, removed
+
+
+def _eval_vszp_debtor_entity(db):
+    """Flag contracts where a hidden entity ICO is a VSZP debtor."""
+    # Load all VSZP debtor CINs into a set
+    vszp_cins = {}
+    for r in db.execute("SELECT cin, name, amount FROM vszp_debtors WHERE cin IS NOT NULL").fetchall():
+        cin = r["cin"].strip()
+        if cin:
+            if cin not in vszp_cins or r["amount"] > vszp_cins[cin][1]:
+                vszp_cins[cin] = (r["name"], r["amount"])
+
+    # Get all extractions with hidden entities
+    rows = db.execute("""
+        SELECT e.zmluva_id, e.extraction_json
+        FROM extractions e
+        WHERE e.hidden_entity_count > 0 AND e.extraction_json IS NOT NULL
+    """).fetchall()
+
+    matching_ids = set()
+    details = {}
+    for row in rows:
+        try:
+            ej = json.loads(row["extraction_json"])
+        except Exception:
+            continue
+        for he in (ej.get("hidden_entities") or []):
+            ico = (he.get("ico") or "").strip()
+            if ico and ico in vszp_cins:
+                matching_ids.add(row["zmluva_id"])
+                name, amount = vszp_cins[ico]
+                entity_name = he.get("name") or name
+                details[row["zmluva_id"]] = f"{entity_name} (ICO: {ico}, dlh VSZP: {amount:,.2f} EUR)"
+
+    # Insert flags
+    inserted = 0
+    for zmluva_id in matching_ids:
+        cursor = db.execute(
+            "INSERT OR IGNORE INTO red_flags (zmluva_id, flag_type, detail) VALUES (?, ?, ?)",
+            (zmluva_id, "vszp_debtor_entity", details.get(zmluva_id)),
+        )
+        inserted += cursor.rowcount
+
+    # Remove stale flags
+    cursor2 = db.execute(
+        "DELETE FROM red_flags WHERE flag_type = 'vszp_debtor_entity' AND zmluva_id NOT IN ({})".format(
+            ",".join(str(i) for i in matching_ids) if matching_ids else "0"
+        )
+    )
+    removed = cursor2.rowcount
     return inserted, removed
 
 

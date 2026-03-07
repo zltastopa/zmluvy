@@ -25,3 +25,6 @@ data/
 # Database backups
 crz.db.old
 .playwright-mcp/
+
+# Large SQL dumps (downloaded separately)
+*.sql

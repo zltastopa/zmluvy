@@ -6,18 +6,18 @@ Usage:
 """
 
 import argparse
+import csv
+import io
 import json
+import re
 import sqlite3
 from pathlib import Path
-from urllib.parse import urlparse, parse_qs
+from urllib.parse import parse_qs
 
 import yaml
 from datasette.app import Datasette
 
-from settings import get_path
-
-import csv
-import io
+from settings import get_path, normalize_company_name
 
 ROOT = Path(__file__).parent
 DB_PATH = get_path("CRZ_DB_PATH", "crz.db")
@@ -256,6 +256,29 @@ def api_detail(db, params):
                 contract[key] = tr["status"] if tr else None
             else:
                 contract[key] = None
+
+        # Debtor status for dodavatel
+        ico_val = contract.get("dodavatel_ico")
+        if ico_val:
+            vszp = db.execute(
+                "SELECT name, amount, payer_type FROM vszp_debtors WHERE cin = ? ORDER BY amount DESC LIMIT 1",
+                [ico_val]
+            ).fetchone()
+            contract["dodavatel_vszp_debt"] = {"name": vszp["name"], "amount": vszp["amount"], "payer_type": vszp["payer_type"]} if vszp else None
+        else:
+            contract["dodavatel_vszp_debt"] = None
+
+        # Socpoist match by name (using the same normalization as flag rule)
+        dodavatel = contract.get("dodavatel") or ""
+        if dodavatel:
+            norm_name = normalize_company_name(dodavatel)
+            socpoist = db.execute(
+                "SELECT name, amount FROM socpoist_debtors WHERE name_normalized = ? ORDER BY amount DESC LIMIT 1",
+                [norm_name]
+            ).fetchone()
+            contract["dodavatel_socpoist_debt"] = {"name": socpoist["name"], "amount": socpoist["amount"]} if socpoist else None
+        else:
+            contract["dodavatel_socpoist_debt"] = None
 
         return {"kind": "contract", "data": contract}
 
@@ -784,7 +807,7 @@ _BROWSE_SORT_COLS = {
     'service_category', 'actual_subject', 'penalty_asymmetry',
     'auto_renewal', 'bezodplatne', 'funding_type', 'grant_amount',
     'hidden_entity_count', 'penalty_count', 'iban_count',
-    'flag_count', 'dodavatel_tax_status',
+    'flag_count', 'dodavatel_tax_status', 'vszp_debt',
 }
 
 
@@ -878,6 +901,15 @@ def _browse_where(params):
         clauses.append("z.dodavatel_ico IN (SELECT ico FROM tax_reliability WHERE status = ?)")
         bindings.append(v)
 
+    # Debtor filter
+    v = params.get('debtor')
+    if v == 'vszp':
+        clauses.append("z.dodavatel_ico IN (SELECT cin FROM vszp_debtors WHERE cin IS NOT NULL)")
+    elif v == 'socpoist':
+        clauses.append("z.id IN (SELECT zmluva_id FROM red_flags WHERE flag_type = 'socpoist_debtor')")
+    elif v == 'any':
+        clauses.append("(z.dodavatel_ico IN (SELECT cin FROM vszp_debtors WHERE cin IS NOT NULL) OR z.id IN (SELECT zmluva_id FROM red_flags WHERE flag_type = 'socpoist_debtor'))")
+
     # Red flags
     if params.get('flag'):
         clauses.append("z.id IN (SELECT zmluva_id FROM red_flags WHERE flag_type = ?)")
@@ -905,14 +937,20 @@ def api_browse(db, params):
     """Full browse endpoint with all fields, pagination, sorting."""
     where, bindings = _browse_where(params)
 
-    # Always join extractions + red flag counts + tax reliability for the browse view
+    # Always join extractions + red flag counts + tax reliability + VSZP debtor info for browse
     join = """LEFT JOIN extractions e ON e.zmluva_id = z.id
               LEFT JOIN (
                   SELECT zmluva_id, count(*) as flag_count,
                          group_concat(flag_type, ', ') as flag_labels
                   FROM red_flags GROUP BY zmluva_id
               ) rf ON rf.zmluva_id = z.id
-              LEFT JOIN tax_reliability tr ON tr.ico = z.dodavatel_ico"""
+              LEFT JOIN tax_reliability tr ON tr.ico = z.dodavatel_ico
+              LEFT JOIN (
+                  SELECT cin, max(amount) as max_debt FROM vszp_debtors WHERE cin IS NOT NULL GROUP BY cin
+              ) vd ON vd.cin = z.dodavatel_ico
+              LEFT JOIN (
+                  SELECT zmluva_id, detail FROM red_flags WHERE flag_type = 'socpoist_debtor'
+              ) spd ON spd.zmluva_id = z.id"""
 
     # Sort
     sort_col = params.get('sort', 'datum_zverejnenia')
@@ -928,6 +966,8 @@ def api_browse(db, params):
         sort_expr = "rf.flag_count"
     elif sort_col == 'dodavatel_tax_status':
         sort_expr = "tr.status"
+    elif sort_col == 'vszp_debt':
+        sort_expr = "vd.max_debt"
     else:
         sort_expr = f"z.{sort_col}"
 
@@ -950,7 +990,9 @@ def api_browse(db, params):
             e.extraction_json,
             COALESCE(rf.flag_count, 0) as flag_count,
             rf.flag_labels,
-            tr.status as dodavatel_tax_status
+            tr.status as dodavatel_tax_status,
+            vd.max_debt as vszp_debt,
+            spd.detail as socpoist_debt_detail
         FROM zmluvy z {join}
         WHERE {where}
         ORDER BY {sort_expr} {sort_dir}
@@ -959,6 +1001,14 @@ def api_browse(db, params):
     ).fetchall()
 
     result_rows = [dict(r) for r in rows]
+    # Parse socpoist debt amount from detail string, then remove raw detail
+    for r in result_rows:
+        detail = r.pop('socpoist_debt_detail', None)
+        if detail:
+            m = re.search(r'dlh:\s*([\d,]+\.\d+)', detail)
+            r['socpoist_debt'] = float(m.group(1).replace(',', '')) if m else None
+        else:
+            r['socpoist_debt'] = None
     # Extract signatories as flat string, then remove extraction_json (too large)
     for r in result_rows:
         ej_raw = r.pop('extraction_json', None)
@@ -1012,6 +1062,122 @@ def api_browse_filters(db, params):
     }
 
 
+def _search_sources_fts(fts_expr, like_pat):
+    """Build FTS-based search UNION and bindings (7 sources)."""
+    sql = """
+        SELECT rowid AS zid, 'text' AS src FROM zmluvy_fts WHERE zmluvy_fts MATCH ?
+        UNION
+        SELECT zmluva_id, 'subject' FROM extractions WHERE actual_subject LIKE ?
+        UNION
+        SELECT id, 'ico' FROM zmluvy WHERE dodavatel_ico LIKE ? OR objednavatel_ico LIKE ?
+        UNION
+        SELECT zmluva_id, 'extraction' FROM extractions WHERE extraction_json LIKE ?
+        UNION
+        SELECT zmluva_id, 'attachment' FROM prilohy WHERE nazov LIKE ?
+        UNION
+        SELECT z2.id, 'vszp_debtor' FROM zmluvy z2
+            JOIN vszp_debtors vd2 ON vd2.cin = z2.dodavatel_ico
+            WHERE vd2.name LIKE ? OR vd2.cin LIKE ?
+        UNION
+        SELECT z3.id, 'socpoist_debtor' FROM zmluvy z3
+            JOIN red_flags rf3 ON rf3.zmluva_id = z3.id AND rf3.flag_type = 'socpoist_debtor'
+            WHERE rf3.detail LIKE ?
+    """
+    bindings = [fts_expr, like_pat, like_pat, like_pat, like_pat, like_pat, like_pat, like_pat, like_pat]
+    return sql, bindings
+
+
+def _search_sources_like(like_pat):
+    """Build LIKE-only search UNION and bindings (fallback when FTS fails)."""
+    sql = """
+        SELECT id AS zid, 'text' AS src FROM zmluvy
+        WHERE nazov_zmluvy LIKE ? OR dodavatel LIKE ? OR objednavatel LIKE ?
+            OR poznamka LIKE ? OR popis LIKE ?
+        UNION
+        SELECT zmluva_id, 'subject' FROM extractions WHERE actual_subject LIKE ?
+        UNION
+        SELECT id, 'ico' FROM zmluvy WHERE dodavatel_ico LIKE ? OR objednavatel_ico LIKE ?
+        UNION
+        SELECT zmluva_id, 'extraction' FROM extractions WHERE extraction_json LIKE ?
+        UNION
+        SELECT zmluva_id, 'attachment' FROM prilohy WHERE nazov LIKE ?
+        UNION
+        SELECT z2.id, 'vszp_debtor' FROM zmluvy z2
+            JOIN vszp_debtors vd2 ON vd2.cin = z2.dodavatel_ico
+            WHERE vd2.name LIKE ? OR vd2.cin LIKE ?
+        UNION
+        SELECT z3.id, 'socpoist_debtor' FROM zmluvy z3
+            JOIN red_flags rf3 ON rf3.zmluva_id = z3.id AND rf3.flag_type = 'socpoist_debtor'
+            WHERE rf3.detail LIKE ?
+    """
+    bindings = [like_pat] * 13
+    return sql, bindings
+
+
+_SEARCH_RESULT_SQL = """
+    WITH matched_ids AS ({sources}),
+    agg AS (
+        SELECT zid, group_concat(DISTINCT src) AS match_sources
+        FROM matched_ids GROUP BY zid
+    )
+    SELECT z.id, z.nazov_zmluvy, z.dodavatel, z.dodavatel_ico,
+           z.objednavatel, z.objednavatel_ico, z.suma,
+           z.datum_zverejnenia, z.typ, z.stav, z.rezort, z.crz_url,
+           e.actual_subject, e.service_category,
+           e.hidden_entity_count, e.penalty_asymmetry,
+           COALESCE(rf.flag_count, 0) AS flag_count,
+           tr.status AS dodavatel_tax_status,
+           agg.match_sources
+    FROM agg
+    JOIN zmluvy z ON z.id = agg.zid
+    LEFT JOIN extractions e ON e.zmluva_id = z.id
+    LEFT JOIN (
+        SELECT zmluva_id, count(*) AS flag_count FROM red_flags GROUP BY zmluva_id
+    ) rf ON rf.zmluva_id = z.id
+    LEFT JOIN tax_reliability tr ON tr.ico = z.dodavatel_ico
+    ORDER BY rf.flag_count DESC NULLS LAST, z.datum_zverejnenia DESC
+    LIMIT ? OFFSET ?
+"""
+
+
+def api_search(db, params):
+    """Full-text search across all data — zmluvy, extractions, ICO, attachments."""
+    q = (params.get("q") or "").strip()
+    if not q:
+        return {"rows": [], "total": 0, "query": ""}
+
+    limit = min(int(params.get("limit", 50)), 200)
+    offset = int(params.get("offset", 0))
+
+    tokens = q.split()
+    fts_expr = " AND ".join(f'"{t}"*' for t in tokens)
+    like_pat = f"%{q}%"
+
+    # Try FTS first, fall back to LIKE-only if FTS syntax is invalid
+    sources_sql, sources_bindings = _search_sources_fts(fts_expr, like_pat)
+    sql = _SEARCH_RESULT_SQL.format(sources=sources_sql)
+    try:
+        rows = db.execute(sql, sources_bindings + [limit, offset]).fetchall()
+    except Exception:
+        sources_sql, sources_bindings = _search_sources_like(like_pat)
+        sql = _SEARCH_RESULT_SQL.format(sources=sources_sql)
+        rows = db.execute(sql, sources_bindings + [limit, offset]).fetchall()
+
+    # Count total (without limit) — reuse FTS sources, fall back on error
+    sources_sql, sources_bindings = _search_sources_fts(fts_expr, like_pat)
+    count_sql = f"SELECT count(DISTINCT zid) FROM ({sources_sql})"
+    try:
+        total = db.execute(count_sql, sources_bindings).fetchone()[0]
+    except Exception:
+        total = len(rows)
+
+    return {
+        "rows": [dict(r) for r in rows],
+        "total": total,
+        "query": q,
+    }
+
+
 API_ROUTES = {
     "/api/filters": api_filters,
     "/api/summary": api_summary,
@@ -1030,6 +1196,7 @@ API_ROUTES = {
     "/api/contracts": api_contracts,
     "/api/browse": api_browse,
     "/api/browse_filters": api_browse_filters,
+    "/api/search": api_search,
 }
 
 
@@ -1050,11 +1217,6 @@ async def send_response(send, status, content_type, body):
 
 
 async def handle_dashboard(scope, receive, send):
-    body = DASHBOARD_HTML_PATH.read_bytes()
-    await send_response(send, 200, "text/html; charset=utf-8", body)
-
-
-async def handle_browse(scope, receive, send):
     body = DASHBOARD_HTML_PATH.read_bytes()
     await send_response(send, 200, "text/html; charset=utf-8", body)
 
@@ -1112,9 +1274,9 @@ class CRZApp:
             await handle_dashboard(scope, receive, send)
             return
 
-        # Browse page
-        if path == "/browse":
-            await handle_browse(scope, receive, send)
+        # Browse / Search page (same SPA)
+        if path == "/browse" or path == "/search":
+            await handle_dashboard(scope, receive, send)
             return
 
         # Detail page — /browse/{id}

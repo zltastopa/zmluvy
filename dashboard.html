@@ -138,6 +138,8 @@
   /* --- Browse styles --- */
   #view-browse { display: none; }
   #view-browse.active { display: block; }
+  #view-search { display: none; }
+  #view-search.active { display: block; }
 
   .table-info {
     padding: 10px 16px; background: var(--surface); border-bottom: 1px solid var(--border);
@@ -184,6 +186,56 @@
   #view-overview th { background: transparent; border-bottom: 1px solid var(--border); cursor: default; }
   #view-overview th:hover { color: var(--muted); }
   #view-overview td { max-width: 250px; }
+
+  /* Search section */
+  .search-container { max-width: 900px; margin: 0 auto; padding: 24px 20px; }
+  .search-box {
+    display: flex; gap: 10px; margin-bottom: 20px;
+  }
+  .search-box input {
+    flex: 1; padding: 12px 16px; font-size: 15px;
+    background: var(--surface); border: 1px solid var(--border); border-radius: 6px;
+    color: var(--text); outline: none;
+  }
+  .search-box input:focus { border-color: var(--accent); }
+  .search-box button {
+    padding: 12px 24px; font-size: 14px; font-weight: 600;
+    background: var(--accent); color: #fff; border: none; border-radius: 6px; cursor: pointer;
+  }
+  .search-box button:hover { opacity: 0.9; }
+  .search-meta { color: var(--muted); font-size: 12px; margin-bottom: 16px; }
+  .search-results { display: flex; flex-direction: column; gap: 12px; }
+  .search-card {
+    background: var(--surface); border: 1px solid var(--border); border-radius: 8px;
+    padding: 16px; transition: border-color 0.15s;
+  }
+  .search-card:hover { border-color: var(--accent); }
+  .search-card-header { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; margin-bottom: 8px; }
+  .search-card-title { font-size: 14px; font-weight: 600; color: var(--text); }
+  .search-card-title a { color: var(--text); }
+  .search-card-title a:hover { color: var(--accent); }
+  .search-card-subtitle { font-size: 12px; color: var(--muted); margin-top: 2px; }
+  .search-card-badges { display: flex; gap: 6px; flex-shrink: 0; flex-wrap: wrap; }
+  .search-card-body { display: flex; flex-wrap: wrap; gap: 16px; font-size: 12px; color: var(--muted); }
+  .search-card-body .field { display: flex; gap: 4px; }
+  .search-card-body .field-label { color: var(--muted); }
+  .search-card-body .field-value { color: var(--text); }
+  .search-card-flags { margin-top: 8px; display: flex; gap: 6px; flex-wrap: wrap; }
+  .search-card-match { font-size: 10px; color: var(--muted); margin-top: 6px; }
+  .search-more { text-align: center; margin-top: 16px; }
+  .search-more button {
+    padding: 8px 24px; background: var(--surface2); color: var(--text);
+    border: 1px solid var(--border); border-radius: 6px; cursor: pointer; font-size: 13px;
+  }
+  .search-more button:hover { border-color: var(--accent); }
+  .search-hint { color: var(--muted); font-size: 13px; text-align: center; margin-top: 40px; }
+  .search-hint p { margin-bottom: 8px; }
+  .search-examples { display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; margin-top: 12px; }
+  .search-examples button {
+    padding: 4px 12px; background: var(--surface2); border: 1px solid var(--border);
+    border-radius: 4px; color: var(--accent); cursor: pointer; font-size: 12px;
+  }
+  .search-examples button:hover { background: var(--surface); border-color: var(--accent); }
 </style>
 </head>
 <body>
@@ -197,6 +249,9 @@
     </div>
     <div class="tab" id="tab-browse" onclick="switchTab('browse')">
       <span class="tab-icon">&#9634;</span> Browse
+    </div>
+    <div class="tab" id="tab-search" onclick="switchTab('search')">
+      <span class="tab-icon">&#128269;</span> Hladat
     </div>
   </div>
   <div class="spacer"></div>
@@ -396,6 +451,19 @@
       </div>
     </div>
 
+    <div class="filter-section">
+      <h3>Dlzniky</h3>
+      <div class="filter-row">
+        <label>Dodavatel dlznik</label>
+        <select data-filter="debtor">
+          <option value="">--</option>
+          <option value="vszp">VSZP (podla ICO)</option>
+          <option value="socpoist">Soc. poistovna (podla nazvu)</option>
+          <option value="any">Ktokolvek</option>
+        </select>
+      </div>
+    </div>
+
     <div class="filter-actions">
       <button class="btn btn-primary" onclick="browseApplyFilters()">Hladat</button>
       <button class="btn btn-secondary" onclick="browseResetFilters()">Reset</button>
@@ -493,6 +561,32 @@
       </div>
     </div>
 
+    <!-- ===== SEARCH ===== -->
+    <div id="view-search">
+      <div class="search-container">
+        <div class="search-box">
+          <input type="text" id="searchInput" placeholder="Hladat zmluvy, dodavatelov, ICO, prilohy..." autofocus>
+          <button onclick="searchRun()">Hladat</button>
+        </div>
+        <div id="searchMeta" class="search-meta"></div>
+        <div id="searchResults" class="search-results"></div>
+        <div id="searchMore" class="search-more" style="display:none">
+          <button onclick="searchLoadMore()">Nacitat dalsie</button>
+        </div>
+        <div id="searchHint" class="search-hint">
+          <p>Hladajte cokolvek — nazvy zmluv, dodavatelov, ICO, adresy, poznamky, prilohy, skryte entity...</p>
+          <div class="search-examples">
+            <button onclick="searchExample(this)">Telekom</button>
+            <button onclick="searchExample(this)">36231151</button>
+            <button onclick="searchExample(this)">dodatok</button>
+            <button onclick="searchExample(this)">bezodplatne</button>
+            <button onclick="searchExample(this)">ministerstvo zdravotnictva</button>
+            <button onclick="searchExample(this)">IT sluzby</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
   </div>
 </div>
 
@@ -509,14 +603,18 @@ function switchTab(tab) {
 
   document.getElementById('view-overview').classList.toggle('active', tab === 'overview');
   document.getElementById('view-browse').classList.toggle('active', tab === 'browse');
+  document.getElementById('view-search').classList.toggle('active', tab === 'search');
   document.getElementById('filtersPanel').classList.toggle('visible', tab === 'browse');
 
   // Update URL without reload
-  var newPath = tab === 'browse' ? '/browse' : '/';
+  var pathMap = { overview: '/', browse: '/browse', search: '/search' };
+  var newPath = pathMap[tab] || '/';
   if (tab === 'browse') {
-    // Preserve browse filter params
     var qs = window.location.search;
     history.replaceState(null, '', newPath + qs);
+  } else if (tab === 'search') {
+    var sq = searchQuery ? '?q=' + encodeURIComponent(searchQuery) : '';
+    history.replaceState(null, '', newPath + sq);
   } else {
     history.replaceState(null, '', newPath);
   }
@@ -524,6 +622,18 @@ function switchTab(tab) {
   // Lazy-load data
   if (tab === 'overview' && !overviewLoaded) { loadOverview(); }
   if (tab === 'browse' && !browseLoaded) { initBrowse(); }
+  if (tab === 'search') {
+    setTimeout(function() { document.getElementById('searchInput').focus(); }, 50);
+    // If URL has ?q= param, run the search
+    if (!searchLoaded) {
+      searchLoaded = true;
+      var urlQ = new URLSearchParams(window.location.search).get('q');
+      if (urlQ) {
+        document.getElementById('searchInput').value = urlQ;
+        searchRun();
+      }
+    }
+  }
 }
 
 async function api(path, params) {
@@ -871,6 +981,8 @@ const COLUMNS = [
   { key: 'uvo_url', label: 'UVO', on: false },
   { key: 'crz_url', label: 'CRZ link', on: false },
   { key: 'dodavatel_tax_status', label: 'Dan. spolahlivost', on: true },
+  { key: 'vszp_debt', label: 'Dlh VSZP', type: 'num', on: true },
+  { key: 'socpoist_debt', label: 'Dlh Soc.poist.', type: 'num', on: true },
   { key: 'signatories', label: 'Podpisujuci', on: true },
   { key: 'service_category', label: 'Kategoria', ext: true, on: true },
   { key: 'penalty_asymmetry', label: 'Pokuty asym.', ext: true, on: true },
@@ -1006,6 +1118,11 @@ function browseRenderCell(col, row) {
     var a = document.createElement('a');
     a.href = v; a.target = '_blank'; a.rel = 'noopener'; a.textContent = 'UVO';
     td.appendChild(a);
+  } else if (col.key === 'vszp_debt' || col.key === 'socpoist_debt') {
+    if (v) {
+      td.textContent = formatNum(v) + ' EUR';
+      td.style.color = '#e15b5b';
+    }
   } else if (col.key === 'suma' || col.key === 'suma_celkom') {
     td.textContent = v != null ? formatNum(v) + ' EUR' : '';
   } else if (col.key === 'typ') {
@@ -1147,12 +1264,223 @@ function initBrowse() {
 }
 
 // ============================================================
+// SEARCH
+// ============================================================
+var searchLoaded = false;
+var searchQuery = '';
+var searchOffset = 0;
+var searchTotal = 0;
+var SEARCH_PAGE = 50;
+
+document.getElementById('searchInput').addEventListener('keydown', function(e) {
+  if (e.key === 'Enter') { e.preventDefault(); searchRun(); }
+});
+
+function searchExample(btn) {
+  document.getElementById('searchInput').value = btn.textContent;
+  searchRun();
+}
+
+function searchRun() {
+  searchQuery = document.getElementById('searchInput').value.trim();
+  if (!searchQuery) return;
+  searchOffset = 0;
+  searchTotal = 0;
+  clearChildren(document.getElementById('searchResults'));
+  document.getElementById('searchMeta').textContent = 'Hladam...';
+  document.getElementById('searchHint').style.display = 'none';
+  document.getElementById('searchMore').style.display = 'none';
+  history.replaceState(null, '', '/search?q=' + encodeURIComponent(searchQuery));
+  searchFetch();
+}
+
+function searchLoadMore() {
+  searchOffset += SEARCH_PAGE;
+  searchFetch();
+}
+
+function searchFetch() {
+  fetch('/api/search?q=' + encodeURIComponent(searchQuery) + '&limit=' + SEARCH_PAGE + '&offset=' + searchOffset)
+    .then(function(r) { return r.json(); })
+    .then(function(json) {
+      searchTotal = json.total;
+      var meta = document.getElementById('searchMeta');
+      var loaded = searchOffset + json.rows.length;
+      meta.textContent = searchTotal.toLocaleString('sk-SK') + ' vysledkov' +
+        (searchTotal > loaded ? ' (zobrazenych ' + loaded + ')' : '');
+
+      var container = document.getElementById('searchResults');
+      json.rows.forEach(function(row) {
+        container.appendChild(searchRenderCard(row));
+      });
+
+      var moreBtn = document.getElementById('searchMore');
+      moreBtn.style.display = loaded < searchTotal ? 'block' : 'none';
+
+      if (!json.rows.length && searchOffset === 0) {
+        meta.textContent = 'Ziadne vysledky pre "' + searchQuery + '"';
+      }
+    });
+}
+
+// Safe DOM-based text highlighting (no innerHTML)
+function searchHighlightInto(parent, text, query) {
+  if (!text || !query) {
+    parent.textContent = text || '';
+    return;
+  }
+  var tokens = query.toLowerCase().split(/\s+/).filter(function(t) { return t.length > 0; });
+  var lowerText = text.toLowerCase();
+  var i = 0;
+  while (i < text.length) {
+    var matched = false;
+    for (var t = 0; t < tokens.length; t++) {
+      if (lowerText.substr(i, tokens[t].length) === tokens[t]) {
+        var mark = document.createElement('mark');
+        mark.textContent = text.substr(i, tokens[t].length);
+        parent.appendChild(mark);
+        i += tokens[t].length;
+        matched = true;
+        break;
+      }
+    }
+    if (!matched) {
+      // Batch plain text chars
+      var start = i;
+      while (i < text.length) {
+        var found = false;
+        for (var t2 = 0; t2 < tokens.length; t2++) {
+          if (lowerText.substr(i, tokens[t2].length) === tokens[t2]) { found = true; break; }
+        }
+        if (found) break;
+        i++;
+      }
+      parent.appendChild(document.createTextNode(text.substring(start, i)));
+    }
+  }
+}
+
+function searchRenderCard(row) {
+  var card = document.createElement('div');
+  card.className = 'search-card';
+  card.style.cursor = 'pointer';
+  card.addEventListener('click', function(e) {
+    // Don't navigate if clicking an actual link
+    if (e.target.closest('a')) return;
+    window.location.href = '/browse/' + row.id;
+  });
+
+  // Header
+  var header = document.createElement('div');
+  header.className = 'search-card-header';
+
+  var titleArea = document.createElement('div');
+  var title = document.createElement('div');
+  title.className = 'search-card-title';
+  var titleLink = document.createElement('a');
+  titleLink.href = '/browse/' + row.id;
+  var displayName = row.actual_subject || row.nazov_zmluvy || 'Bez nazvu';
+  searchHighlightInto(titleLink, displayName, searchQuery);
+  title.appendChild(titleLink);
+  titleArea.appendChild(title);
+
+  // Subtitle — original name if different
+  if (row.actual_subject && row.nazov_zmluvy && row.actual_subject !== row.nazov_zmluvy) {
+    var sub = document.createElement('div');
+    sub.className = 'search-card-subtitle';
+    searchHighlightInto(sub, row.nazov_zmluvy, searchQuery);
+    titleArea.appendChild(sub);
+  }
+
+  header.appendChild(titleArea);
+
+  // Badges
+  var badges = document.createElement('div');
+  badges.className = 'search-card-badges';
+
+  if (row.typ) {
+    var typTag = document.createElement('span');
+    typTag.className = 'tag ' + (row.typ === 'dodatok' ? 'tag-dodatok' : 'tag-zmluva');
+    typTag.textContent = row.typ;
+    badges.appendChild(typTag);
+  }
+  if (row.stav) {
+    var stavTag = document.createElement('span');
+    stavTag.className = 'tag ' + (row.stav === 'zru\u0161en\u00e1' ? 'tag-cancelled' : 'tag-active');
+    stavTag.textContent = row.stav;
+    badges.appendChild(stavTag);
+  }
+  if (row.flag_count > 0) {
+    var flagTag = document.createElement('span');
+    flagTag.className = 'tag tag-cancelled';
+    flagTag.textContent = row.flag_count + ' flag' + (row.flag_count > 1 ? 's' : '');
+    badges.appendChild(flagTag);
+  }
+  if (row.dodavatel_tax_status === 'menej spo\u013eahliv\u00fd') {
+    var taxTag = document.createElement('span');
+    taxTag.className = 'tag tag-cancelled';
+    taxTag.textContent = 'menej spo\u013eahliv\u00fd';
+    badges.appendChild(taxTag);
+  }
+
+  header.appendChild(badges);
+  card.appendChild(header);
+
+  // Body — key fields
+  var body = document.createElement('div');
+  body.className = 'search-card-body';
+
+  var fields = [
+    ['ID', String(row.id)],
+    ['Dodavatel', row.dodavatel],
+    ['ICO', row.dodavatel_ico],
+    ['Objednavatel', row.objednavatel],
+    ['Suma', row.suma != null ? fmtNum(Math.round(row.suma)) + ' EUR' : null],
+    ['Datum', row.datum_zverejnenia ? row.datum_zverejnenia.slice(0, 10) : null],
+    ['Rezort', row.rezort],
+    ['Kategoria', row.service_category],
+  ];
+  fields.forEach(function(f) {
+    if (!f[1]) return;
+    var field = document.createElement('span');
+    field.className = 'field';
+    var label = document.createElement('span');
+    label.className = 'field-label';
+    label.textContent = f[0] + ':';
+    var value = document.createElement('span');
+    value.className = 'field-value';
+    searchHighlightInto(value, f[1], searchQuery);
+    field.appendChild(label);
+    field.appendChild(value);
+    body.appendChild(field);
+  });
+  card.appendChild(body);
+
+  // Match sources
+  if (row.match_sources) {
+    var srcMap = {
+      text: 'Text zmluvy', subject: 'LLM predmet', ico: 'ICO',
+      extraction: 'LLM extrakcia', attachment: 'Priloha'
+    };
+    var sources = row.match_sources.split(',').map(function(s) { return srcMap[s.trim()] || s.trim(); });
+    var matchDiv = document.createElement('div');
+    matchDiv.className = 'search-card-match';
+    matchDiv.textContent = 'Najdene v: ' + sources.join(', ');
+    card.appendChild(matchDiv);
+  }
+
+  return card;
+}
+
+// ============================================================
 // Init — detect URL to pick initial tab
 // ============================================================
 (function() {
   var path = window.location.pathname;
   var hasParams = window.location.search.length > 1;
-  if (path === '/browse' || (path === '/' && hasParams)) {
+  if (path === '/search') {
+    switchTab('search');
+  } else if (path === '/browse' || (path === '/' && hasParams)) {
     switchTab('browse');
   } else {
     switchTab('overview');

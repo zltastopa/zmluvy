@@ -1,8 +1,9 @@
-"""Shared environment-backed configuration for repo scripts."""
+"""Shared environment-backed configuration and utilities for repo scripts."""
 
 from __future__ import annotations
 
 import os
+import re
 from pathlib import Path
 
 from dotenv import load_dotenv
@@ -25,3 +26,26 @@ def get_path(name: str, default: str) -> str:
     if not path.is_absolute():
         path = ROOT_DIR / path
     return str(path)
+
+
+_COMPANY_SUFFIX_RE = re.compile(
+    r'\s*,?\s*'
+    r'(s\.?\s*r\.?\s*o\.?|a\.?\s*s\.?|spol\.\s*s\s*r\.?\s*o\.?'
+    r'|v\.?\s*o\.?\s*s\.?|k\.?\s*s\.?|s\.?\s*e\.?'
+    r'|n\.?\s*o\.?|o\.?\s*z\.?|z\.?\s*s\.?)'
+    r'\s*\.?\s*$',
+    re.IGNORECASE,
+)
+
+
+def normalize_company_name(name: str) -> str:
+    """Normalize a Slovak company name for fuzzy matching.
+
+    Strips legal-form suffixes (s.r.o., a.s., etc.), punctuation, and extra
+    whitespace, then lowercases.
+    """
+    n = name.strip().lower()
+    n = _COMPANY_SUFFIX_RE.sub('', n)
+    n = re.sub(r'[,."\']+', '', n)
+    n = re.sub(r'\s+', ' ', n).strip()
+    return n

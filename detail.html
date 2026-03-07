@@ -175,6 +175,9 @@
     <a class="tab" href="/browse">
       <span class="tab-icon">&#9634;</span> Browse
     </a>
+    <a class="tab" href="/search">
+      <span class="tab-icon">&#128269;</span> Hladat
+    </a>
   </div>
   <div class="spacer"></div>
   <div class="links">
@@ -379,6 +382,16 @@ function renderDetail(result) {
     var taxCls = d.dodavatel_tax_status === 'vysoko spoľahlivý' ? 'tag-active' :
                  d.dodavatel_tax_status === 'spoľahlivý' ? 'tag-zmluva' : 'tag-cancelled';
     dodCard.appendChild(el('span', 'tag ' + taxCls + ' tax-tag', d.dodavatel_tax_status));
+  }
+  if (d.dodavatel_vszp_debt) {
+    var vszpTag = el('span', 'tag tag-cancelled tax-tag',
+      'Dlznik VSZP: ' + Number(d.dodavatel_vszp_debt.amount).toLocaleString('sk-SK', {maximumFractionDigits: 2}) + ' EUR');
+    dodCard.appendChild(vszpTag);
+  }
+  if (d.dodavatel_socpoist_debt) {
+    var spTag = el('span', 'tag tag-cancelled tax-tag',
+      'Dlznik Soc. poist.: ' + Number(d.dodavatel_socpoist_debt.amount).toLocaleString('sk-SK', {maximumFractionDigits: 2}) + ' EUR');
+    dodCard.appendChild(spTag);
   }
   partiesGrid.appendChild(dodCard);
 
@@ -642,6 +655,8 @@ function renderDetail(result) {
     var relBody = document.createElement('tbody');
     d.related_supplier_contracts.forEach(function(r) {
       var tr = document.createElement('tr');
+      tr.style.cursor = 'pointer';
+      tr.addEventListener('click', function() { window.location.href = '/browse/' + r.id; });
       var idTd = document.createElement('td');
       var idA = el('a', null, String(r.id));
       idA.href = '/browse/' + r.id;
