@@ -7,4 +7,5 @@ dependencies = [
     "datasette>=0.65.2",
     "python-dotenv>=1.1.1",
     "sqlite-utils>=3.39",
+    "tqdm>=4.67.3",
 ]

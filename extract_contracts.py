@@ -15,8 +15,11 @@ import sys
 import csv
 import time
 import argparse
+import threading
+from concurrent.futures import ThreadPoolExecutor, as_completed
 import sqlite_utils
 import httpx
+from tqdm import tqdm
 
 from settings import get_env, get_path
 
@@ -276,6 +279,7 @@ def main():
         default=get_path("CRZ_EXTRACTIONS_DIR", "data/extractions"),
         help="Directory for JSON outputs",
     )
+    parser.add_argument("--workers", type=int, default=8, help="Parallel workers (default: 8)")
     args = parser.parse_args()
 
     api_key = load_api_key()
@@ -318,80 +322,87 @@ def main():
     total_tokens = 0
     ok, fail = 0, 0
 
+    def process_one(fname, client):
+        """Call LLM and save JSON. Returns (fname, extraction, usage) or (fname, error_msg, None)."""
+        txt_path = os.path.join(texts_dir, fname)
+        if not os.path.exists(txt_path):
+            return (fname, "file not found", None)
+
+        text = open(txt_path).read()
+        if len(text.strip()) < 50:
+            return (fname, "too short", None)
+
+        try:
+            extraction, usage = extract_one(client, api_key, text, model=args.model)
+
+            # Add metadata
+            meta = manifest.get(fname, {})
+            extraction["_source_file"] = fname
+            extraction["_zmluva_id"] = meta.get("zmluva_id", fname.replace(".txt", ""))
+            extraction["_model"] = args.model
+
+            # Save JSON (file I/O is safe across threads)
+            out_path = os.path.join(output_dir, fname.replace(".txt", ".json"))
+            with open(out_path, "w") as f:
+                json.dump(extraction, f, ensure_ascii=False, indent=2)
+
+            return (fname, extraction, usage)
+
+        except json.JSONDecodeError as e:
+            return (fname, f"bad JSON: {e}", None)
+        except httpx.HTTPStatusError as e:
+            if e.response.status_code == 429:
+                time.sleep(10)
+            return (fname, f"HTTP {e.response.status_code}", None)
+        except Exception as e:
+            return (fname, str(e), None)
+
+    pbar = tqdm(total=len(to_process), desc="Extracting", unit="contract")
+
     with httpx.Client(timeout=60) as client:
-        for i, fname in enumerate(to_process):
-            txt_path = os.path.join(texts_dir, fname)
-            if not os.path.exists(txt_path):
-                print(f"  [{i+1}/{len(to_process)}] SKIP {fname} (file not found)")
-                continue
+        with ThreadPoolExecutor(max_workers=args.workers) as pool:
+            futures = {pool.submit(process_one, fname, client): fname for fname in to_process}
+            for future in as_completed(futures):
+                fname, result, usage = future.result()
+                pbar.update(1)
 
-            text = open(txt_path).read()
-            if len(text.strip()) < 50:
-                print(f"  [{i+1}/{len(to_process)}] SKIP {fname} (too short, likely OCR failure)")
-                continue
+                if usage is None:
+                    # Error or skip
+                    pbar.write(f"  FAIL {fname}: {result}")
+                    fail += 1
+                else:
+                    extraction = result
+                    tokens = usage.get("total_tokens", 0)
+                    total_tokens += tokens
 
-            try:
-                extraction, usage = extract_one(client, api_key, text, model=args.model)
-                tokens = usage.get("total_tokens", 0)
-                total_tokens += tokens
+                    # DB upsert in main thread
+                    zmluva_id = extraction["_zmluva_id"]
+                    db_row = {
+                        "zmluva_id": int(zmluva_id) if str(zmluva_id).isdigit() else zmluva_id,
+                        "service_category": extraction.get("service_category"),
+                        "actual_subject": extraction.get("actual_subject"),
+                        "penalty_asymmetry": extraction.get("penalty_asymmetry"),
+                        "auto_renewal": extraction.get("auto_renewal", False),
+                        "bezodplatne": extraction.get("bezodplatne", False),
+                        "funding_type": extraction.get("funding_source", {}).get("type"),
+                        "grant_amount": extraction.get("funding_source", {}).get("grant_amount"),
+                        "hidden_entity_count": len(extraction.get("hidden_entities", [])),
+                        "penalty_count": len(extraction.get("penalties", [])),
+                        "iban_count": len(extraction.get("bank_accounts", [])),
+                        "extraction_json": json.dumps(extraction, ensure_ascii=False),
+                        "model": args.model,
+                    }
+                    db["extractions"].insert(
+                        db_row,
+                        pk="zmluva_id",
+                        foreign_keys=[("zmluva_id", "zmluvy", "id")],
+                        replace=True,
+                    )
+                    ok += 1
 
-                # Add metadata
-                meta = manifest.get(fname, {})
-                extraction["_source_file"] = fname
-                extraction["_zmluva_id"] = meta.get("zmluva_id", fname.replace(".txt", ""))
-                extraction["_model"] = args.model
+                pbar.set_postfix(ok=ok, fail=fail)
 
-                # Save JSON
-                out_path = os.path.join(output_dir, fname.replace(".txt", ".json"))
-                with open(out_path, "w") as f:
-                    json.dump(extraction, f, ensure_ascii=False, indent=2)
-
-                # Upsert into DB
-                zmluva_id = extraction["_zmluva_id"]
-                db_row = {
-                    "zmluva_id": int(zmluva_id) if str(zmluva_id).isdigit() else zmluva_id,
-                    "service_category": extraction.get("service_category"),
-                    "actual_subject": extraction.get("actual_subject"),
-                    "penalty_asymmetry": extraction.get("penalty_asymmetry"),
-                    "auto_renewal": extraction.get("auto_renewal", False),
-                    "bezodplatne": extraction.get("bezodplatne", False),
-                    "funding_type": extraction.get("funding_source", {}).get("type"),
-                    "grant_amount": extraction.get("funding_source", {}).get("grant_amount"),
-                    "hidden_entity_count": len(extraction.get("hidden_entities", [])),
-                    "penalty_count": len(extraction.get("penalties", [])),
-                    "iban_count": len(extraction.get("bank_accounts", [])),
-                    "extraction_json": json.dumps(extraction, ensure_ascii=False),
-                    "model": args.model,
-                }
-                db["extractions"].insert(
-                    db_row,
-                    pk="zmluva_id",
-                    foreign_keys=[("zmluva_id", "zmluvy", "id")],
-                    replace=True,
-                )
-
-                cat = extraction.get("service_category", "?")
-                subj = (extraction.get("actual_subject") or "")[:60]
-                print(f"  [{i+1}/{len(to_process)}] {fname} -> {cat} | {subj} ({tokens} tok)")
-                ok += 1
-
-            except json.JSONDecodeError as e:
-                print(f"  [{i+1}/{len(to_process)}] FAIL {fname}: bad JSON: {e}")
-                fail += 1
-            except httpx.HTTPStatusError as e:
-                print(f"  [{i+1}/{len(to_process)}] FAIL {fname}: HTTP {e.response.status_code}")
-                fail += 1
-                if e.response.status_code == 429:
-                    print("    Rate limited, waiting 10s...")
-                    time.sleep(10)
-            except Exception as e:
-                print(f"  [{i+1}/{len(to_process)}] FAIL {fname}: {e}")
-                fail += 1
-
-            # Small delay to avoid rate limits
-            if (i + 1) % 20 == 0:
-                time.sleep(1)
-
+    pbar.close()
     print(f"\nDone: {ok} extracted, {fail} failed, {total_tokens} total tokens")
     print(f"Extractions in {output_dir}/ and crz.db:extractions table")
 
