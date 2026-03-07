@@ -30,8 +30,9 @@ Respond ONLY with valid JSON matching this schema — no markdown, no explanatio
   "service_category": one of the categories listed below,
   "actual_subject": short description of what the contract is actually about (1-2 sentences, in Slovak),
   "hidden_entities": [{"name": "...", "ico": "...", "role": one of the roles listed below}],
-  "penalties": [{"payer": "supplier" or "buyer", "trigger": "...", "amount": "..."}],
-  "penalty_asymmetry": one of "strong_buyer_advantage", "moderate_buyer_advantage", "balanced", "supplier_advantage", "none_found",
+  "penalties": [{"penalized_party": "supplier" or "buyer", "trigger": "...", "amount": "..."}],
+  "penalty_asymmetry": one of the asymmetry values listed below,
+  "penalty_asymmetry_reason": short explanation (1 sentence) of why you chose this asymmetry value, referencing which party faces more/harsher penalties,
   "termination": {"buyer_can_terminate_without_cause": bool, "supplier_can_terminate_without_cause": bool, "notice_period": "..." or null},
   "funding_source": {"type": one of "eu_recovery_plan", "eu_structural_funds", "erasmus", "de_minimis", "state_budget", "municipal_budget", "other_eu", "none" , "scheme_reference": "..." or null, "grant_amount": number or null},
   "bank_accounts": [{"party": "supplier" or "buyer", "iban": "SK..."}],
@@ -77,6 +78,15 @@ Hidden entity roles (pick the best match):
 - co_user — spoluužívateľ: additional authorized user of services/property beyond the main parties
 - insurance_broker — poisťovací maklér/sprostredkovateľ: broker or intermediary in insurance contracts (e.g. Finportal, Brokeria, Respect Slovakia)
 - authorized_representative — splnomocnený zástupca: legal representative acting on behalf of a party who is a SEPARATE ORGANIZATION (not an employee or signatory of the contracting parties)
+
+Penalty asymmetry — determined by WHO gets penalized, not who benefits:
+- strong_buyer_advantage — only the supplier (dodávateľ) faces penalties, or supplier penalties are much harsher (higher rates, more triggers). The buyer is protected.
+- moderate_buyer_advantage — both sides have some penalties, but supplier faces more or harsher ones
+- balanced — both sides face comparable penalties (similar rates, similar triggers)
+- supplier_advantage — only the buyer (objednávateľ) faces penalties, or buyer penalties are much harsher. The supplier is protected. This is rare in government contracts.
+- none_found — no explicit contractual penalties found
+
+Key: "penalized_party" in the penalties array means the party who MUST PAY the penalty (the one being punished). If only the supplier is penalized, that is buyer_advantage. If only the buyer is penalized, that is supplier_advantage.
 
 Rules:
 - hidden_entities: ONLY include organizations or persons that are NOT the two main contracting parties (dodávateľ/objednávateľ). Specifically:
