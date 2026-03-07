@@ -96,9 +96,10 @@ a tqdm progress bar. They skip already-processed files, so you can
 Ctrl+C and resume anytime.
 
 Extracted fields include: service category, actual subject, hidden
-entities, penalties, penalty asymmetry, signatories, duration,
-funding source, bank accounts, and more. Results go into
-`data/extractions/` as JSON and the `extractions` table in SQLite.
+entities (with subcontractor percentages), penalties, penalty asymmetry,
+signatories, duration, funding source, bank accounts, and more. Results
+go into `data/extractions/` as JSON and the `extractions` table in
+SQLite. Use `--force` to re-extract existing files.
 
 ## Tax reliability data
 
