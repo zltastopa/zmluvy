@@ -1,0 +1,104 @@
+"""Convert all downloaded PDF attachments to standardized text files.
+
+Uses pdftotext (poppler) for native text extraction. Stores output as
+one .txt file per PDF in data/texts/, with the same filename stem.
+Also writes a manifest CSV mapping filenames to contract metadata.
+"""
+import sqlite_utils
+import subprocess
+import os
+import csv
+import sys
+
+
+def extract_text(pdf_path):
+    """Extract text from PDF using pdftotext, return text or None on failure."""
+    try:
+        result = subprocess.run(
+            ["pdftotext", "-layout", pdf_path, "-"],
+            capture_output=True, text=True, timeout=30
+        )
+        if result.returncode == 0 and result.stdout.strip():
+            return result.stdout
+    except (subprocess.TimeoutExpired, Exception):
+        pass
+    return None
+
+
+def main():
+    pdf_dir = "data/pdfs"
+    text_dir = "data/texts"
+    os.makedirs(text_dir, exist_ok=True)
+
+    db = sqlite_utils.Database("crz.db")
+
+    # Get metadata for all downloaded PDFs
+    pdf_files = [f for f in os.listdir(pdf_dir) if f.endswith(".pdf")]
+    print(f"Found {len(pdf_files)} PDFs to convert")
+
+    manifest = []
+    ok, fail, empty = 0, 0, 0
+
+    for i, fname in enumerate(sorted(pdf_files)):
+        pdf_path = os.path.join(pdf_dir, fname)
+        txt_path = os.path.join(text_dir, fname.replace(".pdf", ".txt"))
+
+        # Skip if already converted
+        if os.path.exists(txt_path) and os.path.getsize(txt_path) > 0:
+            ok += 1
+            text = open(txt_path).read()
+        else:
+            text = extract_text(pdf_path)
+            if text:
+                with open(txt_path, "w") as f:
+                    f.write(text)
+                ok += 1
+            elif text == "":
+                empty += 1
+                continue
+            else:
+                fail += 1
+                continue
+
+        # Get contract metadata
+        row = db.execute('''
+            select z.id, z.nazov_zmluvy, z.dodavatel, z.objednavatel,
+                   z.suma, z.rezort, z.druh, z.typ, z.crz_url
+            from prilohy p join zmluvy z on p.zmluva_id = z.id
+            where p.subor = ? limit 1
+        ''', [fname]).fetchone()
+
+        if row:
+            manifest.append({
+                "file": fname,
+                "txt_file": fname.replace(".pdf", ".txt"),
+                "zmluva_id": row[0],
+                "nazov": row[1],
+                "dodavatel": row[2],
+                "objednavatel": row[3],
+                "suma": row[4],
+                "rezort": row[5],
+                "druh": row[6],
+                "typ": row[7],
+                "crz_url": row[8],
+                "text_len": len(text),
+            })
+
+        if (i + 1) % 10 == 0:
+            print(f"  [{i+1}/{len(pdf_files)}] processed...")
+
+    # Write manifest
+    manifest_path = os.path.join(text_dir, "manifest.csv")
+    if manifest:
+        with open(manifest_path, "w", newline="") as f:
+            writer = csv.DictWriter(f, fieldnames=manifest[0].keys())
+            writer.writeheader()
+            writer.writerows(manifest)
+
+    print(f"\nDone: {ok} converted, {fail} failed, {empty} empty")
+    print(f"Text files in {text_dir}/")
+    print(f"Manifest: {manifest_path}")
+
+
+if __name__ == "__main__":
+    main()

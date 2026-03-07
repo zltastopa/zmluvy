@@ -13,3 +13,4 @@ wheels/
 tmp/
 data/
 *.zip
+.openrouter_key
