@@ -809,7 +809,7 @@ async function loadTopContracts(params) {
     var tr = document.createElement('tr');
     tr.appendChild(createClickableCell(c.suma != null ? fmtNum(Math.round(c.suma)) + ' EUR' : '-',
       function() { openDetail({id: c.id}); }));
-    tr.appendChild(createClickableCell(c.nazov_zmluvy, function() { openDetail({id: c.id}); }));
+    tr.appendChild(createClickableCell(c.actual_subject || c.nazov_zmluvy, function() { openDetail({id: c.id}); }));
     tr.appendChild(createClickableCell(c.dodavatel, function() { openDetail({dodavatel_ico: c.dodavatel_ico || ''}); }));
     tr.appendChild(createClickableCell(c.objednavatel, function() { openDetail({objednavatel_ico: c.objednavatel_ico || ''}); }));
     tr.appendChild(createTextCell(c.datum_zverejnenia ? c.datum_zverejnenia.slice(0, 10) : '-', { style: { whiteSpace: 'nowrap' } }));
@@ -833,7 +833,8 @@ var browseLoaded = false;
 
 const COLUMNS = [
   { key: 'id', label: 'ID', type: 'num', on: true },
-  { key: 'nazov_zmluvy', label: 'Nazov zmluvy', on: false },
+  { key: 'actual_subject', label: 'Skutocny predmet', ext: true, on: true },
+  { key: 'nazov_zmluvy', label: 'Nazov zmluvy', on: true },
   { key: 'cislo_zmluvy', label: 'Cislo', on: false },
   { key: 'dodavatel', label: 'Dodavatel', on: true },
   { key: 'dodavatel_ico', label: 'Dod. ICO', on: true },
@@ -856,8 +857,8 @@ const COLUMNS = [
   { key: 'zdroj', label: 'Zdroj', on: false },
   { key: 'uvo_url', label: 'UVO', on: false },
   { key: 'crz_url', label: 'CRZ link', on: false },
+  { key: 'signatories', label: 'Podpisujuci', on: true },
   { key: 'service_category', label: 'Kategoria', ext: true, on: true },
-  { key: 'actual_subject', label: 'Skutocny predmet', ext: true, on: true },
   { key: 'penalty_asymmetry', label: 'Pokuty asym.', ext: true, on: true },
   { key: 'auto_renewal', label: 'Auto-renew', ext: true, on: false },
   { key: 'bezodplatne', label: 'Bezodplatne', ext: true, on: false },
@@ -872,7 +873,7 @@ const COLUMNS = [
 
 var visibleCols = new Set(COLUMNS.filter(function(c) { return c.on; }).map(function(c) { return c.key; }));
 var browseData = [];
-var browseSortCol = 'datum_zverejnenia';
+var browseSortCol = 'flag_count';
 var browseSortDir = 'desc';
 var browsePage = 0;
 var PAGE_SIZE = 100;
@@ -918,7 +919,7 @@ function browseSyncUrl() {
     if (v) params.set(el.dataset.filter, v);
   });
   Object.keys(extraParams).forEach(function(k) { params.set(k, extraParams[k]); });
-  if (browseSortCol !== 'datum_zverejnenia' || browseSortDir !== 'desc') {
+  if (browseSortCol !== 'flag_count' || browseSortDir !== 'desc') {
     params.set('sort', browseSortCol);
     params.set('sort_dir', browseSortDir);
   }
@@ -1097,7 +1098,7 @@ function browseResetFilters(silent) {
   extraParams = {};
   originalUrlParams = new URLSearchParams();
   browsePage = 0;
-  browseSortCol = 'datum_zverejnenia';
+  browseSortCol = 'flag_count';
   browseSortDir = 'desc';
   if (!silent) browseFetchData();
 }

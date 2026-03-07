@@ -154,8 +154,8 @@ def api_top_contracts(db, params):
         f"""SELECT z.id, z.nazov_zmluvy, z.dodavatel, z.dodavatel_ico,
             z.objednavatel, z.objednavatel_ico,
             z.suma, z.suma_celkom, z.datum_zverejnenia, z.rezort, z.rezort_id,
-            z.typ, z.crz_url
-        FROM zmluvy z {_join(params)} WHERE {where} AND z.suma IS NOT NULL
+            z.typ, z.crz_url, e.actual_subject
+        FROM zmluvy z {_join(params, extraction=True)} WHERE {where} AND z.suma IS NOT NULL
         ORDER BY z.suma DESC LIMIT 25""", bindings).fetchall()
     return [dict(r) for r in rows]
 
@@ -229,9 +229,10 @@ def api_detail(db, params):
 
         # Other contracts with same supplier
         related = db.execute(
-            """SELECT id, nazov_zmluvy, suma, datum_zverejnenia, typ
-            FROM zmluvy WHERE dodavatel_ico = ? AND dodavatel_ico != '' AND id != ?
-            ORDER BY datum_zverejnenia DESC LIMIT 10""",
+            """SELECT z.id, z.nazov_zmluvy, z.suma, z.datum_zverejnenia, z.typ, e.actual_subject
+            FROM zmluvy z LEFT JOIN extractions e ON e.zmluva_id = z.id
+            WHERE z.dodavatel_ico = ? AND z.dodavatel_ico != '' AND z.id != ?
+            ORDER BY z.datum_zverejnenia DESC LIMIT 10""",
             [contract["dodavatel_ico"], int(params["id"])]
         ).fetchall()
         contract["related_supplier_contracts"] = [dict(r) for r in related]
@@ -926,6 +927,7 @@ def api_browse(db, params):
             e.service_category, e.actual_subject, e.penalty_asymmetry,
             e.auto_renewal, e.bezodplatne, e.funding_type, e.grant_amount,
             e.hidden_entity_count, e.penalty_count, e.iban_count,
+            e.extraction_json,
             COALESCE(rf.flag_count, 0) as flag_count,
             rf.flag_labels
         FROM zmluvy z {join}
@@ -936,9 +938,19 @@ def api_browse(db, params):
     ).fetchall()
 
     result_rows = [dict(r) for r in rows]
-    # Remove extraction_json from output (too large for browse)
+    # Extract signatories as flat string, then remove extraction_json (too large)
+    import json as _json
     for r in result_rows:
-        r.pop('extraction_json', None)
+        ej_raw = r.pop('extraction_json', None)
+        sigs = ''
+        if ej_raw:
+            try:
+                ej_data = _json.loads(ej_raw)
+                names = [s['name'] for s in (ej_data.get('signatories') or []) if s.get('name')]
+                sigs = ', '.join(names)
+            except Exception:
+                pass
+        r['signatories'] = sigs
 
     # CSV export
     if params.get('format') == 'csv':

@@ -58,7 +58,11 @@
   .tag-dodatok { background: rgba(230,164,78,0.15); color: var(--accent2); }
   .tag-active { background: rgba(78,203,113,0.15); color: var(--success); }
   .tag-cancelled { background: rgba(225,91,91,0.15); color: var(--danger); }
-  .contract-header h2 { font-size: 22px; font-weight: 600; line-height: 1.3; margin-bottom: 12px; }
+  .contract-header h2 { font-size: 22px; font-weight: 600; line-height: 1.3; margin-bottom: 4px; }
+  .contract-subtitle {
+    font-size: 16px; font-weight: 700; margin-bottom: 16px; margin-top: 8px;
+    padding-bottom: 8px; border-bottom: 1px solid var(--border); color: var(--muted);
+  }
 
   /* Cards */
   .grid { display: grid; gap: 20px; margin-bottom: 28px; }
@@ -127,7 +131,9 @@
     background: var(--surface2); border-radius: 6px; padding: 10px 14px; margin-bottom: 8px;
   }
   .item-card:last-child { margin-bottom: 0; }
-  .item-card .item-name { font-weight: 600; font-size: 13px; }
+  .item-card .item-name { font-weight: 600; font-size: 13px; display: block; }
+  a.item-name { color: var(--accent); }
+  a.item-name:hover { text-decoration: underline; }
   .item-card .item-meta { font-size: 11px; color: var(--muted); margin-top: 2px; }
   .item-card .item-detail { font-size: 12px; margin-top: 4px; }
 
@@ -281,7 +287,8 @@ function renderDetail(result) {
   }
 
   // Title
-  document.title = 'CRZ #' + d.id + ' - ' + (d.nazov_zmluvy || '');
+  var displayName = (extraction && extraction.actual_subject) || d.nazov_zmluvy || '';
+  document.title = 'CRZ #' + d.id + ' - ' + displayName;
 
   // Header
   var header = el('div', 'contract-header');
@@ -295,7 +302,11 @@ function renderDetail(result) {
     idLine.appendChild(el('span', 'tag', d.druh));
   }
   header.appendChild(idLine);
-  header.appendChild(el('h2', null, d.nazov_zmluvy || 'Bez nazvu'));
+  header.appendChild(el('h2', null, displayName || 'Bez nazvu'));
+  if (extraction && extraction.actual_subject && d.nazov_zmluvy && extraction.actual_subject !== d.nazov_zmluvy) {
+    var sub = el('div', 'contract-subtitle', d.nazov_zmluvy);
+    header.appendChild(sub);
+  }
   container.appendChild(header);
 
   // Stat blocks
@@ -378,6 +389,70 @@ function renderDetail(result) {
   partiesGrid.appendChild(objCard);
   container.appendChild(partiesGrid);
 
+  // Hidden entities (right after parties)
+  if (ej && ej.hidden_entities && ej.hidden_entities.length > 0) {
+    container.appendChild(el('div', 'section-title', 'Skryte entity (' + ej.hidden_entities.length + ')'));
+    var heCard = card(null, 'card-warn');
+    ej.hidden_entities.forEach(function(he) {
+      var ic = el('div', 'item-card');
+      var nameEl;
+      if (he.ico) {
+        nameEl = el('a', 'item-name', he.name || '-');
+        nameEl.href = '/browse?dodavatel_ico=' + encodeURIComponent(he.ico);
+      } else if (he.name) {
+        nameEl = el('a', 'item-name', he.name);
+        nameEl.href = '/browse?dodavatel=' + encodeURIComponent(he.name);
+      } else {
+        nameEl = el('div', 'item-name', '-');
+      }
+      ic.appendChild(nameEl);
+      var metaParts = [];
+      if (he.ico) metaParts.push('ICO: ' + he.ico);
+      if (he.role) metaParts.push('Rola: ' + he.role);
+      if (metaParts.length) ic.appendChild(el('div', 'item-meta', metaParts.join('  |  ')));
+      heCard.appendChild(ic);
+    });
+    container.appendChild(heCard);
+  }
+
+  // Signatories (right after hidden entities)
+  if (ej && ej.signatories && ej.signatories.length > 0) {
+    container.appendChild(el('div', 'section-title', 'Podpisujuci (' + ej.signatories.length + ')'));
+    var sigGrid = el('div', 'grid grid-2');
+    var buyerSigs = ej.signatories.filter(function(s) { return s.party === 'buyer'; });
+    var supplierSigs = ej.signatories.filter(function(s) { return s.party !== 'buyer'; });
+
+    if (supplierSigs.length > 0) {
+      var sCard = card('Dodavatel', 'card-accent');
+      supplierSigs.forEach(function(s) {
+        var ic = el('div', 'item-card');
+        ic.appendChild(el('div', 'item-name', s.name || '-'));
+        var meta = [];
+        if (s.role) meta.push(s.role);
+        if (s.delegation) meta.push(s.delegation);
+        if (meta.length) ic.appendChild(el('div', 'item-meta', meta.join('  |  ')));
+        sCard.appendChild(ic);
+      });
+      sigGrid.appendChild(sCard);
+    }
+
+    if (buyerSigs.length > 0) {
+      var bCard = card('Objednavatel', 'card-info');
+      buyerSigs.forEach(function(s) {
+        var ic = el('div', 'item-card');
+        ic.appendChild(el('div', 'item-name', s.name || '-'));
+        var meta = [];
+        if (s.role) meta.push(s.role);
+        if (s.delegation) meta.push(s.delegation);
+        if (meta.length) ic.appendChild(el('div', 'item-meta', meta.join('  |  ')));
+        bCard.appendChild(ic);
+      });
+      sigGrid.appendChild(bCard);
+    }
+
+    container.appendChild(sigGrid);
+  }
+
   // Extraction section
   if (extraction) {
     container.appendChild(el('div', 'section-title', 'LLM Extrakcia'));
@@ -423,22 +498,6 @@ function renderDetail(result) {
       termCard.appendChild(kv('Dodavatel moze ukoncit bez dovodu', t.supplier_can_terminate_without_cause ? 'Ano' : 'Nie'));
       termCard.appendChild(kv('Vypovedna lehota', t.notice_period || '-'));
       container.appendChild(termCard);
-    }
-
-    // Hidden entities
-    if (ej && ej.hidden_entities && ej.hidden_entities.length > 0) {
-      container.appendChild(el('div', 'section-title', 'Skryte entity (' + ej.hidden_entities.length + ')'));
-      var heCard = card(null, 'card-warn');
-      ej.hidden_entities.forEach(function(he) {
-        var ic = el('div', 'item-card');
-        ic.appendChild(el('div', 'item-name', he.name || '-'));
-        var metaParts = [];
-        if (he.ico) metaParts.push('ICO: ' + he.ico);
-        if (he.role) metaParts.push('Rola: ' + he.role);
-        if (metaParts.length) ic.appendChild(el('div', 'item-meta', metaParts.join('  |  ')));
-        heCard.appendChild(ic);
-      });
-      container.appendChild(heCard);
     }
 
     // Bank accounts
@@ -561,7 +620,7 @@ function renderDetail(result) {
       idA.href = '/browse/' + r.id;
       idTd.appendChild(idA);
       tr.appendChild(idTd);
-      tr.appendChild(el('td', null, r.nazov_zmluvy || '-'));
+      tr.appendChild(el('td', null, r.actual_subject || r.nazov_zmluvy || '-'));
       tr.appendChild(el('td', 'num', formatEur(r.suma)));
       tr.appendChild(el('td', null, formatDate(r.datum_zverejnenia)));
       var typTd = document.createElement('td');
