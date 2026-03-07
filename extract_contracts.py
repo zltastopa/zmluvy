@@ -363,7 +363,12 @@ def main():
                     "extraction_json": json.dumps(extraction, ensure_ascii=False),
                     "model": args.model,
                 }
-                db["extractions"].insert(db_row, pk="zmluva_id", replace=True)
+                db["extractions"].insert(
+                    db_row,
+                    pk="zmluva_id",
+                    foreign_keys=[("zmluva_id", "zmluvy", "id")],
+                    replace=True,
+                )
 
                 cat = extraction.get("service_category", "?")
                 subj = (extraction.get("actual_subject") or "")[:60]
