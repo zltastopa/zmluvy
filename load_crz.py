@@ -4,6 +4,8 @@ import sqlite_utils
 import sys
 import os
 
+from settings import get_path
+
 REZORT_MAP = {
     "0": "",
     "118974": "agrokomplex NÁRODNÉ VÝSTAVISKO, štátny podnik",
@@ -189,7 +191,7 @@ def main():
         print("Usage: python load_crz.py <xml_file> [xml_file2 ...]")
         sys.exit(1)
 
-    db_path = "crz.db"
+    db_path = get_path("CRZ_DB_PATH", "crz.db")
     fresh = not os.path.exists(db_path)
     db = sqlite_utils.Database(db_path)
 

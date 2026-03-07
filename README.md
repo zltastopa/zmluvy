@@ -35,6 +35,9 @@ For example: a legal services contract where the title just says "Zmluva o dielo
 ## Build locally
 
 ```bash
+# Configure local defaults
+cp .env.example .env
+
 # Download CRZ daily exports
 curl -o data.zip https://www.crz.gov.sk/export/2026-03-05.zip
 unzip data.zip
@@ -45,6 +48,19 @@ uv run python load_crz.py 2026-03-05.xml
 # Browse
 uv run datasette crz.db
 ```
+
+Environment is loaded automatically from `.env` by all Python
+entrypoints. The main variables are:
+
+- `CRZ_DB_PATH` for the SQLite database path
+- `CRZ_PDF_DIR`, `CRZ_TEXT_DIR`, `CRZ_EXTRACTIONS_DIR` for pipeline
+  directories
+- `OPENROUTER_API_KEY`, `OPENROUTER_MODEL`,
+  `OPENROUTER_BASE_URL` for extraction
+- `CRZ_DOWNLOAD_MONTH`, `CRZ_DOWNLOAD_LIMIT` for downloader defaults
+- `PDFTOTEXT_BIN` if `pdftotext` is not on your default `PATH`
+
+CLI flags still override `.env` values on a per-run basis.
 
 ## Update with more data
 

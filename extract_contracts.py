@@ -18,9 +18,11 @@ import argparse
 import sqlite_utils
 import httpx
 
+from settings import get_env, get_path
 
-OPENROUTER_BASE = "https://openrouter.ai/api/v1"
-MODEL = "google/gemini-2.5-flash-lite"
+
+OPENROUTER_BASE = get_env("OPENROUTER_BASE_URL", "https://openrouter.ai/api/v1")
+MODEL = get_env("OPENROUTER_MODEL", "google/gemini-2.5-flash-lite")
 
 SYSTEM_PROMPT = """You are a structured data extractor for Slovak government contracts from the Central Register of Contracts (CRZ). You receive the text of a contract and extract key fields.
 
@@ -133,7 +135,7 @@ def load_api_key():
         if os.path.exists(key_file):
             key = open(key_file).read().strip()
     if not key:
-        print("Error: Set OPENROUTER_API_KEY env var or create .openrouter_key file")
+        print("Error: set OPENROUTER_API_KEY in .env/env or create .openrouter_key")
         sys.exit(1)
     return key
 
@@ -262,8 +264,18 @@ def main():
     parser.add_argument("--file", type=str, help="Process a single text file")
     parser.add_argument("--dry-run", action="store_true", help="Show what would be processed")
     parser.add_argument("--model", type=str, default=MODEL, help=f"OpenRouter model (default: {MODEL})")
-    parser.add_argument("--texts-dir", type=str, default="data/texts", help="Directory with text files")
-    parser.add_argument("--output-dir", type=str, default="data/extractions", help="Directory for JSON outputs")
+    parser.add_argument(
+        "--texts-dir",
+        type=str,
+        default=get_path("CRZ_TEXT_DIR", "data/texts"),
+        help="Directory with text files",
+    )
+    parser.add_argument(
+        "--output-dir",
+        type=str,
+        default=get_path("CRZ_EXTRACTIONS_DIR", "data/extractions"),
+        help="Directory for JSON outputs",
+    )
     args = parser.parse_args()
 
     api_key = load_api_key()
@@ -301,7 +313,7 @@ def main():
     manifest = get_manifest(texts_dir)
 
     # Set up DB for storing extractions
-    db = sqlite_utils.Database("crz.db")
+    db = sqlite_utils.Database(get_path("CRZ_DB_PATH", "crz.db"))
 
     total_tokens = 0
     ok, fail = 0, 0

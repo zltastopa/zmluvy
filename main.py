@@ -1,5 +1,8 @@
+from settings import ENV_PATH
+
+
 def main():
-    print("Hello from crz-experiments!")
+    print(f"CRZ experiments configured via dotenv ({ENV_PATH})")
 
 
 if __name__ == "__main__":

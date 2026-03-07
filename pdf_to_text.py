@@ -10,12 +10,15 @@ import os
 import csv
 import sys
 
+from settings import get_env, get_path
+
 
 def extract_text(pdf_path):
     """Extract text from PDF using pdftotext, return text or None on failure."""
+    pdftotext_bin = get_env("PDFTOTEXT_BIN", "pdftotext")
     try:
         result = subprocess.run(
-            ["pdftotext", "-layout", pdf_path, "-"],
+            [pdftotext_bin, "-layout", pdf_path, "-"],
             capture_output=True, text=True, timeout=30
         )
         if result.returncode == 0 and result.stdout.strip():
@@ -26,11 +29,11 @@ def extract_text(pdf_path):
 
 
 def main():
-    pdf_dir = "data/pdfs"
-    text_dir = "data/texts"
+    pdf_dir = get_path("CRZ_PDF_DIR", "data/pdfs")
+    text_dir = get_path("CRZ_TEXT_DIR", "data/texts")
     os.makedirs(text_dir, exist_ok=True)
 
-    db = sqlite_utils.Database("crz.db")
+    db = sqlite_utils.Database(get_path("CRZ_DB_PATH", "crz.db"))
 
     # Get metadata for all downloaded PDFs
     pdf_files = [f for f in os.listdir(pdf_dir) if f.endswith(".pdf")]
@@ -98,6 +101,7 @@ def main():
     print(f"\nDone: {ok} converted, {fail} failed, {empty} empty")
     print(f"Text files in {text_dir}/")
     print(f"Manifest: {manifest_path}")
+    print(f"Using pdftotext binary: {get_env('PDFTOTEXT_BIN', 'pdftotext')}")
 
 
 if __name__ == "__main__":

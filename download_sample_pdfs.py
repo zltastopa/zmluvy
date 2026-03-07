@@ -10,19 +10,34 @@ import sqlite_utils
 import httpx
 import os
 import argparse
+from datetime import date
+
+from settings import get_env, get_path
 
 
 def main():
     parser = argparse.ArgumentParser(description="Download CRZ PDF attachments")
-    parser.add_argument("--limit", type=int, default=1000, help="Max PDFs to download (default: 1000, 0=unlimited)")
-    parser.add_argument("--month", type=str, default="2026-03", help="Month to download (YYYY-MM, default: 2026-03)")
+    default_limit = int(get_env("CRZ_DOWNLOAD_LIMIT", "1000"))
+    parser.add_argument(
+        "--limit",
+        type=int,
+        default=default_limit,
+        help=f"Max PDFs to download (default: {default_limit}, 0=unlimited)",
+    )
+    default_month = get_env("CRZ_DOWNLOAD_MONTH", date.today().strftime("%Y-%m"))
+    parser.add_argument(
+        "--month",
+        type=str,
+        default=default_month,
+        help=f"Month to download (YYYY-MM, default: {default_month})",
+    )
     parser.add_argument("--all", action="store_true", help="Download all PDFs for the month (ignores --limit)")
     args = parser.parse_args()
 
     limit = 0 if args.all else args.limit
 
-    db = sqlite_utils.Database("crz.db")
-    out_dir = "data/pdfs"
+    db = sqlite_utils.Database(get_path("CRZ_DB_PATH", "crz.db"))
+    out_dir = get_path("CRZ_PDF_DIR", "data/pdfs")
     os.makedirs(out_dir, exist_ok=True)
 
     # Already downloaded files

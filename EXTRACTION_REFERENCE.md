@@ -6,6 +6,13 @@ What to extract from Slovak government contract PDFs, based on analysis of
 ## Data pipeline
 
 ```
+
+All repo scripts now load configuration from `.env` automatically.
+Use `.env.example` as the starting point, with CLI flags overriding env
+values for one-off runs. The key extraction variables are
+`OPENROUTER_API_KEY`, `OPENROUTER_MODEL`, `OPENROUTER_BASE_URL`,
+`CRZ_DB_PATH`, `CRZ_TEXT_DIR`, `CRZ_EXTRACTIONS_DIR`, and
+`PDFTOTEXT_BIN`.
 CRZ XML daily export
   → parse structured metadata (load_crz.py)
   → download PDF attachments
