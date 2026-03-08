@@ -1,20 +1,29 @@
 # CRZ Explorer
 
-Intelligent search across Slovak government contracts from the [Central Register of Contracts](https://www.crz.gov.sk/) (CRZ).
+[![License: MIT](https://img.shields.io/badge/license-MIT-yellow.svg)](LICENSE)
+[![Python 3.13+](https://img.shields.io/badge/python-3.13%2B-blue.svg)](https://www.python.org/)
+[![SQLite](https://img.shields.io/badge/database-SQLite-003B57.svg)](https://www.sqlite.org/)
+[![Docker](https://img.shields.io/badge/deploy-Docker-2496ED.svg)](compose.yaml)
+[![GitHub issues](https://img.shields.io/github/issues/zltastopa/zmluvy)](https://github.com/zltastopa/zmluvy/issues)
+
+> Intelligent search across Slovak government contracts from the [Central Register of Contracts](https://www.crz.gov.sk/) (CRZ).
+
+CRZ.gov.sk only searches contract titles. But the actual service type is often buried in the **supplier name** or **notes** field. CRZ Explorer searches across **all fields simultaneously** — so a legal services contract titled just "Zmluva o dielo" but filed under "Advokátska kancelária XY" is no longer invisible.
+
+---
 
 ## Try it now
 
-**[Open CRZ Explorer in your browser](https://lite.datasette.io/?url=https://github.com/mrshu/crz-experiments/blob/main/crz.db)**
-
-No installation needed — runs entirely in your browser via WebAssembly.
+**[Open CRZ Explorer in your browser](https://lite.datasette.io/?url=https://github.com/zltastopa/zmluvy/blob/main/crz.db)** — no installation needed, runs entirely via WebAssembly.
 
 ### What you can do
 
 - **Full-text search** across contract titles, supplier names, buyer names, and notes
-- **Filter** by amount, date, contract type, status
-- **Sort** by any column
-- **Export** to CSV or JSON
-- **Write SQL** queries directly
+- **Filter** by amount, date, contract type, status, department
+- **Red flag detection** for anomalies and risk indicators
+- **LLM-powered extraction** of structured data from contract PDFs
+- **Tax reliability cross-reference** against the Financial Administration index
+- **Export** to CSV or JSON, or write SQL queries directly
 
 ### Example searches
 
@@ -26,52 +35,50 @@ No installation needed — runs entirely in your browser via WebAssembly.
 | `marketing` | Marketing and advertising contracts |
 | `dielo` | All "Zmluva o dielo" contracts |
 
-## Why this exists
+---
 
-CRZ.gov.sk only searches contract titles (`predmet`). But the actual service type is often hidden in the **supplier name** or **notes** field. This tool searches across ALL fields simultaneously.
-
-For example: a legal services contract where the title just says "Zmluva o dielo" but the supplier is "Advokátska kancelária XY" — CRZ can't find it, but this tool can.
-
-## Build locally
+## Quick start
 
 ```bash
+# Clone the repo
+git clone https://github.com/zltastopa/zmluvy.git
+cd zmluvy
+
 # Configure local defaults
 cp .env.example .env
 
-# Download CRZ daily exports
+# Download a CRZ daily export
 curl -o data.zip https://www.crz.gov.sk/export/2026-03-05.zip
 unzip data.zip
 
 # Parse into SQLite
 uv run python load_crz.py 2026-03-05.xml
 
-# Browse (dashboard + datasette on one port)
+# Start the server (dashboard + datasette on one port)
 uv run python serve.py
+# → http://localhost:8001
 ```
 
+### Prerequisites
+
+- **Python 3.13+**
+- **[uv](https://docs.astral.sh/uv/)** — fast Python package manager
+- **pdftotext** (optional, for PDF extraction pipeline)
+
+---
+
 ## Deploy with Docker Compose
-
-For the lowest-friction production setup, run the app in Docker and
-keep nginx on the host as the reverse proxy.
-
-1. Put `crz.db` in the repo root, or change the bind mount in
-   [`compose.yaml`](./compose.yaml) if you want to keep it elsewhere.
-
-2. Build and start the container:
 
 ```bash
 docker compose up -d --build
 ```
 
-The app will listen on `127.0.0.1:8001`, ready for host nginx to proxy
-to it inside the container, and Docker publishes it on
-`127.0.0.1:8321` on the host for nginx to proxy to.
+The app listens on `127.0.0.1:8001` inside the container (published as `127.0.0.1:8321` on the host), ready for nginx to reverse-proxy.
 
-If you need custom runtime settings beyond the database path, create a
-repo-local `.env` file as described above. The server loads it
-automatically when present.
+The Compose setup mounts `crz.db` from the host instead of baking it into the image, keeping deploys fast even with a ~1 GB database.
 
-Useful commands:
+<details>
+<summary>Useful commands</summary>
 
 ```bash
 docker compose logs -f
@@ -79,23 +86,27 @@ docker compose ps
 docker compose restart
 docker compose pull
 ```
+</details>
 
-The Compose setup mounts the SQLite database from the host instead of
-baking it into the image, which keeps deploys fast even with a large
-database file.
+---
 
-Environment is loaded automatically from `.env` by all Python
-entrypoints. The main variables are:
+## Configuration
 
-- `CRZ_DB_PATH` for the SQLite database path
-- `CRZ_PDF_DIR`, `CRZ_TEXT_DIR`, `CRZ_EXTRACTIONS_DIR` for pipeline
-  directories
-- `OPENROUTER_API_KEY`, `OPENROUTER_MODEL`,
-  `OPENROUTER_BASE_URL` for extraction
-- `CRZ_DOWNLOAD_MONTH`, `CRZ_DOWNLOAD_LIMIT` for downloader defaults
-- `PDFTOTEXT_BIN` if `pdftotext` is not on your default `PATH`
+Environment is loaded from `.env` by all entrypoints. CLI flags override `.env` values.
 
-CLI flags still override `.env` values on a per-run basis.
+| Variable | Purpose | Default |
+|----------|---------|---------|
+| `CRZ_DB_PATH` | SQLite database path | `crz.db` |
+| `CRZ_PDF_DIR` | Downloaded PDFs | `data/pdfs` |
+| `CRZ_TEXT_DIR` | Extracted text | `data/texts` |
+| `CRZ_EXTRACTIONS_DIR` | LLM extractions | `data/extractions` |
+| `OPENROUTER_API_KEY` | API key for LLM extraction | — |
+| `OPENROUTER_MODEL` | Model for extraction | `google/gemini-2.5-flash-lite` |
+| `CRZ_DOWNLOAD_MONTH` | Default download month | `2026-03` |
+| `CRZ_DOWNLOAD_LIMIT` | Max contracts to download | `50000` |
+| `PDFTOTEXT_BIN` | Path to `pdftotext` binary | `pdftotext` |
+
+---
 
 ## Update with more data
 
@@ -110,6 +121,8 @@ done
 for f in data/*.zip; do unzip -o "$f" -d data/; done
 uv run python load_crz.py data/*.xml
 ```
+
+---
 
 ## LLM extraction pipeline
 
@@ -126,21 +139,15 @@ uv run python pdf_to_text.py
 uv run python extract_contracts.py
 ```
 
-All three scripts support `--workers` for parallel execution and show
-a tqdm progress bar. They skip already-processed files, so you can
-Ctrl+C and resume anytime.
+All three scripts support `--workers` for parallel execution and show a tqdm progress bar. They skip already-processed files, so you can Ctrl+C and resume anytime.
 
-Extracted fields include: service category, actual subject, hidden
-entities (with subcontractor percentages), penalties, penalty asymmetry,
-signatories, duration, funding source, bank accounts, and more. Results
-go into `data/extractions/` as JSON and the `extractions` table in
-SQLite. Use `--force` to re-extract existing files.
+Extracted fields include: service category, actual subject, hidden entities (with subcontractor percentages), penalties, penalty asymmetry, signatories, duration, funding source, bank accounts, and more. Results go into `data/extractions/` as JSON and the `extractions` table in SQLite. Use `--force` to re-extract.
+
+---
 
 ## Tax reliability data
 
-Cross-reference contracts against the Financial Administration's
-[Tax Reliability Index](https://www.financnasprava.sk/sk/elektronicke-sluzby/verejne-sluzby/zoznamy/detail/_5cd6a827-0ee0-4028-8982-4d8bb1de3008)
-to flag contracts with unreliable taxpayers.
+Cross-reference contracts against the Financial Administration's [Tax Reliability Index](https://www.financnasprava.sk/sk/elektronicke-sluzby/verejne-sluzby/zoznamy/detail/_5cd6a827-0ee0-4028-8982-4d8bb1de3008).
 
 ```bash
 curl -o ds_iz_ran.zip https://report.financnasprava.sk/ds_iz_ran.zip
@@ -151,14 +158,28 @@ uv run python load_tax_reliability.py
 This creates a `tax_reliability` table (~680K subjects) joinable on ICO:
 
 ```sql
-select z.nazov_zmluvy, z.dodavatel, z.suma, t.status
-from zmluvy z
-join tax_reliability t on z.dodavatel_ico = t.ico
-where t.status = 'menej spoľahlivý'
-order by z.suma desc
+SELECT z.nazov_zmluvy, z.dodavatel, z.suma, t.status
+FROM zmluvy z
+JOIN tax_reliability t ON z.dodavatel_ico = t.ico
+WHERE t.status = 'menej spoľahlivý'
+ORDER BY z.suma DESC
 ```
+
+---
 
 ## Data sources
 
-- **CRZ**: Daily XML exports from `https://www.crz.gov.sk/export/YYYY-MM-DD.zip` — published nightly by the Office of the Government of the Slovak Republic. All data is public by law (Act No. 211/2000 Coll.)
-- **Tax reliability**: `ds_iz_ran.xml` from Finančná správa SR — CC0 license, updated daily
+| Source | Description | License |
+|--------|-------------|---------|
+| **[CRZ](https://www.crz.gov.sk/)** | Daily XML exports from the Office of the Government of the Slovak Republic | Public by law ([Act No. 211/2000 Coll.](https://www.slov-lex.sk/pravne-predpisy/SK/ZZ/2000/211/)) |
+| **[Tax reliability](https://report.financnasprava.sk/)** | `ds_iz_ran.xml` from Finančná správa SR, updated daily | CC0 |
+
+---
+
+## Contributing
+
+Found a bug or have an idea? [Open an issue](https://github.com/zltastopa/zmluvy/issues/new) or submit a pull request. All contributions are welcome.
+
+## License
+
+[MIT](LICENSE) — made with care by [Žltá stopa](https://github.com/zltastopa).
