@@ -16,9 +16,9 @@
 | **Dátum podpisu** | 18.12.2025 |
 | **CRZ** | https://www.crz.gov.sk/zmluva/11775134/ |
 
-**Prečo je to podozrivé:** SWAN a.s. je podľa Finančnej správy SR vedený ako **„menej spoľahlivý"** daňový subjekt. Napriek tomu získal z Plánu obnovy dotáciu takmer 8 mil. EUR. Je to jediný príjemca dotácie z Plánu obnovy s negatívnym hodnotením daňovej spoľahlivosti. Red flag `tax_unreliable` bol potvrdený v databáze.
+**Prečo je to podozrivé:** SWAN a.s. je podľa Finančnej správy SR vedený ako **„menej spoľahlivý"** daňový subjekt. Napriek tomu získal z Plánu obnovy dotáciu takmer 8 mil. EUR. Je to jediný príjemca dotácie z Plánu obnovy s negatívnym hodnotením daňovej spoľahlivosti. Žltá stopa `tax_unreliable` bola potvrdená v databáze.
 
-**Red flags:** `tax_unreliable` (danger)
+**Žlté stopy:** `tax_unreliable` (danger)
 
 ---
 
@@ -34,7 +34,7 @@
 
 **Prečo je to podozrivé:** Identický Dodatok č. 3 k tej istej zmluve (MS/139/2024-186) bol zverejnený v rovnaký deň na rovnakú sumu 60,4 mil. EUR, ale pre dva rôzne súdy. Buď ide o legitímne rozdelenie tej istej zákazky (a suma je uvádzaná celková pre oba záznamy), alebo ide o **duplicitné účtovanie**. Rovnaký vzor sa opakuje aj pri ďalších zmluvách Min. spravodlivosti — Dodatok č. 2 pre OS Banská Bystrica (503 760 EUR × 2) a Dodatok č. 1 pre KS Košice (312 902,80 EUR × 2). Celkovo Min. spravodlivosti vykazuje **133,6 mil. EUR** v Pláne obnovy (vrátane IČO variantu 166073 za ďalších 7,6 mil.).
 
-**Red flags:** Systematické duplicity, nekonzistentné IČO (00166073 vs 166073)
+**Žlté stopy:** Systematické duplicity, nekonzistentné IČO (00166073 vs 166073)
 
 ---
 
@@ -52,7 +52,7 @@
 
 **Prečo je to podozrivé:** Zmluva bola podpísaná v júli 2024, ale zverejnená až v decembri 2025 — teda takmer rok a pol po podpise. Podľa zákona o CRZ musia byť zmluvy zverejnené do 10 dní. Nezisková organizácia založená v 2018 (NACE: Starostlivosť o staršie osoby) dostala 2,66 mil. EUR na obnovu — ale prečo bola zmluva tak dlho utajovaná?
 
-**Red flags:** Extrémne oneskorenie zverejnenia (507 dní), nezisková organizácia
+**Žlté stopy:** Extrémne oneskorenie zverejnenia (507 dní), nezisková organizácia
 
 ---
 
@@ -70,7 +70,7 @@
 
 **Prečo je to podozrivé:** Firma z Hriňovej s predmetom podnikania **„Nešpecializovaný veľkoobchod"** (NACE 46900) získala 1,33 mil. EUR z Plánu obnovy od MH SR. Ide o jej **jedinú zmluvu** v CRZ. Firma bola založená len v roku 2023 a nemá žiadnu preukázateľnú históriu štátnych zákaziek. Veľkoobchodná firma čerpajúca z plánu obnovy vyvoláva otázku, čo presne „obnovuje".
 
-**Red flags:** Mladá firma, jediná zmluva, nesúlad NACE s účelom dotácie
+**Žlté stopy:** Mladá firma, jediná zmluva, nesúlad NACE s účelom dotácie
 
 ---
 
@@ -88,7 +88,7 @@
 
 **Prečo je to podozrivé:** Firma s predmetom podnikania **„Turistické ubytovanie"** (NACE 55200) so sídlom v Jarovciach získala 1,65 mil. EUR z Plánu obnovy. Suma je **okrúhla** (presne 1 653 000). Firma má len 4 roky a toto je jej jediná zmluva v CRZ. Otázka: prečo turistické ubytovanie z Jaroviec čerpá z plánu obnovy priemyslu?
 
-**Red flags:** Mladá firma, nesúlad NACE, okrúhla suma, jediná zmluva v CRZ
+**Žlté stopy:** Mladá firma, nesúlad NACE, okrúhla suma, jediná zmluva v CRZ
 
 ---
 
@@ -106,7 +106,7 @@
 
 **Prečo je to podozrivé:** IT firma (NACE 62090 — „Ostatné služby týkajúce sa IT") z Dubnice získala 3,23 mil. EUR na zákazku z Plánu obnovy a ďalších 333 000 EUR na koncesiu nabíjacích staníc cez MH Invest. Okrúhla suma. Firma má len 5,7 roka a predtým mala len zmluvy s mestom Liptovský Mikuláš (dodatky za 0 EUR). Skok z nulových zmlúv na 3,5 mil. EUR je výrazný.
 
-**Red flags:** Okrúhla suma, dramatický nárast hodnoty zákaziek, IT firma buduje nabíjacie stanice
+**Žlté stopy:** Okrúhla suma, dramatický nárast hodnoty zákaziek, IT firma buduje nabíjacie stanice
 
 ---
 
@@ -122,7 +122,7 @@
 
 **Prečo je to podozrivé:** Identická zmluva pre toho istého živnostníka, na rovnakú sumu, s rovnakým dátumom podpisu — zverejnená dvakrát (22.1. a 12.2.2026). Buď ide o technický duplikát v CRZ, alebo o pokus o **dvojité čerpanie** z Plánu obnovy. Rovnaký živnostník má aj ďalšiu zmluvu (mandátna zmluva za 73 284 EUR s obcou Pribeta na nábytok pre denný stacionár).
 
-**Red flags:** Duplicitná zmluva, živnostník s 786K EUR celkovo z Plánu obnovy
+**Žlté stopy:** Duplicitná zmluva, živnostník s 786K EUR celkovo z Plánu obnovy
 
 ---
 
@@ -140,7 +140,7 @@
 
 **Prečo je to podozrivé:** Firma s predmetom podnikania **„Veľkoobchod s nápojmi"** (NACE) z obce Vlčany čerpá z Plánu obnovy 102 700 EUR. Zmluva bola zverejnená s oneskorením vyše roka. Aký má veľkoobchod s nápojmi vzťah k obnove a odolnosti? Okrúhla suma. Jediná zmluva v CRZ.
 
-**Red flags:** 370-dňové oneskorenie, nesúlad podnikateľskej činnosti, okrúhla suma
+**Žlté stopy:** 370-dňové oneskorenie, nesúlad podnikateľskej činnosti, okrúhla suma
 
 ---
 
@@ -158,7 +158,7 @@
 
 **Prečo je to podozrivé:** Firma s NACE „Výroba ostatných všeobecných strojov" založená v októbri 2022 získala 618 000 EUR z Plánu obnovy. Okrúhla suma. Jediná zmluva v CRZ. Firma s 3,4-ročnou históriou a bez predchádzajúcich štátnych zákaziek.
 
-**Red flags:** Mladá firma, okrúhla suma, jediná zmluva, žiadna CRZ história
+**Žlté stopy:** Mladá firma, okrúhla suma, jediná zmluva, žiadna CRZ história
 
 ---
 
@@ -176,13 +176,13 @@
 
 **Prečo je to podozrivé:** Firma s NACE kódom **„Obrábanie"** (25620) z Banskej Štiavnice, založená v roku 2020, získala takmer 4 mil. EUR ako **dotáciu** priamo od Úradu podpredsedu vlády pre Plán obnovy. Je to jej **jediná zmluva** v celom CRZ. Firma s 5-ročnou históriou a obrábacím zameraním dostala jednu z najväčších individuálnych dotácií z Plánu obnovy — prečo?
 
-**Red flags:** Mladá firma, jediná zmluva v CRZ, vysoká suma dotácie, úzko špecializovaný NACE
+**Žlté stopy:** Mladá firma, jediná zmluva v CRZ, vysoká suma dotácie, úzko špecializovaný NACE
 
 ---
 
 ## Súhrnná tabuľka
 
-| # | Dodávateľ | Suma (EUR) | Hlavný red flag |
+| # | Dodávateľ | Suma (EUR) | Hlavná žltá stopa |
 |---|---|---|---|
 | 1 | SWAN, a.s. | 7 981 200 | Daňovo nespoľahlivý subjekt |
 | 2 | Min. spravodlivosti SR | 60 408 004 × 2 | Duplicitné zmluvy |

@@ -100,7 +100,7 @@ V Regulatory Side Agreement (zmluva 12002339) sa nachadza 8 skrytych entit:
 | **PM CEE VC j. s. a.** | **57316813** | SPV | **SK** |
 | Cardiac Invest BV | — | Investor | NL |
 
-PM CEE VC j. s. a. je zaroven dodavatelom v hlavnej zmluve aj skrytou entitou v Regulatory Side Agreement — **hidden_entity_is_supplier** red flag.
+PM CEE VC j. s. a. je zaroven dodavatelom v hlavnej zmluve aj skrytou entitou v Regulatory Side Agreement — **hidden_entity_is_supplier** žltá stopa.
 
 **7. Zahranicni direktori bez slovenskej stopy**
 
@@ -129,7 +129,7 @@ HERMAN VENTURES Ltd. (UK, 31 Southampton Row, London) drzi 55% — zahranicna ho
 | AKCIONARSKA ZMLUVA PM CEE VC | https://www.crz.gov.sk/zmluva/11917894/ | https://www.crz.gov.sk/data/att/6489997.pdf |
 | Regulatory Side Agreement Powerful Medical | https://www.crz.gov.sk/zmluva/12002339/ | https://www.crz.gov.sk/data/att/6541616.pdf |
 
-### Red flags
+### Žlté stopy
 
 | Flag | Severity | Detail |
 |---|---|---|

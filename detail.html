@@ -768,7 +768,7 @@
 
 <div class="topbar">
   <a class="logo" href="/" aria-label="CRZ Explorer">
-    <img class="brand-mark" src="/assets/zltastopa.png" alt="Žltá stopa logo">
+    <svg class="brand-mark" viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg"><circle cx="26" cy="26" r="18" stroke="#F5C518" stroke-width="5"/><line x1="39" y1="39" x2="56" y2="56" stroke="#F5C518" stroke-width="5" stroke-linecap="round"/><path d="M20 26c0-3.3 2.7-6 6-6" stroke="#fff" stroke-width="2.5" stroke-linecap="round" opacity=".5"/></svg>
     <span>CRZ Explorer</span>
   </a>
   <div class="tabs">
@@ -948,7 +948,7 @@ function renderDetail(result) {
   if (d.red_flags && d.red_flags.length > 0) {
     var s4 = el('div', 'stat-block danger');
     s4.appendChild(el('div', 'stat-value', String(d.red_flags.length)));
-    s4.appendChild(el('div', 'stat-label', 'Red flags'));
+    s4.appendChild(el('div', 'stat-label', 'Žlté stopy'));
     stats.appendChild(s4);
   }
   if (extraction) {
@@ -961,7 +961,7 @@ function renderDetail(result) {
 
   // Red flags
   if (d.red_flags && d.red_flags.length > 0) {
-    container.appendChild(el('div', 'section-title', 'Red Flags'));
+    container.appendChild(el('div', 'section-title', 'Žlté stopy'));
     var flagCard = card(null, 'card-danger');
     var flagList = el('div', 'flag-list');
     d.red_flags.forEach(function(f) {

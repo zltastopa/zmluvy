@@ -118,7 +118,7 @@ Register partnerov verejneho sektora (rpvs.gov.sk) bol v case vysetrovania nedos
 | Priloha c. 3 | | https://www.crz.gov.sk/data/att/6426292.pdf |
 | Priloha c. 4 | | https://www.crz.gov.sk/data/att/6426361.pdf |
 
-### Red flags
+### Žlté stopy
 
 | Flag | Severity | Detail |
 |---|---|---|
