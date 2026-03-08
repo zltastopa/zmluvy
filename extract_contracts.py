@@ -1,30 +1,29 @@
-"""Extract structured data from CRZ contract text files using LLM.
+"""Extract structured data from CRZ contract texts or PDFs using LLM.
 
 Uses OpenRouter API (OpenAI-compatible) to classify and extract
 key fields from Slovak government contract PDFs.
 
 Usage:
-    python extract_contracts.py                    # extract all unprocessed texts
+    python extract_contracts.py                    # extract from texts, fallback to PDFs
     python extract_contracts.py --limit 10         # extract 10 contracts
     python extract_contracts.py --file 6578512.txt # extract one specific file
     python extract_contracts.py --dry-run          # show what would be processed
 """
 import json
 import os
-import sys
 import csv
 import time
 import argparse
-import threading
+import base64
 from concurrent.futures import ThreadPoolExecutor, as_completed
 import sqlite_utils
 import httpx
 from tqdm import tqdm
 
 from settings import get_env, get_path
+from openrouter_utils import OPENROUTER_BASE, load_openrouter_api_key
 
 
-OPENROUTER_BASE = get_env("OPENROUTER_BASE_URL", "https://openrouter.ai/api/v1")
 MODEL = get_env("OPENROUTER_MODEL", "google/gemini-2.5-flash-lite")
 
 SYSTEM_PROMPT = """You are a structured data extractor for Slovak government contracts from the Central Register of Contracts (CRZ). You receive the text of a contract and extract key fields.
@@ -114,10 +113,13 @@ Signatories — extract the people who actually signed, one per party:
 Rules:
 - hidden_entities: ONLY include organizations or persons that are NOT the two main contracting parties (dodávateľ/objednávateľ). Specifically:
   - Do NOT include the dodávateľ or objednávateľ themselves, even under a slightly different name or spelling. If an entity is one of the two main parties, SKIP it — even if it also plays another role (e.g. a dodávateľ who is also a consortium member). The main parties are already known.
+  - If the contract is not a typical procurement contract (for example a kolektívna zmluva, dodatok ku kolektívnej zmluve, or another agreement with a union/association as a signatory party), treat those named signatory organizations as main contracting parties, not hidden entities. In such cases, `hidden_entities` will often correctly be [].
   - Do NOT include people who merely signed the contract (štatutárny zástupca, konateľ, starosta, riaditeľ) — these are signatories, not hidden entities.
   - Do NOT include bank account signatories (disponenti).
   - Do NOT include generic collecting societies (SOZA, LITA, Literárny fond) unless they are a contractual party.
   - Only use roles from the list above. Never invent new roles like "supplier", "buyer", "owner", "organizer". If an entity does not fit any defined role, skip it.
+  - When no hidden-entity role clearly applies, return an empty array [] instead of force-fitting a named organization into an approximate role such as consortium_member.
+  - Example: in a collective agreement between a school and a union organization, the union organization is a main contracting party and MUST NOT appear in `hidden_entities`.
   - If an IČO looks like garbled text (OCR artifact), set it to null rather than including garbage.
   - "percentage" and "subcontract_subject" fields ONLY apply to entities with role "subcontractor". Set both to null for all other roles.
   - For "percentage", extract the numeric share of total contract value (0-100). Ignore percentages that refer to DPH/VAT rates, zmluvná pokuta rates, discount rates, co-financing shares, or Russian sanctions thresholds (Article 5k, Regulation 833/2014).
@@ -134,17 +136,7 @@ Contract text:
 {text}
 ---"""
 
-
-def load_api_key():
-    key = os.environ.get("OPENROUTER_API_KEY", "")
-    if not key:
-        key_file = os.path.join(os.path.dirname(__file__), ".openrouter_key")
-        if os.path.exists(key_file):
-            key = open(key_file).read().strip()
-    if not key:
-        print("Error: set OPENROUTER_API_KEY in .env/env or create .openrouter_key")
-        sys.exit(1)
-    return key
+USER_PROMPT_INSTRUCTION = "Extract structured data from this Slovak government contract text."
 
 
 import re
@@ -253,6 +245,55 @@ def extract_one(client, api_key, text, model=MODEL):
     return json.loads(content), usage
 
 
+def extract_one_pdf(client, api_key, pdf_path, model=MODEL):
+    """Send a PDF to the same extraction prompt and return parsed JSON."""
+    with open(pdf_path, "rb") as f:
+        pdf_data = base64.b64encode(f.read()).decode("utf-8")
+
+    resp = client.post(
+        f"{OPENROUTER_BASE}/chat/completions",
+        headers={
+            "Authorization": f"Bearer {api_key}",
+            "Content-Type": "application/json",
+        },
+        json={
+            "model": model,
+            "messages": [
+                {"role": "system", "content": SYSTEM_PROMPT},
+                {
+                    "role": "user",
+                    "content": [
+                        {"type": "text", "text": USER_PROMPT_INSTRUCTION},
+                        {
+                            "type": "file",
+                            "file": {
+                                "filename": os.path.basename(pdf_path),
+                                "file_data": f"data:application/pdf;base64,{pdf_data}",
+                            },
+                        },
+                    ],
+                },
+            ],
+            "temperature": 0.0,
+            "max_tokens": 4000,
+        },
+        timeout=120,
+    )
+    resp.raise_for_status()
+    data = resp.json()
+
+    content = data["choices"][0]["message"]["content"]
+    content = content.strip()
+    if content.startswith("```"):
+        content = content.split("\n", 1)[1]
+    if content.endswith("```"):
+        content = content.rsplit("```", 1)[0]
+    content = content.strip()
+
+    usage = data.get("usage", {})
+    return json.loads(content), usage
+
+
 def get_manifest(texts_dir):
     """Load manifest mapping text files to contract metadata."""
     manifest_path = os.path.join(texts_dir, "manifest.csv")
@@ -265,8 +306,17 @@ def get_manifest(texts_dir):
     return mapping
 
 
+def normalize_contract_arg(name: str) -> str:
+    """Normalize --file input to the canonical .txt-based contract key."""
+    if name.endswith(".txt"):
+        return name
+    if name.endswith(".pdf"):
+        return name[:-4] + ".txt"
+    return name + ".txt"
+
+
 def main():
-    parser = argparse.ArgumentParser(description="Extract structured data from CRZ contract texts")
+    parser = argparse.ArgumentParser(description="Extract structured data from CRZ contract texts or PDFs")
     parser.add_argument("--limit", type=int, default=0, help="Max contracts to process (0=all)")
     parser.add_argument("--file", type=str, help="Process a single text file")
     parser.add_argument("--dry-run", action="store_true", help="Show what would be processed")
@@ -278,6 +328,12 @@ def main():
         help="Directory with text files",
     )
     parser.add_argument(
+        "--pdf-dir",
+        type=str,
+        default=get_path("CRZ_PDF_DIR", "data/pdfs"),
+        help="Directory with PDFs for direct extraction fallback",
+    )
+    parser.add_argument(
         "--output-dir",
         type=str,
         default=get_path("CRZ_EXTRACTIONS_DIR", "data/extractions"),
@@ -287,16 +343,19 @@ def main():
     parser.add_argument("--force", action="store_true", help="Re-extract even if JSON already exists")
     args = parser.parse_args()
 
-    api_key = load_api_key()
+    api_key = load_openrouter_api_key()
     texts_dir = args.texts_dir
+    pdf_dir = args.pdf_dir
     output_dir = args.output_dir
     os.makedirs(output_dir, exist_ok=True)
 
     # Determine which files to process
     if args.file:
-        files = [args.file]
+        files = [normalize_contract_arg(args.file)]
     else:
-        files = sorted(f for f in os.listdir(texts_dir) if f.endswith(".txt"))
+        txt_stems = {f[:-4] for f in os.listdir(texts_dir) if f.endswith(".txt")}
+        pdf_stems = {f[:-4] for f in os.listdir(pdf_dir) if f.endswith(".pdf")}
+        files = [f"{stem}.txt" for stem in sorted(txt_stems | pdf_stems)]
 
     # Skip already-extracted files (unless --force)
     if args.force:
@@ -308,7 +367,7 @@ def main():
     if args.limit > 0:
         to_process = to_process[:args.limit]
 
-    print(f"Text files: {len(files)}, already extracted: {len(already_done)}, to process: {len(to_process)}")
+    print(f"Contracts: {len(files)}, already extracted: {len(already_done)}, to process: {len(to_process)}")
 
     if args.dry_run:
         for f in to_process[:20]:
@@ -333,19 +392,32 @@ def main():
     def process_one(fname, client):
         """Call LLM and save JSON. Returns (fname, extraction, usage) or (fname, error_msg, None)."""
         txt_path = os.path.join(texts_dir, fname)
-        if not os.path.exists(txt_path):
-            return (fname, "file not found", None)
+        pdf_name = fname.replace(".txt", ".pdf")
+        pdf_path = os.path.join(pdf_dir, pdf_name)
+        source_kind = None
 
-        text = open(txt_path).read()
-        if len(text.strip()) < 50:
-            return (fname, "too short", None)
+        text = None
+        if os.path.exists(txt_path):
+            text = open(txt_path).read()
+            if len(text.strip()) >= 50:
+                source_kind = "text"
+
+        if source_kind is None and os.path.exists(pdf_path):
+            source_kind = "pdf"
+
+        if source_kind is None:
+            return (fname, "no usable text or pdf found", None)
 
         try:
-            extraction, usage = extract_one(client, api_key, text, model=args.model)
+            if source_kind == "text":
+                extraction, usage = extract_one(client, api_key, text, model=args.model)
+            else:
+                extraction, usage = extract_one_pdf(client, api_key, pdf_path, model=args.model)
 
             # Add metadata
             meta = manifest.get(fname, {})
             extraction["_source_file"] = fname
+            extraction["_source_kind"] = source_kind
             extraction["_zmluva_id"] = meta.get("zmluva_id", fname.replace(".txt", ""))
             extraction["_model"] = args.model
 
