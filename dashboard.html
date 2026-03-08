@@ -6,277 +6,1433 @@
 <title>CRZ Explorer</title>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4"></script>
 <style>
-  :root {
-    --bg: #0f1117;
-    --surface: #1a1d27;
-    --surface2: #22252f;
-    --border: #2a2d3a;
-    --text: #e1e4ed;
-    --muted: #8b8fa3;
-    --accent: #6c7ee1;
-    --accent2: #e6a44e;
-    --danger: #e15b5b;
-    --success: #4ecb71;
-    --info: #5bb8e1;
-  }
-  * { box-sizing: border-box; margin: 0; padding: 0; }
-  body {
-    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
-    background: var(--bg); color: var(--text); line-height: 1.5; font-size: 13px;
-  }
-  a { color: var(--accent); text-decoration: none; }
-  a:hover { text-decoration: underline; }
+  @import url('https://fonts.googleapis.com/css2?family=Lexend:wght@400;500;600;700;800;900&display=swap');
 
-  /* Top bar */
-  .topbar {
-    background: var(--surface); border-bottom: 1px solid var(--border);
-    padding: 0 20px; display: flex; align-items: center; gap: 0;
-    position: sticky; top: 0; z-index: 100; height: 48px;
+  :root {
+    --black: #000000;
+    --white: #ffffff;
+    --yellow: #FFC400;
+    --layout-max: 1380px;
+    --canvas: #f3f3ef;
+    --canvas-alt: #f8f8f5;
+    --text: #101010;
+    --muted: #575757;
+    --danger: #bb3d3d;
+    --success: #2f8b3e;
+    --info: #2c2c2c;
+    --edge-soft: rgb(0 0 0 / 0.13);
+    --card-radius: 26px;
+    --shadow-soft: 0 12px 28px rgb(0 0 0 / 0.08), 0 3px 9px rgb(0 0 0 / 0.05);
+    --shadow-lift: 0 18px 40px rgb(0 0 0 / 0.11), 0 5px 14px rgb(0 0 0 / 0.06);
   }
-  .topbar .logo {
-    font-size: 15px; font-weight: 700; white-space: nowrap; margin-right: 24px;
+
+  * {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+  }
+
+  html,
+  body {
+    min-height: 100%;
+  }
+
+  body {
+    font-family: 'Lexend', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    background: linear-gradient(180deg, #f9f9f6 0%, var(--canvas) 100%);
+    color: var(--text);
+    line-height: 1.45;
+    font-size: 13px;
+    letter-spacing: 0.002em;
+    overflow-x: hidden;
+    position: relative;
+  }
+
+  body::before {
+    content: '';
+    position: fixed;
+    width: min(62vw, 940px);
+    height: min(62vw, 940px);
+    right: -14%;
+    top: -36%;
+    border-radius: 50%;
+    background: rgb(255 196 0 / 0.84);
+    pointer-events: none;
+    z-index: -3;
+  }
+
+  body::after {
+    content: '';
+    position: fixed;
+    width: 78px;
+    height: 78px;
+    left: 1%;
+    top: 116px;
+    border-radius: 50%;
+    background: rgb(255 196 0 / 0.82);
+    box-shadow: 172px 150px 0 -20px rgb(255 196 0 / 0.56), 1160px 420px 0 -34px rgb(255 196 0 / 0.5);
+    pointer-events: none;
+    z-index: -2;
+  }
+
+  a,
+  a:visited {
     color: var(--text);
   }
-  .topbar .tabs { display: flex; height: 100%; }
-  .topbar .tab {
-    padding: 0 16px; display: flex; align-items: center; gap: 6px;
-    font-size: 13px; font-weight: 500; color: var(--muted);
-    cursor: pointer; border-bottom: 2px solid transparent;
-    transition: color 0.15s, border-color 0.15s;
+
+  :focus-visible {
+    outline: 3px solid var(--yellow);
+    outline-offset: 2px;
+    border-radius: 10px;
   }
-  .topbar .tab:hover { color: var(--text); }
-  .topbar .tab.active { color: var(--accent); border-bottom-color: var(--accent); }
-  .topbar .tab-icon { font-size: 14px; }
-  .topbar .spacer { flex: 1; }
-  .topbar .stats { color: var(--muted); font-size: 12px; margin-right: 16px; }
-  .topbar .links { display: flex; gap: 12px; }
-  .topbar .links a { color: var(--muted); font-size: 12px; }
-  .topbar .links a:hover { color: var(--text); text-decoration: none; }
 
-  /* App layout */
-  .app { display: flex; min-height: calc(100vh - 48px); }
+  .topbar {
+    position: sticky;
+    top: 8px;
+    z-index: 140;
+    width: min(var(--layout-max), calc(100% - 1.8rem));
+    min-height: 58px;
+    margin: 8px auto 0;
+    padding: 0.34rem 0.74rem;
+    display: flex;
+    align-items: center;
+    gap: 0.52rem;
+    border: 0;
+    border-radius: 26px;
+    background: rgb(255 255 255 / 0.8);
+    box-shadow: var(--shadow-soft), inset 0 0 0 1px rgb(255 255 255 / 0.52);
+    backdrop-filter: blur(8px);
+    overflow: hidden;
+  }
 
-  /* Filter sidebar (browse only) */
+  .topbar .logo {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.55rem;
+    text-decoration: none;
+    white-space: nowrap;
+    font-size: 1.14rem;
+    font-weight: 900;
+    letter-spacing: -0.045em;
+    color: var(--text);
+    border-radius: 12px;
+    padding: 0.14rem 0.24rem;
+    line-height: 1;
+  }
+
+  .topbar .logo .brand-mark {
+    width: 74px;
+    height: auto;
+    display: block;
+    object-fit: contain;
+    mix-blend-mode: multiply;
+  }
+
+  .topbar .tabs {
+    display: flex;
+    align-items: center;
+    gap: 0.2rem;
+    overflow-x: auto;
+    padding-bottom: 2px;
+  }
+
+  .topbar .tab {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.3rem;
+    border-radius: 999px;
+    border: 0;
+    background: transparent;
+    color: var(--text);
+    padding: 0.44rem 0.68rem;
+    font-size: 0.84rem;
+    font-weight: 800;
+    letter-spacing: -0.01em;
+    cursor: pointer;
+    transition: transform 170ms ease, background-color 170ms ease, color 170ms ease;
+    white-space: nowrap;
+  }
+
+  .topbar .tab:hover {
+    background: var(--yellow);
+    transform: translateY(-1px);
+  }
+
+  .topbar .tab.active {
+    background: var(--black);
+    color: var(--white);
+  }
+
+  .topbar .tab-icon {
+    width: 14px;
+    height: 14px;
+    display: inline-grid;
+    place-items: center;
+    line-height: 0;
+    color: currentColor;
+    flex: 0 0 auto;
+  }
+
+  .topbar .tab-icon svg {
+    width: 14px;
+    height: 14px;
+    fill: none;
+    stroke: currentColor;
+    stroke-width: 1.9;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+    display: block;
+  }
+
+  .topbar .spacer {
+    flex: 1;
+  }
+
+  .topbar .stats {
+    color: var(--muted);
+    font-size: 0.77rem;
+    margin-right: 0.2rem;
+    font-weight: 650;
+    white-space: nowrap;
+  }
+
+  .topbar .links {
+    display: flex;
+    gap: 0.4rem;
+  }
+
+  .topbar .links a {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    text-decoration: none;
+    border-radius: 999px;
+    border: 0;
+    background: var(--yellow);
+    color: var(--black);
+    font-size: 0.8rem;
+    font-weight: 850;
+    padding: 0.48rem 0.82rem;
+    transition: transform 170ms ease, background-color 170ms ease, color 170ms ease;
+  }
+
+  .topbar .links a:hover {
+    background: var(--black);
+    color: var(--white);
+    transform: translateY(-1px);
+  }
+
+  .app {
+    width: min(var(--layout-max), calc(100% - 1.8rem));
+    margin: 1rem auto 2.4rem;
+    display: block;
+  }
+
+  .app.browse-mode {
+    display: grid;
+    grid-template-columns: minmax(285px, 332px) minmax(0, 1fr);
+    align-items: start;
+    gap: 0.85rem;
+  }
+
   .filters {
-    width: 280px; min-width: 280px; background: var(--surface);
-    border-right: 1px solid var(--border); padding: 16px;
-    overflow-y: auto; height: calc(100vh - 48px); position: sticky; top: 48px;
+    display: none;
+    border-radius: var(--card-radius);
+    background: rgb(255 255 255 / 0.88);
+    box-shadow: var(--shadow-soft);
+    padding: 1rem;
+    overflow-y: auto;
+    max-height: calc(100vh - 104px);
+    position: sticky;
+    top: 96px;
+    backdrop-filter: blur(1px);
+  }
+
+  .filters.visible {
+    display: block;
+  }
+
+  .filters h2 {
+    font-size: 1.06rem;
+    font-weight: 900;
+    letter-spacing: -0.015em;
+    margin-bottom: 0.8rem;
+  }
+
+  .filter-section {
+    margin-bottom: 0.8rem;
+    border-radius: 18px;
+    padding: 0.72rem;
+    background: var(--white);
+    box-shadow: inset 0 0 0 1px rgb(0 0 0 / 0.08), 0 3px 8px rgb(0 0 0 / 0.05);
+    position: relative;
+    overflow: hidden;
+  }
+
+  .filter-section::after {
+    content: '';
+    position: absolute;
+    width: 26px;
+    height: 26px;
+    border-radius: 50%;
+    right: 0.45rem;
+    top: 0.45rem;
+    background: rgb(255 196 0 / 0.75);
+  }
+
+  .filter-section h3 {
+    font-size: 0.62rem;
+    font-weight: 850;
+    color: var(--muted);
+    margin-bottom: 0.58rem;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    position: relative;
+    z-index: 1;
+  }
+
+  .filter-row {
+    margin-bottom: 0.55rem;
+    position: relative;
+    z-index: 1;
+  }
+
+  .filter-row:last-child {
+    margin-bottom: 0;
+  }
+
+  .filter-row label {
+    display: block;
+    font-size: 0.67rem;
+    color: var(--muted);
+    margin-bottom: 0.2rem;
+    font-weight: 650;
+  }
+
+  .filter-row input,
+  .filter-row select {
+    width: 100%;
+    border: 0;
+    border-radius: 10px;
+    background: var(--canvas-alt);
+    padding: 0.45rem 0.62rem;
+    color: var(--text);
+    font-size: 0.78rem;
+    font-family: inherit;
+    font-weight: 550;
+    box-shadow: inset 0 0 0 1px rgb(0 0 0 / 0.13);
+    outline: none;
+  }
+
+  .filter-row input:focus,
+  .filter-row select:focus {
+    box-shadow: inset 0 0 0 1px var(--black), 0 0 0 3px rgb(255 196 0 / 0.36);
+  }
+
+  .filter-row .range {
+    display: flex;
+    gap: 0.42rem;
+  }
+
+  .filter-row .range input {
+    width: 50%;
+  }
+
+  .filter-actions {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 0.5rem;
+    margin-top: 0.85rem;
+  }
+
+  .btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border: 0;
+    border-radius: 999px;
+    font-size: 0.76rem;
+    font-family: inherit;
+    font-weight: 820;
+    letter-spacing: 0.01em;
+    cursor: pointer;
+    min-height: 34px;
+    padding: 0.4rem 0.7rem;
+    transition: transform 170ms ease, background-color 170ms ease, color 170ms ease, box-shadow 170ms ease;
+  }
+
+  .btn-primary {
+    background: var(--black);
+    color: var(--white);
+  }
+
+  .btn-primary:hover {
+    background: var(--yellow);
+    color: var(--black);
+    transform: translateY(-1px);
+  }
+
+  .btn-secondary {
+    background: var(--white);
+    color: var(--text);
+    box-shadow: inset 0 0 0 1px var(--edge-soft);
+  }
+
+  .btn-secondary:hover {
+    background: var(--yellow);
+    transform: translateY(-1px);
+  }
+
+  .content {
+    min-width: 0;
+    position: relative;
+    border-radius: var(--card-radius);
+    background: rgb(255 255 255 / 0.8);
+    box-shadow: var(--shadow-soft);
+    overflow: hidden;
+    backdrop-filter: blur(1px);
+  }
+
+  #view-overview {
+    display: none;
+    padding: 1.35rem;
+  }
+
+  #view-overview.active {
+    display: block;
+  }
+
+  #view-browse {
     display: none;
   }
-  .filters.visible { display: block; }
-  .filters h2 { font-size: 13px; font-weight: 600; margin-bottom: 12px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.05em; }
-  .filter-section { margin-bottom: 16px; border-bottom: 1px solid var(--border); padding-bottom: 12px; }
-  .filter-section:last-child { border-bottom: none; }
-  .filter-section h3 { font-size: 11px; font-weight: 600; color: var(--accent); margin-bottom: 8px; text-transform: uppercase; letter-spacing: 0.05em; }
-  .filter-row { margin-bottom: 6px; }
-  .filter-row label { display: block; font-size: 11px; color: var(--muted); margin-bottom: 2px; }
-  .filter-row input, .filter-row select {
-    width: 100%; padding: 5px 8px; background: var(--bg); border: 1px solid var(--border);
-    border-radius: 4px; color: var(--text); font-size: 12px; outline: none;
-  }
-  .filter-row input:focus, .filter-row select:focus { border-color: var(--accent); }
-  .filter-row select { cursor: pointer; }
-  .filter-row .range { display: flex; gap: 6px; }
-  .filter-row .range input { width: 50%; }
-  .filter-actions { display: flex; gap: 8px; margin-top: 12px; }
-  .btn {
-    padding: 6px 14px; border: none; border-radius: 4px; font-size: 12px;
-    cursor: pointer; font-weight: 500;
-  }
-  .btn-primary { background: var(--accent); color: #fff; }
-  .btn-primary:hover { opacity: 0.9; }
-  .btn-secondary { background: var(--surface2); color: var(--text); border: 1px solid var(--border); }
-  .btn-secondary:hover { background: var(--border); }
 
-  /* Content area */
-  .content { flex: 1; overflow-x: auto; }
+  #view-browse.active {
+    display: block;
+  }
 
-  /* --- Overview styles --- */
-  #view-overview { display: none; padding: 24px; }
-  #view-overview.active { display: block; }
+  #view-search {
+    display: none;
+    padding: 0.5rem 0;
+  }
+
+  #view-search.active {
+    display: block;
+  }
+
+  #view-methodology {
+    display: none;
+    padding: 1.35rem;
+  }
+
+  #view-methodology.active {
+    display: block;
+  }
+
+  .overview-hero {
+    border-radius: 30px;
+    padding: clamp(1.05rem, 2.5vw, 1.5rem);
+    background: var(--white);
+    box-shadow: var(--shadow-lift);
+    position: relative;
+    overflow: hidden;
+    margin-bottom: 1rem;
+  }
+
+  .overview-hero::before {
+    content: '';
+    position: absolute;
+    width: 240px;
+    height: 240px;
+    border-radius: 50%;
+    right: -128px;
+    top: -142px;
+    background: rgb(255 196 0 / 0.72);
+  }
+
+  .overview-hero::after {
+    content: '';
+    position: absolute;
+    width: 16px;
+    height: 16px;
+    border-radius: 50%;
+    right: 126px;
+    top: 26px;
+    background: rgb(255 196 0 / 0.9);
+    box-shadow: -24px 16px 0 -4px rgb(255 196 0 / 0.72);
+  }
+
+  .overview-hero h1 {
+    font-size: clamp(1.65rem, 3.8vw, 3rem);
+    line-height: 0.94;
+    letter-spacing: -0.045em;
+    margin-bottom: 0.62rem;
+    position: relative;
+    z-index: 1;
+    text-wrap: balance;
+  }
+
+  .overview-hero p {
+    max-width: 82ch;
+    font-size: clamp(0.9rem, 1.35vw, 1.02rem);
+    font-weight: 600;
+    line-height: 1.42;
+    color: #242424;
+    position: relative;
+    z-index: 1;
+  }
+
+  .overview-hero .wink {
+    margin-top: 0.46rem;
+    font-size: 0.78rem;
+    color: var(--muted);
+    font-weight: 650;
+    letter-spacing: -0.01em;
+    position: relative;
+    z-index: 1;
+  }
 
   .stat-grid {
-    display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
-    gap: 12px; margin-bottom: 24px;
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+    gap: 0.72rem;
+    margin-bottom: 1rem;
   }
-  .stat-card {
-    background: var(--surface); border: 1px solid var(--border);
-    border-radius: 10px; padding: 16px;
-  }
-  .stat-card .value { font-size: 24px; font-weight: 700; line-height: 1.2; }
-  .stat-card .label { font-size: 12px; color: var(--muted); margin-top: 2px; }
-  .chart-grid {
-    display: grid; grid-template-columns: 1fr 1fr;
-    gap: 16px; margin-bottom: 24px;
-  }
-  .chart-grid.full { grid-template-columns: 1fr; }
-  .panel {
-    background: var(--surface); border: 1px solid var(--border);
-    border-radius: 10px; padding: 16px;
-  }
-  .panel h2 { font-size: 14px; font-weight: 600; margin-bottom: 12px; color: var(--muted); }
-  .panel canvas { max-height: 300px; }
-  .anomaly-list { list-style: none; }
-  .anomaly-item {
-    display: flex; align-items: center; gap: 10px;
-    padding: 10px 8px; border-bottom: 1px solid var(--border);
-    cursor: pointer; border-radius: 6px; transition: background 0.15s;
-  }
-  .anomaly-item:hover { background: rgba(108,126,225,0.08); }
-  .anomaly-item:last-child { border-bottom: none; }
-  .anomaly-badge {
-    font-size: 11px; font-weight: 600; padding: 2px 8px;
-    border-radius: 4px; text-transform: uppercase;
-  }
-  .anomaly-badge.warning { background: rgba(230,164,78,0.15); color: var(--accent2); }
-  .anomaly-badge.info { background: rgba(91,184,225,0.15); color: var(--info); }
-  .anomaly-count { font-size: 20px; font-weight: 700; min-width: 60px; text-align: right; }
-  .anomaly-label { font-size: 14px; flex: 1; }
-  .clickable { color: var(--accent); cursor: pointer; }
-  .clickable:hover { text-decoration: underline; }
 
-  /* --- Browse styles --- */
-  #view-browse { display: none; }
-  #view-browse.active { display: block; }
-  #view-search { display: none; }
-  #view-search.active { display: block; }
-  #view-methodology { display: none; padding: 24px; }
-  #view-methodology.active { display: block; }
-  .methodology-container { max-width: 900px; margin: 0 auto; }
-  .methodology-container h2 { font-size: 18px; margin-bottom: 12px; }
-  .methodology-container h3 { font-size: 14px; color: var(--accent); margin: 20px 0 10px; }
-  .methodology-intro { color: var(--muted); margin-bottom: 16px; line-height: 1.7; }
-  .methodology-sources { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 12px; margin-bottom: 8px; }
-  .source-card { background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 14px; }
-  .source-card strong { display: block; margin-bottom: 4px; color: var(--accent2); }
-  .source-card p { font-size: 12px; color: var(--muted); }
-  .methodology-rules { display: flex; flex-direction: column; gap: 10px; }
-  .rule-card { background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 14px; display: flex; align-items: flex-start; gap: 12px; }
-  .rule-severity { font-size: 11px; font-weight: 600; padding: 2px 8px; border-radius: 4px; white-space: nowrap; margin-top: 2px; }
-  .rule-severity.danger { background: rgba(225,91,91,0.15); color: var(--danger); }
-  .rule-severity.warning { background: rgba(230,164,78,0.15); color: var(--accent2); }
-  .rule-severity.info { background: rgba(91,184,225,0.15); color: var(--info); }
-  .rule-body { flex: 1; }
-  .rule-body .rule-label { font-weight: 600; font-size: 13px; }
-  .rule-body .rule-desc { font-size: 12px; color: var(--muted); margin-top: 2px; }
-  .rule-count { font-size: 12px; color: var(--muted); white-space: nowrap; margin-top: 2px; }
-  .rule-card.clickable { cursor: pointer; transition: border-color 0.15s, background 0.15s; }
-  .rule-card.clickable:hover { border-color: var(--accent); background: var(--surface2); }
+  .stat-card {
+    border-radius: var(--card-radius);
+    background: var(--white);
+    min-height: 120px;
+    padding: 1rem;
+    position: relative;
+    overflow: hidden;
+    box-shadow: var(--shadow-soft);
+  }
+
+  .stat-card::before {
+    content: '';
+    position: absolute;
+    width: 132px;
+    height: 132px;
+    border-radius: 50%;
+    right: -84px;
+    bottom: -88px;
+    background: rgb(255 196 0 / 0.28);
+  }
+
+  .stat-card::after {
+    content: '';
+    position: absolute;
+    width: 66px;
+    height: 66px;
+    border-radius: 50%;
+    right: -24px;
+    bottom: -22px;
+    background: rgb(255 196 0 / 0.5);
+  }
+
+  .stat-card .value {
+    font-size: clamp(1.45rem, 2vw, 2.4rem);
+    font-weight: 900;
+    line-height: 1.06;
+    letter-spacing: -0.038em;
+    position: relative;
+    z-index: 2;
+    max-width: 10ch;
+  }
+
+  .stat-card .label {
+    margin-top: 0.38rem;
+    font-size: 0.78rem;
+    color: var(--muted);
+    font-weight: 640;
+    position: relative;
+    z-index: 2;
+  }
+
+  .stat-card:nth-child(1) {
+    background: var(--black);
+    color: var(--white);
+  }
+
+  .stat-card:nth-child(1)::after {
+    background: rgb(255 196 0 / 0.46);
+  }
+
+  .stat-card:nth-child(1)::before {
+    background: rgb(255 196 0 / 0.22);
+  }
+
+  .stat-card:nth-child(1) .label {
+    color: rgb(255 255 255 / 0.78);
+  }
+
+  .chart-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0.82rem;
+    margin-bottom: 1rem;
+  }
+
+  .chart-grid.full {
+    grid-template-columns: 1fr;
+  }
+
+  .panel {
+    background: var(--white);
+    border: 0;
+    border-radius: var(--card-radius);
+    padding: 1.1rem;
+    position: relative;
+    overflow: hidden;
+    box-shadow: var(--shadow-soft);
+  }
+
+  .panel::before {
+    content: '';
+    position: absolute;
+    width: 170px;
+    height: 170px;
+    border-radius: 50%;
+    right: -120px;
+    top: -110px;
+    background: rgb(255 196 0 / 0.21);
+    pointer-events: none;
+  }
+
+  .panel::after {
+    content: '';
+    position: absolute;
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    right: 14px;
+    top: 14px;
+    background: var(--yellow);
+    pointer-events: none;
+  }
+
+  .panel h2 {
+    margin-bottom: 0.64rem;
+    font-size: 1rem;
+    line-height: 1.2;
+    font-weight: 850;
+    letter-spacing: -0.017em;
+    position: relative;
+    z-index: 1;
+  }
+
+  .panel canvas {
+    max-height: 340px;
+    position: relative;
+    z-index: 1;
+  }
+
+  .anomaly-list {
+    list-style: none;
+    position: relative;
+    z-index: 1;
+  }
+
+  .anomaly-item {
+    display: flex;
+    align-items: center;
+    gap: 0.58rem;
+    padding: 0.58rem 0.62rem;
+    border-radius: 14px;
+    background: var(--canvas-alt);
+    box-shadow: inset 0 0 0 1px rgb(0 0 0 / 0.1);
+    margin-bottom: 0.52rem;
+    transition: transform 160ms ease, background-color 160ms ease, box-shadow 160ms ease;
+    cursor: pointer;
+  }
+
+  .anomaly-item:hover {
+    transform: translateY(-1px);
+    background: #fff4ce;
+    box-shadow: inset 0 0 0 1px rgb(0 0 0 / 0.16), 0 6px 14px rgb(0 0 0 / 0.07);
+  }
+
+  .anomaly-item:last-child {
+    margin-bottom: 0;
+  }
+
+  .anomaly-badge {
+    font-size: 0.61rem;
+    font-weight: 850;
+    border-radius: 999px;
+    padding: 0.2rem 0.48rem;
+    text-transform: uppercase;
+  }
+
+  .anomaly-badge.warning {
+    background: #fff0c6;
+    color: #995f00;
+  }
+
+  .anomaly-badge.info {
+    background: #ececec;
+    color: #4f4f4f;
+  }
+
+  .anomaly-badge.danger {
+    background: #ffe2e2;
+    color: var(--danger);
+  }
+
+  .anomaly-count {
+    font-size: 1.22rem;
+    font-weight: 900;
+    min-width: 52px;
+    text-align: right;
+    letter-spacing: -0.03em;
+  }
+
+  .anomaly-label {
+    font-size: 0.84rem;
+    flex: 1;
+    font-weight: 650;
+    color: var(--text);
+  }
+
+  .clickable {
+    color: var(--text);
+    cursor: pointer;
+    text-decoration: underline;
+    text-decoration-color: rgb(255 196 0 / 0.9);
+    text-underline-offset: 3px;
+  }
+
+  .clickable:hover {
+    color: var(--black);
+  }
+
+  .methodology-container {
+    max-width: 1060px;
+    margin: 0 auto;
+  }
+
+  .methodology-container h2 {
+    font-size: clamp(2rem, 5.2vw, 3.5rem);
+    margin-bottom: 0.68rem;
+    font-weight: 900;
+    letter-spacing: -0.045em;
+    line-height: 0.95;
+  }
+
+  .methodology-container h3 {
+    font-size: 0.8rem;
+    margin: 1.15rem 0 0.6rem;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--muted);
+    font-weight: 800;
+  }
+
+  .methodology-intro {
+    color: #222;
+    margin-bottom: 0.9rem;
+    line-height: 1.62;
+    font-size: 0.94rem;
+    max-width: 82ch;
+    font-weight: 580;
+  }
+
+  .methodology-sources {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+    gap: 0.68rem;
+    margin-bottom: 0.8rem;
+  }
+
+  .source-card {
+    border: 0;
+    border-radius: 18px;
+    padding: 0.84rem;
+    background: var(--white);
+    box-shadow: inset 0 0 0 1px rgb(0 0 0 / 0.12), 0 4px 12px rgb(0 0 0 / 0.06);
+    position: relative;
+    overflow: hidden;
+  }
+
+  .source-card::after {
+    content: '';
+    position: absolute;
+    width: 88px;
+    height: 88px;
+    border-radius: 50%;
+    right: -56px;
+    top: -56px;
+    background: rgb(255 196 0 / 0.33);
+  }
+
+  .source-card strong {
+    display: block;
+    margin-bottom: 0.24rem;
+    color: var(--text);
+    font-size: 0.89rem;
+    font-weight: 850;
+    position: relative;
+    z-index: 1;
+  }
+
+  .source-card p {
+    font-size: 0.76rem;
+    color: var(--muted);
+    line-height: 1.5;
+    position: relative;
+    z-index: 1;
+  }
+
+  .methodology-rules {
+    display: flex;
+    flex-direction: column;
+    gap: 0.56rem;
+  }
+
+  .rule-card {
+    background: var(--white);
+    border-radius: 16px;
+    padding: 0.75rem 0.82rem;
+    display: flex;
+    align-items: flex-start;
+    gap: 0.64rem;
+    box-shadow: inset 0 0 0 1px rgb(0 0 0 / 0.12), 0 4px 10px rgb(0 0 0 / 0.05);
+  }
+
+  .rule-severity {
+    font-size: 0.6rem;
+    font-weight: 820;
+    padding: 0.18rem 0.5rem;
+    border-radius: 999px;
+    white-space: nowrap;
+    margin-top: 1px;
+  }
+
+  .rule-severity.danger {
+    background: #ffe4e4;
+    color: var(--danger);
+  }
+
+  .rule-severity.warning {
+    background: #fff0cc;
+    color: #9f6700;
+  }
+
+  .rule-severity.info {
+    background: #ececec;
+    color: #4d4d4d;
+  }
+
+  .rule-body {
+    flex: 1;
+  }
+
+  .rule-body .rule-label {
+    font-weight: 820;
+    font-size: 0.83rem;
+    color: var(--text);
+  }
+
+  .rule-body .rule-desc {
+    font-size: 0.74rem;
+    color: var(--muted);
+    margin-top: 0.15rem;
+    line-height: 1.45;
+  }
+
+  .rule-count {
+    font-size: 0.72rem;
+    color: var(--muted);
+    white-space: nowrap;
+    margin-top: 1px;
+    font-weight: 700;
+  }
+
+  .rule-card.clickable {
+    cursor: pointer;
+    transition: transform 160ms ease, background-color 160ms ease;
+  }
+
+  .rule-card.clickable:hover {
+    background: #fff4cb;
+    transform: translateY(-1px);
+  }
 
   .table-info {
-    padding: 10px 16px; background: var(--surface); border-bottom: 1px solid var(--border);
-    display: flex; align-items: center; gap: 16px; font-size: 12px; color: var(--muted);
-    position: sticky; top: 0; z-index: 10;
+    padding: 0.75rem 0.9rem;
+    background: rgb(255 255 255 / 0.9);
+    display: flex;
+    align-items: center;
+    gap: 0.8rem;
+    font-size: 0.76rem;
+    color: var(--muted);
+    position: sticky;
+    top: 0;
+    z-index: 12;
+    font-weight: 620;
+    border-bottom: 1px solid rgb(0 0 0 / 0.08);
+    backdrop-filter: blur(2px);
   }
-  .pagination { display: flex; gap: 4px; margin-left: auto; }
+
+  .table-info strong {
+    color: var(--text);
+  }
+
+  .pagination {
+    display: flex;
+    gap: 0.32rem;
+    margin-left: auto;
+  }
+
   .pagination button {
-    padding: 4px 10px; background: var(--surface2); border: 1px solid var(--border);
-    border-radius: 4px; color: var(--text); font-size: 11px; cursor: pointer;
+    padding: 0.36rem 0.62rem;
+    border: 0;
+    border-radius: 999px;
+    color: var(--text);
+    background: var(--white);
+    box-shadow: inset 0 0 0 1px var(--edge-soft);
+    font-size: 0.72rem;
+    cursor: pointer;
+    font-family: inherit;
+    font-weight: 820;
+    transition: transform 160ms ease, background-color 160ms ease;
   }
-  .pagination button:hover { background: var(--border); }
-  .pagination button:disabled { opacity: 0.3; cursor: default; }
 
-  .table-wrap { overflow-x: auto; }
-  table { width: 100%; border-collapse: collapse; font-size: 12px; }
+  .pagination button:hover {
+    transform: translateY(-1px);
+    background: var(--yellow);
+  }
+
+  .pagination button:disabled {
+    opacity: 0.35;
+    cursor: default;
+    transform: none;
+  }
+
+  .table-wrap {
+    overflow-x: auto;
+    background: var(--white);
+  }
+
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.77rem;
+  }
+
   th {
-    background: var(--surface2); padding: 8px 10px; text-align: left; font-weight: 600;
-    font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.03em;
-    border-bottom: 2px solid var(--border); white-space: nowrap; cursor: pointer; user-select: none;
+    background: #f4f4ef;
+    color: #424242;
+    padding: 0.58rem 0.64rem;
+    text-align: left;
+    font-weight: 760;
+    font-size: 0.64rem;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    border-bottom: 1px solid rgb(0 0 0 / 0.1);
+    white-space: nowrap;
+    cursor: pointer;
+    user-select: none;
   }
-  th:hover { color: var(--text); }
-  th.sorted-asc::after { content: " \u25B2"; color: var(--accent); }
-  th.sorted-desc::after { content: " \u25BC"; color: var(--accent); }
+
+  th:hover {
+    color: var(--black);
+    background: #f0f0e9;
+  }
+
+  th.sorted-asc::after {
+    content: " ▲";
+    color: #926000;
+  }
+
+  th.sorted-desc::after {
+    content: " ▼";
+    color: #926000;
+  }
+
   td {
-    padding: 6px 10px; border-bottom: 1px solid var(--border);
-    max-width: 300px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+    padding: 0.54rem 0.64rem;
+    border-bottom: 1px solid rgb(0 0 0 / 0.08);
+    max-width: 320px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    color: var(--text);
+    background: rgb(255 255 255 / 0.9);
   }
-  td.num { text-align: right; font-variant-numeric: tabular-nums; }
-  tr:hover td { background: var(--surface2); }
+
+  td.num {
+    text-align: right;
+    font-variant-numeric: tabular-nums;
+  }
+
+  tr:nth-child(even) td {
+    background: #fbfbf8;
+  }
+
+  tr:hover td {
+    background: #fff4cd;
+  }
+
   .tag {
-    display: inline-block; padding: 1px 6px; border-radius: 3px; font-size: 10px; font-weight: 600;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 1.35rem;
+    border-radius: 999px;
+    padding: 0.12rem 0.52rem;
+    font-size: 0.62rem;
+    font-weight: 820;
+    line-height: 1;
+    box-shadow: inset 0 0 0 1px rgb(0 0 0 / 0.15);
   }
-  .tag-zmluva { background: rgba(108,126,225,0.15); color: var(--accent); }
-  .tag-dodatok { background: rgba(230,164,78,0.15); color: var(--accent2); }
-  .tag-active { background: rgba(78,203,113,0.15); color: var(--success); }
-  .tag-cancelled { background: rgba(225,91,91,0.15); color: var(--danger); }
-  td.ext { color: var(--info); }
-  .empty-state { padding: 60px 20px; text-align: center; color: var(--muted); }
-  .empty-state p { font-size: 14px; margin-bottom: 8px; }
 
-  /* Overview tables */
-  #view-overview table { font-size: 13px; }
-  #view-overview th { background: transparent; border-bottom: 1px solid var(--border); cursor: default; }
-  #view-overview th:hover { color: var(--muted); }
-  #view-overview td { max-width: 250px; }
+  .tag-zmluva {
+    background: #f3f3f3;
+    color: var(--text);
+  }
 
-  /* Search section */
-  .search-container { max-width: 900px; margin: 0 auto; padding: 24px 20px; }
+  .tag-dodatok {
+    background: #fff0bc;
+    color: #5f4a00;
+  }
+
+  .tag-active {
+    background: #e9f7e8;
+    color: var(--success);
+  }
+
+  .tag-cancelled {
+    background: #ffe3e3;
+    color: var(--danger);
+  }
+
+  td.ext {
+    color: var(--text);
+    font-weight: 650;
+  }
+
+  .empty-state {
+    padding: 4rem 1rem;
+    text-align: center;
+    color: var(--muted);
+  }
+
+  .empty-state p {
+    font-size: 0.92rem;
+    margin-bottom: 0.35rem;
+    font-weight: 730;
+  }
+
+  #view-overview table {
+    font-size: 0.78rem;
+  }
+
+  #view-overview th {
+    cursor: default;
+  }
+
+  #view-overview th:hover {
+    color: #424242;
+    background: #f4f4ef;
+  }
+
+  #view-overview td {
+    max-width: 260px;
+  }
+
+  .search-container {
+    max-width: 1020px;
+    margin: 0 auto;
+    padding: 1.2rem 1rem 1.4rem;
+  }
+
   .search-box {
-    display: flex; gap: 10px; margin-bottom: 20px;
+    display: flex;
+    gap: 0.55rem;
+    margin-bottom: 1rem;
   }
+
   .search-box input {
-    flex: 1; padding: 12px 16px; font-size: 15px;
-    background: var(--surface); border: 1px solid var(--border); border-radius: 6px;
-    color: var(--text); outline: none;
+    flex: 1;
+    border: 0;
+    border-radius: 999px;
+    background: var(--white);
+    box-shadow: inset 0 0 0 1px rgb(0 0 0 / 0.16), 0 5px 12px rgb(0 0 0 / 0.06);
+    padding: 0.78rem 1rem;
+    font-size: 0.98rem;
+    color: var(--text);
+    outline: none;
+    font-family: inherit;
+    font-weight: 640;
   }
-  .search-box input:focus { border-color: var(--accent); }
+
+  .search-box input:focus {
+    box-shadow: inset 0 0 0 1px var(--black), 0 0 0 4px rgb(255 196 0 / 0.3);
+  }
+
   .search-box button {
-    padding: 12px 24px; font-size: 14px; font-weight: 600;
-    background: var(--accent); color: #fff; border: none; border-radius: 6px; cursor: pointer;
+    border: 0;
+    border-radius: 999px;
+    background: var(--black);
+    color: var(--white);
+    min-width: 104px;
+    padding: 0.7rem 1rem;
+    font-size: 0.81rem;
+    font-family: inherit;
+    font-weight: 850;
+    cursor: pointer;
+    transition: transform 160ms ease, background-color 160ms ease, color 160ms ease;
   }
-  .search-box button:hover { opacity: 0.9; }
-  .search-meta { color: var(--muted); font-size: 12px; margin-bottom: 16px; }
-  .search-results { display: flex; flex-direction: column; gap: 12px; }
+
+  .search-box button:hover {
+    transform: translateY(-1px);
+    background: var(--yellow);
+    color: var(--black);
+  }
+
+  .search-meta {
+    color: var(--muted);
+    font-size: 0.78rem;
+    margin-bottom: 0.7rem;
+    font-weight: 620;
+  }
+
+  .search-results {
+    display: flex;
+    flex-direction: column;
+    gap: 0.62rem;
+  }
+
   .search-card {
-    background: var(--surface); border: 1px solid var(--border); border-radius: 8px;
-    padding: 16px; transition: border-color 0.15s;
+    background: var(--white);
+    border: 0;
+    border-radius: 20px;
+    padding: 0.88rem;
+    transition: transform 160ms ease, box-shadow 160ms ease, background-color 160ms ease;
+    box-shadow: var(--shadow-soft);
+    position: relative;
+    overflow: hidden;
   }
-  .search-card:hover { border-color: var(--accent); }
-  .search-card-header { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; margin-bottom: 8px; }
-  .search-card-title { font-size: 14px; font-weight: 600; color: var(--text); }
-  .search-card-title a { color: var(--text); }
-  .search-card-title a:hover { color: var(--accent); }
-  .search-card-subtitle { font-size: 12px; color: var(--muted); margin-top: 2px; }
-  .search-card-badges { display: flex; gap: 6px; flex-shrink: 0; flex-wrap: wrap; }
-  .search-card-body { display: flex; flex-wrap: wrap; gap: 16px; font-size: 12px; color: var(--muted); }
-  .search-card-body .field { display: flex; gap: 4px; }
-  .search-card-body .field-label { color: var(--muted); }
-  .search-card-body .field-value { color: var(--text); }
-  .search-card-flags { margin-top: 8px; display: flex; gap: 6px; flex-wrap: wrap; }
-  .search-card-match { font-size: 10px; color: var(--muted); margin-top: 6px; }
-  .search-more { text-align: center; margin-top: 16px; }
+
+  .search-card::after {
+    content: '';
+    position: absolute;
+    width: 90px;
+    height: 90px;
+    border-radius: 50%;
+    right: -62px;
+    top: -62px;
+    background: rgb(255 196 0 / 0.28);
+  }
+
+  .search-card:hover {
+    background: #fff9e5;
+    transform: translateY(-1px);
+    box-shadow: var(--shadow-lift);
+  }
+
+  .search-card-header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 0.7rem;
+    margin-bottom: 0.44rem;
+    position: relative;
+    z-index: 1;
+  }
+
+  .search-card-title {
+    font-size: 1.02rem;
+    font-weight: 860;
+    color: var(--text);
+    letter-spacing: -0.02em;
+  }
+
+  .search-card-title a {
+    color: var(--text);
+    text-decoration: none;
+  }
+
+  .search-card-title a:hover {
+    text-decoration: underline;
+    text-decoration-color: var(--yellow);
+  }
+
+  .search-card-subtitle {
+    font-size: 0.72rem;
+    color: var(--muted);
+    margin-top: 0.2rem;
+    font-weight: 620;
+  }
+
+  .search-card-badges {
+    display: flex;
+    gap: 0.32rem;
+    flex-shrink: 0;
+    flex-wrap: wrap;
+    position: relative;
+    z-index: 1;
+  }
+
+  .search-card-body {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.7rem;
+    font-size: 0.74rem;
+    color: var(--muted);
+    position: relative;
+    z-index: 1;
+  }
+
+  .search-card-body .field {
+    display: flex;
+    gap: 0.28rem;
+  }
+
+  .search-card-body .field-label {
+    color: var(--muted);
+    font-weight: 700;
+  }
+
+  .search-card-body .field-value {
+    color: var(--text);
+    font-weight: 620;
+  }
+
+  .search-card-match {
+    font-size: 0.7rem;
+    color: var(--muted);
+    margin-top: 0.45rem;
+    font-weight: 620;
+    position: relative;
+    z-index: 1;
+  }
+
+  .search-more {
+    text-align: center;
+    margin-top: 0.88rem;
+  }
+
   .search-more button {
-    padding: 8px 24px; background: var(--surface2); color: var(--text);
-    border: 1px solid var(--border); border-radius: 6px; cursor: pointer; font-size: 13px;
+    border: 0;
+    border-radius: 999px;
+    background: var(--white);
+    color: var(--text);
+    box-shadow: inset 0 0 0 1px var(--edge-soft);
+    padding: 0.46rem 1.05rem;
+    cursor: pointer;
+    font-size: 0.74rem;
+    font-family: inherit;
+    font-weight: 840;
+    transition: transform 160ms ease, background-color 160ms ease;
   }
-  .search-more button:hover { border-color: var(--accent); }
-  .search-hint { color: var(--muted); font-size: 13px; text-align: center; margin-top: 40px; }
-  .search-hint p { margin-bottom: 8px; }
-  .search-examples { display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; margin-top: 12px; }
+
+  .search-more button:hover {
+    transform: translateY(-1px);
+    background: var(--yellow);
+  }
+
+  .search-hint {
+    color: var(--muted);
+    font-size: 0.82rem;
+    text-align: center;
+    margin-top: 2.1rem;
+  }
+
+  .search-hint p {
+    margin-bottom: 0.55rem;
+    font-weight: 620;
+  }
+
+  .search-examples {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.42rem;
+    justify-content: center;
+    margin-top: 0.72rem;
+  }
+
   .search-examples button {
-    padding: 4px 12px; background: var(--surface2); border: 1px solid var(--border);
-    border-radius: 4px; color: var(--accent); cursor: pointer; font-size: 12px;
+    border: 0;
+    border-radius: 999px;
+    color: var(--text);
+    background: var(--white);
+    box-shadow: inset 0 0 0 1px var(--edge-soft);
+    padding: 0.35rem 0.72rem;
+    cursor: pointer;
+    font-size: 0.71rem;
+    font-family: inherit;
+    font-weight: 700;
+    transition: transform 160ms ease, background-color 160ms ease;
   }
-  .search-examples button:hover { background: var(--surface); border-color: var(--accent); }
+
+  .search-examples button:hover {
+    transform: translateY(-1px);
+    background: var(--yellow);
+  }
+
+  mark {
+    background: var(--yellow);
+    color: var(--black);
+    border-radius: 4px;
+    padding: 0 2px;
+  }
+
+  @media (max-width: 1160px) {
+    .topbar .stats {
+      display: none;
+    }
+
+    .stat-grid {
+      grid-template-columns: repeat(auto-fit, minmax(184px, 1fr));
+    }
+  }
+
+  @media (max-width: 980px) {
+    .topbar {
+      min-height: 64px;
+      height: auto;
+      border-radius: 22px;
+      flex-wrap: wrap;
+      top: 6px;
+      padding: 0.42rem 0.6rem;
+      gap: 0.36rem;
+    }
+
+    .topbar .tabs {
+      order: 3;
+      width: 100%;
+    }
+
+    .topbar .logo .brand-mark {
+      width: 68px;
+    }
+
+    .app.browse-mode {
+      display: block;
+    }
+
+    .filters {
+      position: static;
+      max-height: none;
+      margin-bottom: 0.8rem;
+    }
+
+    .content {
+      border-radius: 22px;
+    }
+  }
+
+  @media (max-width: 740px) {
+    .topbar .logo span {
+      display: none;
+    }
+
+    .topbar .tabs {
+      gap: 0.12rem;
+      justify-content: space-between;
+    }
+
+    .topbar .tab-icon {
+      display: none;
+    }
+
+    .topbar .tab {
+      font-size: 0.74rem;
+      padding: 0.4rem 0.46rem;
+    }
+
+    #view-overview,
+    #view-methodology {
+      padding: 0.86rem;
+    }
+
+    .search-container {
+      padding: 0.82rem 0.64rem 1rem;
+    }
+
+    .overview-hero {
+      border-radius: 22px;
+    }
+
+    .overview-hero h1 {
+      font-size: clamp(1.48rem, 8vw, 2.25rem);
+    }
+
+    .chart-grid {
+      grid-template-columns: 1fr;
+      gap: 0.65rem;
+    }
+
+    .panel {
+      border-radius: 20px;
+      padding: 0.82rem;
+    }
+
+    .stat-grid {
+      gap: 0.55rem;
+    }
+
+    .stat-card {
+      min-height: 106px;
+      border-radius: 20px;
+    }
+
+    .table-info {
+      flex-wrap: wrap;
+      gap: 0.58rem;
+    }
+
+    .pagination {
+      width: 100%;
+      margin-left: 0;
+    }
+
+    .search-box {
+      flex-direction: column;
+    }
+
+    .search-card-header {
+      flex-direction: column;
+      gap: 0.45rem;
+    }
+  }
 </style>
+
 </head>
 <body>
 
 <!-- Top bar -->
 <div class="topbar">
-  <span class="logo">CRZ Explorer</span>
+  <a class="logo" href="/" aria-label="CRZ Explorer">
+    <img class="brand-mark" src="/assets/zltastopa.png" alt="Žltá stopa logo">
+    <span>CRZ Explorer</span>
+  </a>
   <div class="tabs">
     <div class="tab active" id="tab-overview" onclick="switchTab('overview')">
-      <span class="tab-icon">&#9776;</span> Prehlad
+      <span class="tab-icon" aria-hidden="true">
+        <svg viewBox="0 0 16 16"><path d="M3 4.5h10M3 8h10M3 11.5h10"/></svg>
+      </span>
+      Prehľad
     </div>
     <div class="tab" id="tab-browse" onclick="switchTab('browse')">
-      <span class="tab-icon">&#9634;</span> Browse
+      <span class="tab-icon" aria-hidden="true">
+        <svg viewBox="0 0 16 16"><rect x="2.5" y="2.5" width="4.5" height="4.5" rx="0.8"/><rect x="9" y="2.5" width="4.5" height="4.5" rx="0.8"/><rect x="2.5" y="9" width="4.5" height="4.5" rx="0.8"/><rect x="9" y="9" width="4.5" height="4.5" rx="0.8"/></svg>
+      </span>
+      Browse
     </div>
     <div class="tab" id="tab-search" onclick="switchTab('search')">
-      <span class="tab-icon">&#128269;</span> Hladat
+      <span class="tab-icon" aria-hidden="true">
+        <svg viewBox="0 0 16 16"><circle cx="7" cy="7" r="3.8"/><path d="M10 10l3.5 3.5"/></svg>
+      </span>
+      Hľadať
     </div>
     <div class="tab" id="tab-methodology" onclick="switchTab('methodology')">
-      <span class="tab-icon">&#9888;</span> Metodika
+      <span class="tab-icon" aria-hidden="true">
+        <svg viewBox="0 0 16 16"><path d="M8 2.5l5.3 9.3H2.7L8 2.5z"/><path d="M8 6.3v2.8M8 10.9h.01"/></svg>
+      </span>
+      Metodika
     </div>
   </div>
   <div class="spacer"></div>
@@ -296,12 +1452,12 @@
     <div class="filter-section">
       <h3>Zmluva</h3>
       <div class="filter-row">
-        <label>Nazov zmluvy</label>
-        <input type="text" data-filter="nazov_zmluvy" placeholder="hladat v nazve...">
+        <label>Názov zmluvy</label>
+        <input type="text" data-filter="nazov_zmluvy" placeholder="hľadať v názve...">
       </div>
       <div class="filter-row">
-        <label>Cislo zmluvy</label>
-        <input type="text" data-filter="cislo_zmluvy" placeholder="cislo...">
+        <label>Číslo zmluvy</label>
+        <input type="text" data-filter="cislo_zmluvy" placeholder="číslo...">
       </div>
       <div class="filter-row">
         <label>Typ</label>
@@ -309,31 +1465,31 @@
       </div>
       <div class="filter-row">
         <label>Stav</label>
-        <select data-filter="stav"><option value="">--</option><option value="akt\u00edvna">aktivna</option><option value="zru\u0161en\u00e1">zrusena</option></select>
+        <select data-filter="stav"><option value="">--</option><option value="aktívna">aktívna</option><option value="zrušená">zrušená</option></select>
       </div>
       <div class="filter-row">
         <label>Druh</label>
-        <select data-filter="druh"><option value="">--</option><option value="zmluva">zmluva</option><option value="objedn\u00e1vka">objednavka</option></select>
+        <select data-filter="druh"><option value="">--</option><option value="zmluva">zmluva</option><option value="objednávka">objednávka</option></select>
       </div>
     </div>
 
     <div class="filter-section">
-      <h3>Zmluvne strany</h3>
+      <h3>Zmluvné strany</h3>
       <div class="filter-row">
-        <label>Dodavatel</label>
-        <input type="text" data-filter="dodavatel" placeholder="nazov dodavatela...">
+        <label>Dodávateľ</label>
+        <input type="text" data-filter="dodavatel" placeholder="názov dodávateľa...">
       </div>
       <div class="filter-row">
-        <label>Dodavatel ICO</label>
-        <input type="text" data-filter="dodavatel_ico" placeholder="ICO...">
+        <label>Dodávateľ IČO</label>
+        <input type="text" data-filter="dodavatel_ico" placeholder="IČO...">
       </div>
       <div class="filter-row">
-        <label>Objednavatel</label>
-        <input type="text" data-filter="objednavatel" placeholder="nazov objednavatela...">
+        <label>Objednávateľ</label>
+        <input type="text" data-filter="objednavatel" placeholder="názov objednávateľa...">
       </div>
       <div class="filter-row">
-        <label>Objednavatel ICO</label>
-        <input type="text" data-filter="objednavatel_ico" placeholder="ICO...">
+        <label>Objednávateľ IČO</label>
+        <input type="text" data-filter="objednavatel_ico" placeholder="IČO...">
       </div>
       <div class="filter-row">
         <label>Rezort</label>
@@ -360,23 +1516,23 @@
     </div>
 
     <div class="filter-section">
-      <h3>Datumy</h3>
+      <h3>Dátumy</h3>
       <div class="filter-row">
-        <label>Datum zverejnenia</label>
+        <label>Dátum zverejnenia</label>
         <div class="range">
           <input type="date" data-filter="date_from">
           <input type="date" data-filter="date_to">
         </div>
       </div>
       <div class="filter-row">
-        <label>Datum podpisu</label>
+        <label>Dátum podpisu</label>
         <div class="range">
           <input type="date" data-filter="podpis_from">
           <input type="date" data-filter="podpis_to">
         </div>
       </div>
       <div class="filter-row">
-        <label>Datum ucinnosti</label>
+        <label>Dátum účinnosti</label>
         <div class="range">
           <input type="date" data-filter="ucinnost_from">
           <input type="date" data-filter="ucinnost_to">
@@ -387,12 +1543,12 @@
     <div class="filter-section">
       <h3>Text</h3>
       <div class="filter-row">
-        <label>Poznamka</label>
-        <input type="text" data-filter="poznamka" placeholder="hladat v poznamke...">
+        <label>Poznámka</label>
+        <input type="text" data-filter="poznamka" placeholder="hľadať v poznámke...">
       </div>
       <div class="filter-row">
         <label>Popis</label>
-        <input type="text" data-filter="popis" placeholder="hladat v popise...">
+        <input type="text" data-filter="popis" placeholder="hľadať v popise...">
       </div>
       <div class="filter-row">
         <label>Zdroj</label>
@@ -403,12 +1559,12 @@
     <div class="filter-section">
       <h3>Extrakcia (LLM)</h3>
       <div class="filter-row">
-        <label>Kategoria sluzby</label>
+        <label>Kategória služby</label>
         <select data-filter="service_category" id="categorySelect"><option value="">--</option></select>
       </div>
       <div class="filter-row">
-        <label>Skutocny predmet</label>
-        <input type="text" data-filter="actual_subject" placeholder="hladat...">
+        <label>Skutočný predmet</label>
+        <input type="text" data-filter="actual_subject" placeholder="hľadať...">
       </div>
       <div class="filter-row">
         <label>Asymetria pokut</label>
@@ -426,27 +1582,27 @@
         <select data-filter="funding_type" id="fundingSelect"><option value="">--</option></select>
       </div>
       <div class="filter-row">
-        <label>Automaticke predlzenie</label>
+        <label>Automatické predĺženie</label>
         <select data-filter="auto_renewal"><option value="">--</option><option value="1">ano</option><option value="0">nie</option></select>
       </div>
       <div class="filter-row">
-        <label>Bezodplatne</label>
+        <label>Bezodplatné</label>
         <select data-filter="bezodplatne"><option value="">--</option><option value="1">ano</option><option value="0">nie</option></select>
       </div>
       <div class="filter-row">
-        <label>Skryte entity (min. pocet)</label>
+        <label>Skryté entity (min. počet)</label>
         <input type="number" data-filter="hidden_entity_min" placeholder="min...">
       </div>
       <div class="filter-row">
-        <label>Pocet pokut (min.)</label>
+        <label>Počet pokút (min.)</label>
         <input type="number" data-filter="penalty_count_min" placeholder="min...">
       </div>
       <div class="filter-row">
-        <label>Pocet IBAN (min.)</label>
+        <label>Počet IBAN (min.)</label>
         <input type="number" data-filter="iban_count_min" placeholder="min...">
       </div>
       <div class="filter-row">
-        <label>Ma extrakciu</label>
+        <label>Má extrakciu</label>
         <select data-filter="has_extraction"><option value="">--</option><option value="1">ano</option><option value="0">nie</option></select>
       </div>
     </div>
@@ -454,19 +1610,19 @@
     <div class="filter-section">
       <h3>Red Flags</h3>
       <div class="filter-row">
-        <label>Flag typ</label>
+        <label>Typ flagu</label>
         <select data-filter="flag" id="flagSelect"><option value="">--</option></select>
       </div>
       <div class="filter-row">
-        <label>Ma aspon 1 flag</label>
+        <label>Má aspoň 1 flag</label>
         <select data-filter="has_flag"><option value="">--</option><option value="1">ano</option><option value="0">nie</option></select>
       </div>
     </div>
 
     <div class="filter-section">
-      <h3>Danova spolahlivost</h3>
+      <h3>Daňová spoľahlivosť</h3>
       <div class="filter-row">
-        <label>Dodavatel</label>
+        <label>Dodávateľ</label>
         <select data-filter="dodavatel_tax_status">
           <option value="">--</option>
           <option value="vysoko spoľahlivý">vysoko spoľahlivý</option>
@@ -477,14 +1633,14 @@
     </div>
 
     <div class="filter-section">
-      <h3>Dlzniky</h3>
+      <h3>Dlžníky</h3>
       <div class="filter-row">
-        <label>Dodavatel dlznik</label>
+        <label>Dodávateľ dlžník</label>
         <select data-filter="debtor">
           <option value="">--</option>
-          <option value="vszp">VSZP (podla ICO)</option>
-          <option value="socpoist">Soc. poistovna (podla nazvu)</option>
-          <option value="any">Ktokolvek</option>
+          <option value="vszp">VSZP (podľa IČO)</option>
+          <option value="socpoist">Soc. poisťovňa (podľa názvu)</option>
+          <option value="any">Ktokoľvek</option>
         </select>
       </div>
     </div>
@@ -492,10 +1648,10 @@
     <div class="filter-section">
       <h3>Register (RUZ)</h3>
       <div class="filter-row">
-        <label><input type="checkbox" data-filter="ruz_terminated" value="1"> Zrusena firma</label>
+        <label><input type="checkbox" data-filter="ruz_terminated" value="1"> Zrušená firma</label>
       </div>
       <div class="filter-row">
-        <label><input type="checkbox" data-filter="ruz_fresh" value="1"> Cerstve zalozena (&lt;1r)</label>
+        <label><input type="checkbox" data-filter="ruz_fresh" value="1"> Čerstvo založená (&lt;1r)</label>
       </div>
       <div class="filter-row">
         <label><input type="checkbox" data-filter="ruz_micro" value="1"> Mikro firma (0-1 zam.)</label>
@@ -503,7 +1659,7 @@
     </div>
 
     <div class="filter-actions">
-      <button class="btn btn-primary" onclick="browseApplyFilters()">Hladat</button>
+      <button class="btn btn-primary" onclick="browseApplyFilters()">Hľadať</button>
       <button class="btn btn-secondary" onclick="browseResetFilters()">Reset</button>
       <button class="btn btn-secondary" onclick="browseExportCSV()">CSV</button>
     </div>
@@ -513,47 +1669,53 @@
 
     <!-- ===== OVERVIEW ===== -->
     <div id="view-overview" class="active">
+      <div class="overview-hero">
+        <h1>Niektoré dokumenty smrdia.</h1>
+        <p>CRZ Explorer mení surové CRZ záznamy na jasný prehľad. Vyfiltruj podozrivé vzory, porovnaj rezorty a otvor detaily bez boja s tabuľkami.</p>
+        <p class="wink">Žltá stopa tu ostáva, ale dáta majú vždy prvú prioritu.</p>
+      </div>
+
       <div class="stat-grid" id="stats">
-        <div class="stat-card"><div class="value" id="s-total">-</div><div class="label">Zmluv celkom</div></div>
-        <div class="stat-card"><div class="value" id="s-value">-</div><div class="label">Celkova hodnota</div></div>
-        <div class="stat-card"><div class="value" id="s-avg">-</div><div class="label">Priemerna suma</div></div>
-        <div class="stat-card"><div class="value" id="s-max">-</div><div class="label">Najvyssia suma</div></div>
+        <div class="stat-card"><div class="value" id="s-total">-</div><div class="label">Zmlúv celkom</div></div>
+        <div class="stat-card"><div class="value" id="s-value">-</div><div class="label">Celková hodnota</div></div>
+        <div class="stat-card"><div class="value" id="s-avg">-</div><div class="label">Priemerná suma</div></div>
+        <div class="stat-card"><div class="value" id="s-max">-</div><div class="label">Najvyššia suma</div></div>
         <div class="stat-card"><div class="value" id="s-no-amount">-</div><div class="label">Bez uvedenej sumy</div></div>
         <div class="stat-card"><div class="value" id="s-amendments">-</div><div class="label">Dodatkov</div></div>
       </div>
 
       <div class="chart-grid full">
         <div class="panel">
-          <h2>Zmluvy podla mesiacov</h2>
+          <h2>Zmluvy podľa mesiacov</h2>
           <canvas id="chart-timeline"></canvas>
         </div>
       </div>
 
       <div class="chart-grid">
         <div class="panel">
-          <h2>Top rezorty (pocet zmluv)</h2>
+          <h2>Top rezorty (počet zmlúv)</h2>
           <canvas id="chart-rezort"></canvas>
         </div>
         <div class="panel">
-          <h2>Kategorie sluzieb</h2>
+          <h2>Kategórie služieb</h2>
           <canvas id="chart-category"></canvas>
         </div>
       </div>
 
       <div class="chart-grid">
         <div class="panel">
-          <h2>Anomalie a upozornenia</h2>
+          <h2>Anomálie a upozornenia</h2>
           <ul class="anomaly-list" id="anomaly-list"></ul>
         </div>
         <div class="panel">
-          <h2>Rozdelenie podla sumy</h2>
+          <h2>Rozdelenie podľa sumy</h2>
           <canvas id="chart-distribution"></canvas>
         </div>
       </div>
 
       <div class="chart-grid">
         <div class="panel">
-          <h2>Asymetria zmluvnych pokut</h2>
+          <h2>Asymetria zmluvných pokút</h2>
           <canvas id="chart-penalties"></canvas>
         </div>
         <div class="panel" style="display:flex;flex-direction:column;justify-content:center;">
@@ -563,16 +1725,16 @@
       </div>
 
       <div class="panel" style="margin-bottom:24px;">
-        <h2>Najvacsie zmluvy</h2>
+        <h2>Najväčšie zmluvy</h2>
         <div class="table-wrap">
           <table>
             <thead>
               <tr>
                 <th>Suma EUR</th>
-                <th>Nazov zmluvy</th>
-                <th>Dodavatel</th>
-                <th>Objednavatel</th>
-                <th>Datum</th>
+                <th>Názov zmluvy</th>
+                <th>Dodávateľ</th>
+                <th>Objednávateľ</th>
+                <th>Dátum</th>
                 <th>Rezort</th>
                 <th>Odkaz</th>
               </tr>
@@ -586,7 +1748,7 @@
     <!-- ===== BROWSE ===== -->
     <div id="view-browse">
       <div class="table-info" id="tableInfo">
-        <span>Nacitavam...</span>
+        <span>Načítavam...</span>
       </div>
       <div class="table-wrap">
         <table id="dataTable">
@@ -595,7 +1757,7 @@
         </table>
       </div>
       <div id="emptyState" class="empty-state" style="display:none">
-        <p>Ziadne vysledky pre zadane filtre.</p>
+        <p>Žiadne výsledky pre zadané filtre.</p>
       </div>
     </div>
 
@@ -603,23 +1765,23 @@
     <div id="view-search">
       <div class="search-container">
         <div class="search-box">
-          <input type="text" id="searchInput" placeholder="Hladat zmluvy, dodavatelov, ICO, prilohy..." autofocus>
-          <button onclick="searchRun()">Hladat</button>
+          <input type="text" id="searchInput" placeholder="Hľadať zmluvy, dodávateľov, IČO, prílohy..." autofocus>
+          <button onclick="searchRun()">Hľadať</button>
         </div>
         <div id="searchMeta" class="search-meta"></div>
         <div id="searchResults" class="search-results"></div>
         <div id="searchMore" class="search-more" style="display:none">
-          <button onclick="searchLoadMore()">Nacitat dalsie</button>
+          <button onclick="searchLoadMore()">Načítať ďalšie</button>
         </div>
         <div id="searchHint" class="search-hint">
-          <p>Hladajte cokolvek — nazvy zmluv, dodavatelov, ICO, adresy, poznamky, prilohy, skryte entity...</p>
+          <p>Hľadajte čokoľvek — názvy zmlúv, dodávateľov, IČO, adresy, poznámky, prílohy, skryté entity...</p>
           <div class="search-examples">
             <button onclick="searchExample(this)">Telekom</button>
             <button onclick="searchExample(this)">36231151</button>
             <button onclick="searchExample(this)">dodatok</button>
-            <button onclick="searchExample(this)">bezodplatne</button>
-            <button onclick="searchExample(this)">ministerstvo zdravotnictva</button>
-            <button onclick="searchExample(this)">IT sluzby</button>
+            <button onclick="searchExample(this)">bezodplatné</button>
+            <button onclick="searchExample(this)">ministerstvo zdravotníctva</button>
+            <button onclick="searchExample(this)">IT služby</button>
           </div>
         </div>
       </div>
@@ -630,42 +1792,42 @@
       <div class="methodology-container">
         <h2>Metodika hodnotenia red flags</h2>
         <p class="methodology-intro">
-          CRZ Explorer automaticky vyhodnocuje zmluvy podla sady pravidiel (red flags).
-          Kazde pravidlo kontroluje specificku vlastnost alebo kombinaciu dat z viacerych zdrojov.
-          Nizka zavaznost (info) znamena pozorovanie, stredna (warning) znamena podozrenie a vysoka (danger) znamena zavazny problem.
+          CRZ Explorer automaticky vyhodnocuje zmluvy podľa sady pravidiel (red flags).
+          Každé pravidlo kontroluje špecifickú vlastnosť alebo kombináciu dát z viacerých zdrojov.
+          Nízka závažnosť (info) znamená pozorovanie, stredná (warning) znamená podozrenie a vysoká (danger) znamená závažný problém.
         </p>
 
-        <h3>Zdroje dat</h3>
+        <h3>Zdroje dát</h3>
         <div class="methodology-sources">
           <div class="source-card">
             <strong>CRZ</strong>
-            <p>Centralny register zmluv — zmluvy, dodatky, prilohy, zmluvne strany</p>
+            <p>Centrálny register zmlúv — zmluvy, dodatky, prílohy, zmluvné strany</p>
           </div>
           <div class="source-card">
             <strong>LLM extrakcia</strong>
-            <p>Automaticka analyza textu zmluv — skryte entity, pokuty, podpisujuci, kategoria sluzieb</p>
+            <p>Automatická analýza textu zmlúv — skryté entity, pokuty, podpisujúci, kategórie služieb</p>
           </div>
           <div class="source-card">
             <strong>RUZ</strong>
-            <p>Register uctovnych zavierok — pravna forma, velkost, NACE odvetvie, datum zalozenia/zaniku</p>
+            <p>Register účtovných závierok — právna forma, veľkosť, NACE odvetvie, dátum založenia/zániku</p>
           </div>
           <div class="source-card">
-            <strong>Financna sprava SR</strong>
-            <p>Danova spolahlivost subjektov — vysoko spolahlivy, spolahlivy, menej spolahlivy</p>
+            <strong>Finančná správa SR</strong>
+            <p>Daňová spoľahlivosť subjektov — vysoko spoľahlivý, spoľahlivý, menej spoľahlivý</p>
           </div>
           <div class="source-card">
             <strong>VSZP</strong>
-            <p>Vseobecna zdravotna poistovna — register dlznikov</p>
+            <p>Všeobecná zdravotná poisťovňa — register dlžníkov</p>
           </div>
           <div class="source-card">
-            <strong>Socialna poistovna</strong>
-            <p>Register dlznikov Socialnej poistovne</p>
+            <strong>Sociálna poisťovňa</strong>
+            <p>Register dlžníkov Sociálnej poisťovne</p>
           </div>
         </div>
 
-        <h3>Prehlad pravidiel</h3>
+        <h3>Prehľad pravidiel</h3>
         <div id="methodologyRules" class="methodology-rules">
-          <p>Nacitavam pravidla...</p>
+          <p>Načítavam pravidlá...</p>
         </div>
       </div>
     </div>
@@ -683,6 +1845,8 @@ function switchTab(tab) {
   currentTab = tab;
   document.querySelectorAll('.tab').forEach(function(el) { el.classList.remove('active'); });
   document.getElementById('tab-' + tab).classList.add('active');
+  var appEl = document.querySelector('.app');
+  if (appEl) appEl.classList.toggle('browse-mode', tab === 'browse');
 
   document.getElementById('view-overview').classList.toggle('active', tab === 'overview');
   document.getElementById('view-browse').classList.toggle('active', tab === 'browse');
@@ -727,7 +1891,7 @@ async function loadMethodology() {
   var data = await api('/api/flags');
   var el = document.getElementById('methodologyRules');
   if (!data.rules || data.rules.length === 0) {
-    el.innerHTML = '<p>Ziadne pravidla.</p>';
+    el.innerHTML = '<p>Žiadne pravidlá.</p>';
     return;
   }
   var html = '';
@@ -799,19 +1963,39 @@ var overviewLoaded = false;
 var charts = {};
 
 const CHART_COLORS = {
-  accent: '#6c7ee1', accent2: '#e6a44e', danger: '#e15b5b',
-  success: '#4ecb71', info: '#5bb8e1', muted: '#8b8fa3',
-  purple: '#b07ee1', pink: '#e17eb0',
+  accent: '#FFC400',
+  accent2: '#C77A00',
+  danger: '#C54A4A',
+  success: '#3E9B65',
+  info: '#5C7385',
+  muted: '#8F928C',
+  ink: '#111111',
 };
-const PALETTE = [
-  CHART_COLORS.accent, CHART_COLORS.accent2, CHART_COLORS.success,
-  CHART_COLORS.info, CHART_COLORS.danger, CHART_COLORS.purple,
-  CHART_COLORS.pink, CHART_COLORS.muted,
+
+const RANK_COLOR_STOPS = [
+  '#FFC400',
+  '#FFB637',
+  '#FFA24F',
+  '#FF8B64',
+  '#F27477',
+  '#D86E8D',
+  '#B672A0',
+  '#9477AF',
+  '#757FB7',
+  '#5C8EBA',
 ];
 
-Chart.defaults.color = '#8b8fa3';
-Chart.defaults.borderColor = '#2a2d3a';
-Chart.defaults.font.family = '-apple-system, BlinkMacSystemFont, sans-serif';
+const PENALTY_COLOR_MAP = {
+  strong_buyer_advantage: '#CF4B4B',
+  moderate_buyer_advantage: '#F08E34',
+  balanced: '#3E9B65',
+  supplier_advantage: '#4F79C4',
+  none_found: '#9A9C96',
+};
+
+Chart.defaults.color = '#585850';
+Chart.defaults.borderColor = '#D6D6CE';
+Chart.defaults.font.family = "'Lexend', -apple-system, BlinkMacSystemFont, sans-serif";
 Chart.defaults.font.size = 12;
 
 function destroyChart(key) {
@@ -824,14 +2008,57 @@ function makeChart(key, canvasId, type, data, options) {
   return charts[key];
 }
 
+function hexToRgb(hex) {
+  var n = hex.replace('#', '');
+  if (n.length === 3) n = n.split('').map(function(ch) { return ch + ch; }).join('');
+  var num = parseInt(n, 16);
+  return { r: (num >> 16) & 255, g: (num >> 8) & 255, b: num & 255 };
+}
+
+function mixHex(a, b, t) {
+  var ca = hexToRgb(a);
+  var cb = hexToRgb(b);
+  var tt = Math.max(0, Math.min(1, t));
+  var r = Math.round(ca.r + (cb.r - ca.r) * tt);
+  var g = Math.round(ca.g + (cb.g - ca.g) * tt);
+  var bch = Math.round(ca.b + (cb.b - ca.b) * tt);
+  return 'rgb(' + r + ', ' + g + ', ' + bch + ')';
+}
+
+function sampleColorStops(stops, t) {
+  if (stops.length === 1) return mixHex(stops[0], stops[0], 0);
+  var scaled = Math.max(0, Math.min(1, t)) * (stops.length - 1);
+  var index = Math.floor(scaled);
+  if (index >= stops.length - 1) return mixHex(stops[stops.length - 1], stops[stops.length - 1], 0);
+  return mixHex(stops[index], stops[index + 1], scaled - index);
+}
+
+function buildRankColors(count, alpha, stepCount) {
+  var colors = [];
+  var steps = stepCount && stepCount > 1 ? stepCount : 0;
+  for (var i = 0; i < count; i++) {
+    var t = count <= 1 ? 0 : (i / (count - 1));
+    if (steps) {
+      t = Math.round(t * (steps - 1)) / (steps - 1);
+    }
+    var rgb = sampleColorStops(RANK_COLOR_STOPS, t);
+    if (alpha == null) {
+      colors.push(rgb);
+    } else {
+      colors.push(rgb.replace('rgb(', 'rgba(').replace(')', ', ' + alpha + ')'));
+    }
+  }
+  return colors;
+}
+
 function makeHBarChart(key, canvasId, labels, values, opts) {
   return makeChart(key, canvasId, 'bar', {
     labels: labels,
-    datasets: [{ data: values, backgroundColor: PALETTE.concat(PALETTE), borderRadius: 3 }],
+    datasets: [{ data: values, backgroundColor: buildRankColors(values.length, 0.95), borderRadius: 4 }],
   }, {
     indexAxis: 'y', responsive: true,
     plugins: { legend: { display: false } },
-    scales: { x: { title: { display: true, text: (opts && opts.xLabel) || 'Pocet zmluv' } } },
+    scales: { x: { title: { display: true, text: (opts && opts.xLabel) || 'Počet zmlúv' } } },
   });
 }
 
@@ -868,11 +2095,11 @@ function applyAnomalyFilter(type) {
 (function buildPenaltyLegend() {
   var container = document.getElementById('penalty-legend');
   var items = [
-    { color: CHART_COLORS.danger, label: 'strong_buyer_advantage', desc: 'pokuty len pre dodavatela' },
-    { color: CHART_COLORS.accent2, label: 'moderate_buyer_advantage', desc: 'dodavatel znasa viac' },
-    { color: CHART_COLORS.success, label: 'balanced', desc: 'porovnatelne pokuty' },
-    { color: CHART_COLORS.accent, label: 'supplier_advantage', desc: 'pokuty zvyhodnuju dodavatela' },
-    { color: CHART_COLORS.muted, label: 'none_found', desc: 'bez zmluvnych pokut' },
+    { color: PENALTY_COLOR_MAP.strong_buyer_advantage, label: 'strong_buyer_advantage', desc: 'pokuty len pre dodávateľa' },
+    { color: PENALTY_COLOR_MAP.moderate_buyer_advantage, label: 'moderate_buyer_advantage', desc: 'dodávateľ znáša viac' },
+    { color: PENALTY_COLOR_MAP.balanced, label: 'balanced', desc: 'porovnateľné pokuty' },
+    { color: PENALTY_COLOR_MAP.supplier_advantage, label: 'supplier_advantage', desc: 'pokuty zvýhodňujú dodávateľa' },
+    { color: PENALTY_COLOR_MAP.none_found, label: 'none_found', desc: 'bez zmluvných pokút' },
   ];
   items.forEach(function(item) {
     var div = document.createElement('div');
@@ -913,9 +2140,9 @@ async function loadTimeline(params) {
     data: {
       labels: data.map(function(d) { return d.month; }),
       datasets: [
-        { label: 'Pocet zmluv', data: data.map(function(d) { return d.count; }),
+        { label: 'Počet zmlúv', data: data.map(function(d) { return d.count; }),
           backgroundColor: CHART_COLORS.accent + '99', borderRadius: 3, yAxisID: 'y' },
-        { label: 'Celkova hodnota (EUR)', data: data.map(function(d) { return d.total_value; }),
+        { label: 'Celková hodnota (EUR)', data: data.map(function(d) { return d.total_value; }),
           type: 'line', borderColor: CHART_COLORS.accent2, backgroundColor: 'transparent',
           pointRadius: 2, tension: 0.3, yAxisID: 'y1' },
       ],
@@ -923,7 +2150,7 @@ async function loadTimeline(params) {
     options: {
       responsive: true, interaction: { mode: 'index', intersect: false },
       scales: {
-        y: { position: 'left', title: { display: true, text: 'Pocet' } },
+        y: { position: 'left', title: { display: true, text: 'Počet' } },
         y1: { position: 'right', title: { display: true, text: 'EUR' },
           grid: { drawOnChartArea: false },
           ticks: { callback: function(v) { return fmtEur(v); } } },
@@ -948,35 +2175,39 @@ async function loadRezort(params) {
 
 async function loadCategory(params) {
   var data = await api('/api/by_category', params);
+  var sorted = data.slice().sort(function(a, b) { return (b.count || 0) - (a.count || 0); });
   destroyChart('category');
+  var categoryColors = buildRankColors(sorted.length, 0.95, 8);
   charts.category = new Chart(document.getElementById('chart-category'), {
     type: 'doughnut',
     data: {
-      labels: data.map(function(d) { return d.category; }),
-      datasets: [{ data: data.map(function(d) { return d.count; }),
-        backgroundColor: PALETTE.concat(PALETTE).concat(PALETTE), borderWidth: 0 }],
+      labels: sorted.map(function(d) { return d.category; }),
+      datasets: [{ data: sorted.map(function(d) { return d.count; }),
+        backgroundColor: categoryColors,
+        borderWidth: 1,
+        borderColor: '#f4f4ef',
+        borderAlign: 'inner',
+        spacing: 1,
+        hoverOffset: 2 }],
     },
-    options: { responsive: true, plugins: { legend: { position: 'right', labels: { boxWidth: 10, font: { size: 11 } } } } },
+    options: { responsive: true, plugins: { legend: { position: 'right', labels: { boxWidth: 10, font: { size: 11 } } } }, cutout: '58%' },
   });
 }
 
 async function loadPenalties(params) {
   var data = await api('/api/penalties', params);
-  var colorMap = {
-    strong_buyer_advantage: CHART_COLORS.danger, moderate_buyer_advantage: CHART_COLORS.accent2,
-    balanced: CHART_COLORS.success, supplier_advantage: CHART_COLORS.accent, none_found: CHART_COLORS.muted,
-  };
+  var sorted = data.slice().sort(function(a, b) { return (b.count || 0) - (a.count || 0); });
   destroyChart('penalties');
   charts.penalties = new Chart(document.getElementById('chart-penalties'), {
     type: 'bar',
     data: {
-      labels: data.map(function(d) { return d.asymmetry; }),
-      datasets: [{ data: data.map(function(d) { return d.count; }),
-        backgroundColor: data.map(function(d) { return colorMap[d.asymmetry] || CHART_COLORS.muted; }),
+      labels: sorted.map(function(d) { return d.asymmetry; }),
+      datasets: [{ data: sorted.map(function(d) { return d.count; }),
+        backgroundColor: sorted.map(function(d) { return PENALTY_COLOR_MAP[d.asymmetry] || CHART_COLORS.muted; }),
         borderRadius: 3 }],
     },
     options: { responsive: true, plugins: { legend: { display: false } },
-      scales: { y: { title: { display: true, text: 'Pocet zmluv' } } } },
+      scales: { y: { title: { display: true, text: 'Počet zmlúv' } } } },
   });
 }
 
@@ -987,7 +2218,7 @@ async function loadAnomalies(params) {
   if (data.anomalies.length === 0) {
     var li = document.createElement('li');
     li.style.padding = '16px'; li.style.color = 'var(--muted)';
-    li.textContent = 'Ziadne anomalie';
+    li.textContent = 'Žiadne anomálie';
     list.appendChild(li);
   } else {
     data.anomalies.forEach(function(a) {
@@ -1014,10 +2245,10 @@ async function loadAnomalies(params) {
     data: {
       labels: dist.map(function(d) { return d.bucket; }),
       datasets: [{ data: dist.map(function(d) { return d.count; }),
-        backgroundColor: CHART_COLORS.info + '99', borderRadius: 3 }],
+        backgroundColor: buildRankColors(dist.length, 0.9), borderRadius: 3 }],
     },
     options: { responsive: true, plugins: { legend: { display: false } },
-      scales: { y: { title: { display: true, text: 'Pocet zmluv' } } } },
+      scales: { y: { title: { display: true, text: 'Počet zmlúv' } } } },
   });
 }
 
@@ -1081,53 +2312,53 @@ var browseLoaded = false;
 
 const COLUMNS = [
   { key: 'id', label: 'ID', type: 'num', on: true },
-  { key: 'actual_subject', label: 'Skutocny predmet', ext: true, on: true },
-  { key: 'nazov_zmluvy', label: 'Nazov zmluvy', on: true },
-  { key: 'cislo_zmluvy', label: 'Cislo', on: false },
-  { key: 'dodavatel', label: 'Dodavatel', on: true },
-  { key: 'dodavatel_ico', label: 'Dod. ICO', on: true },
+  { key: 'actual_subject', label: 'Skutočný predmet', ext: true, on: true },
+  { key: 'nazov_zmluvy', label: 'Názov zmluvy', on: true },
+  { key: 'cislo_zmluvy', label: 'Číslo', on: false },
+  { key: 'dodavatel', label: 'Dodávateľ', on: true },
+  { key: 'dodavatel_ico', label: 'Dod. IČO', on: true },
   { key: 'dodavatel_adresa', label: 'Dod. adresa', on: false },
-  { key: 'objednavatel', label: 'Objednavatel', on: true },
-  { key: 'objednavatel_ico', label: 'Obj. ICO', on: true },
+  { key: 'objednavatel', label: 'Objednávateľ', on: true },
+  { key: 'objednavatel_ico', label: 'Obj. IČO', on: true },
   { key: 'objednavatel_adresa', label: 'Obj. adresa', on: false },
   { key: 'suma', label: 'Suma', type: 'num', on: true },
   { key: 'suma_celkom', label: 'Suma celkom', type: 'num', on: false },
   { key: 'datum_zverejnenia', label: 'Zverejnenie', on: true },
   { key: 'datum_podpisu', label: 'Podpis', on: false },
-  { key: 'datum_ucinnosti', label: 'Ucinnost', on: false },
-  { key: 'platnost_do', label: 'Platnost do', on: false },
+  { key: 'datum_ucinnosti', label: 'Účinnosť', on: false },
+  { key: 'platnost_do', label: 'Platnosť do', on: false },
   { key: 'typ', label: 'Typ', on: true },
   { key: 'stav', label: 'Stav', on: true },
   { key: 'druh', label: 'Druh', on: false },
   { key: 'rezort', label: 'Rezort', on: true },
-  { key: 'poznamka', label: 'Poznamka', on: false },
+  { key: 'poznamka', label: 'Poznámka', on: false },
   { key: 'popis', label: 'Popis', on: false },
   { key: 'zdroj', label: 'Zdroj', on: false },
   { key: 'uvo_url', label: 'UVO', on: false },
   { key: 'crz_url', label: 'CRZ link', on: false },
-  { key: 'dodavatel_tax_status', label: 'Dan. spolahlivost', on: true },
+  { key: 'dodavatel_tax_status', label: 'Daň. spoľahlivosť', on: true },
   { key: 'vszp_debt', label: 'Dlh VSZP', type: 'num', on: true },
   { key: 'socpoist_debt', label: 'Dlh Soc.poist.', type: 'num', on: true },
   { key: 'ruz_established', label: 'Vznik firmy', on: false },
   { key: 'ruz_terminated', label: 'Zanik firmy', on: false },
   { key: 'ruz_legal_form', label: 'Prav. forma', on: false },
-  { key: 'ruz_org_size', label: 'Velkost firmy', on: true },
+  { key: 'ruz_org_size', label: 'Veľkosť firmy', on: true },
   { key: 'ruz_nace', label: 'NACE', on: false },
-  { key: 'signatories', label: 'Podpisujuci', on: true },
-  { key: 'service_category', label: 'Kategoria', ext: true, on: true },
+  { key: 'signatories', label: 'Podpisujúci', on: true },
+  { key: 'service_category', label: 'Kategória', ext: true, on: true },
   { key: 'penalty_asymmetry', label: 'Pokuty asym.', ext: true, on: true },
   { key: 'auto_renewal', label: 'Auto-renew', ext: true, on: false },
-  { key: 'bezodplatne', label: 'Bezodplatne', ext: true, on: false },
+  { key: 'bezodplatne', label: 'Bezodplatné', ext: true, on: false },
   { key: 'funding_type', label: 'Financovanie', ext: true, on: true },
   { key: 'grant_amount', label: 'Grant suma', ext: true, on: false },
-  { key: 'hidden_entity_count', label: 'Skryte entity', ext: true, type: 'num', on: true },
-  { key: 'penalty_count', label: 'Pocet pokut', ext: true, type: 'num', on: true },
-  { key: 'iban_count', label: 'Pocet IBAN', ext: true, type: 'num', on: false },
+  { key: 'hidden_entity_count', label: 'Skryté entity', ext: true, type: 'num', on: true },
+  { key: 'penalty_count', label: 'Počet pokút', ext: true, type: 'num', on: true },
+  { key: 'iban_count', label: 'Počet IBAN', ext: true, type: 'num', on: false },
   { key: 'subcontracting_mentioned', label: 'Subdodavky', ext: true, on: false },
-  { key: 'subcontractor_count', label: 'Pocet subdod.', ext: true, type: 'num', on: false },
+  { key: 'subcontractor_count', label: 'Počet subdod.', ext: true, type: 'num', on: false },
   { key: 'subcontractor_max_percentage', label: 'Max % subdod.', ext: true, type: 'num', on: true },
   { key: 'flag_count', label: 'Flagy', type: 'num', on: true },
-  { key: 'flag_labels', label: 'Flag typy', on: false },
+  { key: 'flag_labels', label: 'Typ flaguy', on: false },
 ];
 
 var visibleCols = new Set(COLUMNS.filter(function(c) { return c.on; }).map(function(c) { return c.key; }));
@@ -1269,15 +2500,15 @@ function browseRenderCell(col, row) {
   } else if (col.key === 'vszp_debt' || col.key === 'socpoist_debt') {
     if (v) {
       td.textContent = formatNum(v) + ' EUR';
-      td.style.color = '#e15b5b';
+      td.style.color = '#bf2f2f';
     }
   } else if (col.key === 'ruz_terminated') {
-    if (v) { td.textContent = v; td.style.color = '#e15b5b'; td.style.fontWeight = 'bold'; }
+    if (v) { td.textContent = v; td.style.color = '#bf2f2f'; td.style.fontWeight = 'bold'; }
   } else if (col.key === 'ruz_org_size') {
     if (v) {
       td.textContent = v;
       var sizeId = row['ruz_org_size_id'];
-      if (sizeId != null && sizeId <= 2) { td.style.color = '#e89b3a'; }
+      if (sizeId != null && sizeId <= 2) { td.style.color = '#d98200'; }
     }
   } else if (col.key === 'suma' || col.key === 'suma_celkom') {
     td.textContent = v != null ? formatNum(v) + ' EUR' : '';
@@ -1298,8 +2529,8 @@ function browseRenderCell(col, row) {
       var pct = parseFloat(v);
       if (pct > 0 && pct <= 100) {
         td.textContent = pct.toFixed(1) + '%';
-        if (pct >= 80) { td.style.color = '#e15b5b'; td.style.fontWeight = 'bold'; }
-        else if (pct >= 30) { td.style.color = '#e89b3a'; }
+        if (pct >= 80) { td.style.color = '#bf2f2f'; td.style.fontWeight = 'bold'; }
+        else if (pct >= 30) { td.style.color = '#d98200'; }
       }
     }
   } else if (col.key === 'auto_renewal' || col.key === 'bezodplatne') {
@@ -1457,7 +2688,7 @@ function searchRun() {
   searchOffset = 0;
   searchTotal = 0;
   clearChildren(document.getElementById('searchResults'));
-  document.getElementById('searchMeta').textContent = 'Hladam...';
+  document.getElementById('searchMeta').textContent = 'Hľadám...';
   document.getElementById('searchHint').style.display = 'none';
   document.getElementById('searchMore').style.display = 'none';
   history.replaceState(null, '', '/search?q=' + encodeURIComponent(searchQuery));
@@ -1476,8 +2707,8 @@ function searchFetch() {
       searchTotal = json.total;
       var meta = document.getElementById('searchMeta');
       var loaded = searchOffset + json.rows.length;
-      meta.textContent = searchTotal.toLocaleString('sk-SK') + ' vysledkov' +
-        (searchTotal > loaded ? ' (zobrazenych ' + loaded + ')' : '');
+      meta.textContent = searchTotal.toLocaleString('sk-SK') + ' výsledkov' +
+        (searchTotal > loaded ? ' (zobrazených ' + loaded + ')' : '');
 
       var container = document.getElementById('searchResults');
       json.rows.forEach(function(row) {
@@ -1488,7 +2719,7 @@ function searchFetch() {
       moreBtn.style.display = loaded < searchTotal ? 'block' : 'none';
 
       if (!json.rows.length && searchOffset === 0) {
-        meta.textContent = 'Ziadne vysledky pre "' + searchQuery + '"';
+        meta.textContent = 'Žiadne výsledky pre "' + searchQuery + '"';
       }
     });
 }
@@ -1549,7 +2780,7 @@ function searchRenderCard(row) {
   title.className = 'search-card-title';
   var titleLink = document.createElement('a');
   titleLink.href = '/browse/' + row.id;
-  var displayName = row.actual_subject || row.nazov_zmluvy || 'Bez nazvu';
+  var displayName = row.actual_subject || row.nazov_zmluvy || 'Bez názvu';
   searchHighlightInto(titleLink, displayName, searchQuery);
   title.appendChild(titleLink);
   titleArea.appendChild(title);
@@ -1602,13 +2833,13 @@ function searchRenderCard(row) {
 
   var fields = [
     ['ID', String(row.id)],
-    ['Dodavatel', row.dodavatel],
-    ['ICO', row.dodavatel_ico],
-    ['Objednavatel', row.objednavatel],
+    ['Dodávateľ', row.dodavatel],
+    ['IČO', row.dodavatel_ico],
+    ['Objednávateľ', row.objednavatel],
     ['Suma', row.suma != null ? fmtNum(Math.round(row.suma)) + ' EUR' : null],
-    ['Datum', row.datum_zverejnenia ? row.datum_zverejnenia.slice(0, 10) : null],
+    ['Dátum', row.datum_zverejnenia ? row.datum_zverejnenia.slice(0, 10) : null],
     ['Rezort', row.rezort],
-    ['Kategoria', row.service_category],
+    ['Kategória', row.service_category],
   ];
   fields.forEach(function(f) {
     if (!f[1]) return;
@@ -1629,13 +2860,13 @@ function searchRenderCard(row) {
   // Match sources
   if (row.match_sources) {
     var srcMap = {
-      text: 'Text zmluvy', subject: 'LLM predmet', ico: 'ICO',
-      extraction: 'LLM extrakcia', attachment: 'Priloha'
+      text: 'Text zmluvy', subject: 'LLM predmet', ico: 'IČO',
+      extraction: 'LLM extrakcia', attachment: 'Príloha'
     };
     var sources = row.match_sources.split(',').map(function(s) { return srcMap[s.trim()] || s.trim(); });
     var matchDiv = document.createElement('div');
     matchDiv.className = 'search-card-match';
-    matchDiv.textContent = 'Najdene v: ' + sources.join(', ');
+    matchDiv.textContent = 'Nájdené v: ' + sources.join(', ');
     card.appendChild(matchDiv);
   }
 

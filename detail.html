@@ -5,181 +5,796 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>CRZ Detail</title>
 <style>
-  :root {
-    --bg: #0f1117; --surface: #1a1d27; --surface2: #22252f; --border: #2a2d3a;
-    --text: #e1e4ed; --muted: #8b8fa3; --accent: #6c7ee1; --accent2: #e6a44e;
-    --danger: #e15b5b; --success: #4ecb71; --info: #5bb8e1; --warn: #e6a44e;
-  }
-  * { box-sizing: border-box; margin: 0; padding: 0; }
-  body {
-    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
-    background: var(--bg); color: var(--text); line-height: 1.6; font-size: 14px;
-  }
-  a { color: var(--accent); text-decoration: none; }
-  a:hover { text-decoration: underline; }
+  @import url('https://fonts.googleapis.com/css2?family=Lexend:wght@400;500;600;700;800;900&display=swap');
 
-  .topbar {
-    background: var(--surface); border-bottom: 1px solid var(--border);
-    padding: 0 20px; display: flex; align-items: center; gap: 0;
-    position: sticky; top: 0; z-index: 100; height: 48px;
+  :root {
+    --black: #000000;
+    --white: #ffffff;
+    --yellow: #FFC400;
+    --layout-max: 1280px;
+    --canvas: #f3f3ef;
+    --text: #111111;
+    --muted: #5d5d5d;
+    --danger: #bb3d3d;
+    --success: #2f8b3e;
+    --info: #1f1f1f;
+    --warn: #9a6a00;
+    --edge-soft: rgb(0 0 0 / 0.13);
+    --card-radius: 24px;
+    --shadow-soft: 0 12px 28px rgb(0 0 0 / 0.08), 0 3px 10px rgb(0 0 0 / 0.05);
+    --shadow-lift: 0 18px 42px rgb(0 0 0 / 0.11), 0 5px 14px rgb(0 0 0 / 0.06);
   }
-  .topbar .logo {
-    font-size: 15px; font-weight: 700; white-space: nowrap; margin-right: 24px;
+
+  * {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+  }
+
+  body {
+    font-family: 'Lexend', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    background: linear-gradient(180deg, #f8f8f5 0%, var(--canvas) 100%);
+    color: var(--text);
+    line-height: 1.52;
+    font-size: 14px;
+    overflow-x: hidden;
+    position: relative;
+  }
+
+  body::before {
+    content: '';
+    position: fixed;
+    width: min(70vw, 980px);
+    height: min(70vw, 980px);
+    right: -24%;
+    top: -48%;
+    border-radius: 50%;
+    background: var(--yellow);
+    pointer-events: none;
+    z-index: -3;
+  }
+
+  body::after {
+    content: '';
+    position: fixed;
+    left: 2%;
+    top: 118px;
+    width: 82px;
+    height: 82px;
+    border-radius: 50%;
+    background: var(--yellow);
+    box-shadow: 162px 152px 0 -19px var(--yellow), 1220px 520px 0 -30px var(--yellow);
+    pointer-events: none;
+    z-index: -2;
+  }
+
+  a,
+  a:visited {
     color: var(--text);
   }
-  .topbar .tabs { display: flex; height: 100%; }
+
+  a:hover {
+    text-decoration: underline;
+    text-decoration-color: var(--yellow);
+  }
+
+  :focus-visible {
+    outline: 3px solid var(--yellow);
+    outline-offset: 2px;
+    border-radius: 10px;
+  }
+
+  .topbar {
+    position: sticky;
+    top: 8px;
+    z-index: 140;
+    width: min(var(--layout-max), calc(100% - 1.8rem));
+    min-height: 58px;
+    margin: 8px auto 0;
+    padding: 0.34rem 0.74rem;
+    display: flex;
+    align-items: center;
+    gap: 0.52rem;
+    border: 0;
+    border-radius: 26px;
+    background: rgb(255 255 255 / 0.8);
+    box-shadow: var(--shadow-soft), inset 0 0 0 1px rgb(255 255 255 / 0.52);
+    backdrop-filter: blur(8px);
+    overflow: hidden;
+  }
+
+  .topbar .logo {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.55rem;
+    text-decoration: none;
+    white-space: nowrap;
+    font-size: 1.12rem;
+    font-weight: 900;
+    letter-spacing: -0.04em;
+    color: var(--text);
+    border-radius: 12px;
+    padding: 0.14rem 0.24rem;
+    line-height: 1;
+  }
+
+  .topbar .logo .brand-mark {
+    width: 74px;
+    height: auto;
+    display: block;
+    object-fit: contain;
+    mix-blend-mode: multiply;
+  }
+
+  .topbar .tabs {
+    display: flex;
+    align-items: center;
+    gap: 0.2rem;
+    overflow-x: auto;
+    padding-bottom: 2px;
+  }
+
   .topbar .tab {
-    padding: 0 16px; display: flex; align-items: center; gap: 6px;
-    font-size: 13px; font-weight: 500; color: var(--muted);
-    cursor: pointer; border-bottom: 2px solid transparent;
-    transition: color 0.15s, border-color 0.15s;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.3rem;
+    border-radius: 999px;
+    border: 0;
+    background: transparent;
+    color: var(--text);
+    padding: 0.44rem 0.68rem;
+    font-size: 0.84rem;
+    font-weight: 800;
+    letter-spacing: -0.01em;
+    cursor: pointer;
+    transition: transform 170ms ease, background-color 170ms ease, color 170ms ease;
+    text-decoration: none;
+    white-space: nowrap;
+  }
+
+  .topbar .tab:hover {
+    background: var(--yellow);
+    transform: translateY(-1px);
     text-decoration: none;
   }
-  .topbar .tab:hover { color: var(--text); text-decoration: none; }
-  .topbar .tab-icon { font-size: 14px; }
-  .topbar .spacer { flex: 1; }
-  .topbar .links { display: flex; gap: 12px; }
-  .topbar .links a { color: var(--muted); font-size: 12px; }
-  .topbar .links a:hover { color: var(--text); text-decoration: none; }
 
-  .container { max-width: 1100px; margin: 0 auto; padding: 24px; }
+  .topbar .tab.active {
+    background: var(--black);
+    color: var(--white);
+  }
 
-  /* Header */
-  .contract-header { margin-bottom: 32px; }
+  .topbar .tab-icon {
+    width: 14px;
+    height: 14px;
+    display: inline-grid;
+    place-items: center;
+    line-height: 0;
+    color: currentColor;
+    flex: 0 0 auto;
+  }
+
+  .topbar .tab-icon svg {
+    width: 14px;
+    height: 14px;
+    fill: none;
+    stroke: currentColor;
+    stroke-width: 1.9;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+    display: block;
+  }
+
+  .topbar .spacer {
+    flex: 1;
+  }
+
+  .topbar .links {
+    display: flex;
+    gap: 0.4rem;
+  }
+
+  .topbar .links a {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    text-decoration: none;
+    border-radius: 999px;
+    border: 0;
+    background: var(--yellow);
+    color: var(--black);
+    font-size: 0.8rem;
+    font-weight: 850;
+    padding: 0.48rem 0.82rem;
+    transition: transform 170ms ease, background-color 170ms ease, color 170ms ease;
+  }
+
+  .topbar .links a:hover {
+    background: var(--black);
+    color: var(--white);
+    transform: translateY(-1px);
+    text-decoration: none;
+  }
+
+  .container {
+    width: min(var(--layout-max), calc(100% - 1.8rem));
+    margin: 1rem auto 2.2rem;
+  }
+
+  .contract-header {
+    margin-bottom: 1rem;
+    border-radius: 30px;
+    background: var(--white);
+    box-shadow: var(--shadow-lift);
+    padding: 1.2rem 1.3rem;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .contract-header::before {
+    content: '';
+    position: absolute;
+    width: 280px;
+    height: 280px;
+    border-radius: 50%;
+    right: -154px;
+    top: -170px;
+    background: var(--yellow);
+  }
+
+  .contract-header::after {
+    content: '';
+    position: absolute;
+    width: 16px;
+    height: 16px;
+    border-radius: 50%;
+    right: 118px;
+    top: 22px;
+    background: var(--yellow);
+    box-shadow: -24px 16px 0 -4px var(--yellow);
+  }
+
   .contract-header .id-line {
-    display: flex; align-items: center; gap: 10px; margin-bottom: 8px; flex-wrap: wrap;
-  }
-  .contract-header .contract-id { font-size: 12px; color: var(--muted); font-weight: 600; }
-  .tag {
-    display: inline-block; padding: 2px 8px; border-radius: 4px;
-    font-size: 11px; font-weight: 600; letter-spacing: 0.02em;
-  }
-  .tag-zmluva { background: rgba(108,126,225,0.15); color: var(--accent); }
-  .tag-dodatok { background: rgba(230,164,78,0.15); color: var(--accent2); }
-  .tag-active { background: rgba(78,203,113,0.15); color: var(--success); }
-  .tag-cancelled { background: rgba(225,91,91,0.15); color: var(--danger); }
-  .contract-header h2 { font-size: 22px; font-weight: 600; line-height: 1.3; margin-bottom: 4px; }
-  .contract-subtitle {
-    font-size: 16px; font-weight: 700; margin-bottom: 16px; margin-top: 8px;
-    padding-bottom: 8px; border-bottom: 1px solid var(--border); color: var(--muted);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 0.45rem;
+    flex-wrap: wrap;
+    position: relative;
+    z-index: 1;
   }
 
-  /* Cards */
-  .grid { display: grid; gap: 20px; margin-bottom: 28px; }
-  .grid-2 { grid-template-columns: 1fr 1fr; }
-  .grid-3 { grid-template-columns: 1fr 1fr 1fr; }
-  @media (max-width: 768px) { .grid-2, .grid-3 { grid-template-columns: 1fr; } }
-
-  .card {
-    background: var(--surface); border: 1px solid var(--border);
-    border-radius: 10px; padding: 20px; overflow: hidden;
-  }
-  .card-header {
-    font-size: 11px; font-weight: 700; text-transform: uppercase;
-    letter-spacing: 0.06em; color: var(--muted); margin-bottom: 14px;
-    padding-bottom: 10px; border-bottom: 1px solid var(--border);
-  }
-  .card-accent { border-left: 3px solid var(--accent); }
-  .card-warn { border-left: 3px solid var(--warn); }
-  .card-danger { border-left: 3px solid var(--danger); }
-  .card-info { border-left: 3px solid var(--info); }
-  .card-success { border-left: 3px solid var(--success); }
-
-  /* Key-value pairs */
-  .kv { margin-bottom: 10px; }
-  .kv:last-child { margin-bottom: 0; }
-  .kv-label { font-size: 11px; color: var(--muted); font-weight: 600; text-transform: uppercase; letter-spacing: 0.04em; margin-bottom: 1px; }
-  .kv-value { font-size: 14px; word-break: break-word; }
-  .kv-value.large { font-size: 22px; font-weight: 700; }
-  .kv-value.mono { font-family: 'SF Mono', 'Fira Code', monospace; font-size: 13px; }
-  .kv-value a { color: var(--accent); }
-
-  /* Entity cards */
-  .entity-name { font-size: 16px; font-weight: 600; margin-bottom: 4px; }
-  .entity-ico { font-family: 'SF Mono', 'Fira Code', monospace; font-size: 13px; color: var(--info); }
-  .entity-address { font-size: 12px; color: var(--muted); margin-top: 4px; }
-  .tax-tag { margin-top: 8px; }
-
-  /* Flag badges */
-  .flag-list { display: flex; flex-direction: column; gap: 10px; }
-  .flag-item {
-    display: flex; align-items: flex-start; gap: 12px;
-    padding: 10px 14px; border-radius: 8px; background: var(--surface2);
-  }
-  .flag-dot {
-    width: 10px; height: 10px; border-radius: 50%; margin-top: 5px; flex-shrink: 0;
-  }
-  .flag-dot.danger { background: var(--danger); }
-  .flag-dot.warning { background: var(--warn); }
-  .flag-dot.info { background: var(--info); }
-  .flag-label { font-weight: 600; font-size: 13px; }
-  .flag-desc { font-size: 12px; color: var(--muted); }
-
-  /* Tables inside cards */
-  .mini-table { width: 100%; border-collapse: collapse; font-size: 12px; }
-  .mini-table th {
-    text-align: left; font-size: 10px; font-weight: 700; text-transform: uppercase;
-    color: var(--muted); padding: 6px 8px; border-bottom: 1px solid var(--border);
+  .contract-header .contract-id {
+    font-size: 0.7rem;
+    color: var(--muted);
+    font-weight: 700;
     letter-spacing: 0.04em;
   }
-  .mini-table td { padding: 8px 8px; border-bottom: 1px solid var(--border); }
-  .mini-table tr:last-child td { border-bottom: none; }
-  .mini-table tr:hover td { background: var(--surface2); }
-  td.num { text-align: right; font-variant-numeric: tabular-nums; }
 
-  /* Hidden entities / extraction items */
+  .tag {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 1.35rem;
+    border-radius: 999px;
+    padding: 0.12rem 0.52rem;
+    font-size: 0.62rem;
+    font-weight: 820;
+    line-height: 1;
+    box-shadow: inset 0 0 0 1px rgb(0 0 0 / 0.15);
+  }
+
+  .tag-zmluva {
+    background: #f3f3f3;
+    color: var(--text);
+  }
+
+  .tag-dodatok {
+    background: #fff0bc;
+    color: #5f4a00;
+  }
+
+  .tag-active {
+    background: #e9f7e8;
+    color: var(--success);
+  }
+
+  .tag-cancelled {
+    background: #ffe3e3;
+    color: var(--danger);
+  }
+
+  .contract-header h2 {
+    font-size: clamp(1.52rem, 3vw, 2.4rem);
+    font-weight: 900;
+    line-height: 1.08;
+    margin-bottom: 0.16rem;
+    letter-spacing: -0.03em;
+    position: relative;
+    z-index: 1;
+    max-width: 24ch;
+  }
+
+  .contract-subtitle {
+    font-size: 0.9rem;
+    font-weight: 620;
+    margin-top: 0.26rem;
+    color: var(--muted);
+    position: relative;
+    z-index: 1;
+    max-width: 78ch;
+  }
+
+  .grid {
+    display: grid;
+    gap: 0.82rem;
+    margin-bottom: 1rem;
+  }
+
+  .grid-2 {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .grid-3 {
+    grid-template-columns: 1fr 1fr 1fr;
+  }
+
+  .card {
+    background: var(--white);
+    border-radius: var(--card-radius);
+    padding: 1rem;
+    overflow: hidden;
+    box-shadow: var(--shadow-soft);
+    position: relative;
+  }
+
+  .card::before {
+    content: '';
+    position: absolute;
+    width: 150px;
+    height: 150px;
+    border-radius: 50%;
+    right: -106px;
+    top: -100px;
+    background: rgb(255 196 0 / 0.2);
+    pointer-events: none;
+  }
+
+  .card::after {
+    content: '';
+    position: absolute;
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    right: 14px;
+    top: 14px;
+    background: var(--yellow);
+    pointer-events: none;
+  }
+
+  .card > * {
+    position: relative;
+    z-index: 1;
+  }
+
+  .card-header {
+    font-size: 0.66rem;
+    font-weight: 820;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--muted);
+    margin-bottom: 0.66rem;
+  }
+
+  .card-accent::after {
+    background: var(--black);
+  }
+
+  .card-warn::after {
+    background: #c58b00;
+  }
+
+  .card-danger::after {
+    background: var(--danger);
+  }
+
+  .card-info::after {
+    background: #4b4b4b;
+  }
+
+  .card-success::after {
+    background: var(--success);
+  }
+
+  .kv {
+    margin-bottom: 0.55rem;
+  }
+
+  .kv:last-child {
+    margin-bottom: 0;
+  }
+
+  .kv-label {
+    font-size: 0.64rem;
+    color: var(--muted);
+    font-weight: 780;
+    text-transform: uppercase;
+    letter-spacing: 0.07em;
+    margin-bottom: 0.14rem;
+  }
+
+  .kv-value {
+    font-size: 0.86rem;
+    word-break: break-word;
+    font-weight: 520;
+  }
+
+  .kv-value.large {
+    font-size: 1.45rem;
+    font-weight: 860;
+    letter-spacing: -0.02em;
+  }
+
+  .kv-value.mono {
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    font-size: 0.78rem;
+  }
+
+  .kv-value a {
+    color: var(--text);
+    text-decoration: underline;
+    text-decoration-color: rgb(255 196 0 / 0.9);
+  }
+
+  .entity-name {
+    font-size: 1.05rem;
+    font-weight: 760;
+    margin-bottom: 0.16rem;
+  }
+
+  .entity-ico {
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    font-size: 0.8rem;
+    color: #4e4e4e;
+    text-decoration: none;
+  }
+
+  .entity-address {
+    font-size: 0.76rem;
+    color: var(--muted);
+    margin-top: 0.24rem;
+  }
+
+  .tax-tag {
+    margin-top: 0.45rem;
+  }
+
+  .ruz-info {
+    margin-top: 0.5rem;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.3rem;
+  }
+
+  .flag-list {
+    display: flex;
+    flex-direction: column;
+    gap: 0.55rem;
+  }
+
+  .flag-item {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.62rem;
+    padding: 0.62rem 0.74rem;
+    border-radius: 14px;
+    background: #fbfbf8;
+    box-shadow: inset 0 0 0 1px rgb(0 0 0 / 0.1);
+  }
+
+  .flag-dot {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    margin-top: 6px;
+    flex-shrink: 0;
+  }
+
+  .flag-dot.danger {
+    background: var(--danger);
+  }
+
+  .flag-dot.warning {
+    background: #cc9300;
+  }
+
+  .flag-dot.info {
+    background: #5f5f5f;
+  }
+
+  .flag-label {
+    font-weight: 760;
+    font-size: 0.84rem;
+  }
+
+  .flag-desc {
+    font-size: 0.76rem;
+    color: var(--muted);
+    line-height: 1.45;
+  }
+
+  .mini-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.76rem;
+    overflow: hidden;
+    border-radius: 16px;
+  }
+
+  .mini-table th {
+    text-align: left;
+    font-size: 0.64rem;
+    font-weight: 760;
+    text-transform: uppercase;
+    color: #444;
+    padding: 0.5rem 0.54rem;
+    background: #f4f4ef;
+    border-bottom: 1px solid rgb(0 0 0 / 0.11);
+    letter-spacing: 0.08em;
+  }
+
+  .mini-table td {
+    padding: 0.5rem 0.54rem;
+    border-bottom: 1px solid rgb(0 0 0 / 0.08);
+    background: rgb(255 255 255 / 0.9);
+  }
+
+  .mini-table tr:last-child td {
+    border-bottom: none;
+  }
+
+  .mini-table tr:hover td {
+    background: #fff4cd;
+  }
+
+  td.num {
+    text-align: right;
+    font-variant-numeric: tabular-nums;
+  }
+
   .item-card {
-    background: var(--surface2); border-radius: 6px; padding: 10px 14px; margin-bottom: 8px;
+    background: #fbfbf8;
+    border-radius: 14px;
+    padding: 0.58rem 0.72rem;
+    margin-bottom: 0.46rem;
+    box-shadow: inset 0 0 0 1px rgb(0 0 0 / 0.1);
   }
-  .item-card:last-child { margin-bottom: 0; }
-  .item-card .item-name { font-weight: 600; font-size: 13px; display: block; }
-  a.item-name { color: var(--accent); }
-  a.item-name:hover { text-decoration: underline; }
-  .item-card .item-meta { font-size: 11px; color: var(--muted); margin-top: 2px; }
-  .item-card .item-detail { font-size: 12px; margin-top: 4px; }
 
-  /* Stat blocks */
-  .stat-row { display: flex; gap: 16px; flex-wrap: wrap; margin-bottom: 20px; }
+  .item-card:last-child {
+    margin-bottom: 0;
+  }
+
+  .item-card .item-name {
+    font-weight: 720;
+    font-size: 0.82rem;
+    display: block;
+    text-decoration: none;
+  }
+
+  .item-card .item-meta {
+    font-size: 0.7rem;
+    color: var(--muted);
+    margin-top: 0.14rem;
+  }
+
+  .item-card .item-detail {
+    font-size: 0.74rem;
+    margin-top: 0.2rem;
+    color: #333;
+  }
+
+  .stat-row {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    gap: 0.68rem;
+    margin-bottom: 1rem;
+  }
+
   .stat-block {
-    background: var(--surface); border: 1px solid var(--border); border-radius: 8px;
-    padding: 14px 18px; flex: 1; min-width: 120px; text-align: center;
+    background: var(--white);
+    border-radius: 20px;
+    padding: 0.88rem;
+    text-align: center;
+    box-shadow: var(--shadow-soft);
+    position: relative;
+    overflow: hidden;
   }
-  .stat-block .stat-value { font-size: 26px; font-weight: 700; }
-  .stat-block .stat-label { font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.04em; }
-  .stat-block.accent .stat-value { color: var(--accent); }
-  .stat-block.warn .stat-value { color: var(--warn); }
-  .stat-block.danger .stat-value { color: var(--danger); }
-  .stat-block.info .stat-value { color: var(--info); }
-  .stat-block.success .stat-value { color: var(--success); }
 
-  .empty { color: var(--muted); font-style: italic; font-size: 13px; }
+  .stat-block::after {
+    content: '';
+    position: absolute;
+    width: 98px;
+    height: 98px;
+    border-radius: 50%;
+    right: -68px;
+    top: -66px;
+    background: rgb(255 196 0 / 0.25);
+  }
+
+  .stat-block .stat-value {
+    font-size: 1.45rem;
+    font-weight: 860;
+    letter-spacing: -0.03em;
+    position: relative;
+    z-index: 1;
+  }
+
+  .stat-block .stat-label {
+    font-size: 0.66rem;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    font-weight: 720;
+    margin-top: 0.2rem;
+    position: relative;
+    z-index: 1;
+  }
+
+  .stat-block.accent .stat-value {
+    color: var(--black);
+  }
+
+  .stat-block.warn .stat-value {
+    color: var(--warn);
+  }
+
+  .stat-block.danger .stat-value {
+    color: var(--danger);
+  }
+
+  .stat-block.info .stat-value {
+    color: #3e3e3e;
+  }
+
+  .stat-block.success .stat-value {
+    color: var(--success);
+  }
+
+  .empty {
+    color: var(--muted);
+    font-style: italic;
+    font-size: 0.84rem;
+  }
+
   .section-title {
-    font-size: 16px; font-weight: 700; margin-bottom: 16px; margin-top: 8px;
-    padding-bottom: 8px; border-bottom: 1px solid var(--border);
+    font-size: clamp(1.1rem, 2.5vw, 1.5rem);
+    font-weight: 860;
+    margin-bottom: 0.58rem;
+    margin-top: 0.3rem;
+    letter-spacing: -0.03em;
   }
 
-  .loading { padding: 80px; text-align: center; color: var(--muted); font-size: 16px; }
-  .error-state { padding: 80px; text-align: center; }
-  .error-state h2 { font-size: 20px; margin-bottom: 8px; }
-  .error-state p { color: var(--muted); }
+  .loading,
+  .error-state {
+    background: var(--white);
+    border-radius: 24px;
+    box-shadow: var(--shadow-soft);
+    padding: 2.8rem 1rem;
+    text-align: center;
+    color: var(--muted);
+    font-size: 1rem;
+  }
+
+  .error-state h2 {
+    font-size: 1.4rem;
+    margin-bottom: 0.4rem;
+    color: var(--text);
+    letter-spacing: -0.02em;
+  }
+
+  .error-state p {
+    color: var(--muted);
+  }
+
+  @media (max-width: 980px) {
+    .topbar {
+      min-height: 64px;
+      height: auto;
+      border-radius: 22px;
+      flex-wrap: wrap;
+      top: 6px;
+      padding: 0.42rem 0.6rem;
+      gap: 0.36rem;
+    }
+
+    .topbar .tabs {
+      order: 3;
+      width: 100%;
+    }
+
+    .topbar .logo .brand-mark {
+      width: 68px;
+    }
+
+    .container {
+      width: min(var(--layout-max), calc(100% - 1rem));
+    }
+
+    .grid-2,
+    .grid-3 {
+      grid-template-columns: 1fr;
+    }
+  }
+
+  @media (max-width: 740px) {
+    .topbar .logo span {
+      display: none;
+    }
+
+    .topbar .tabs {
+      gap: 0.12rem;
+      justify-content: space-between;
+    }
+
+    .topbar .tab-icon {
+      display: none;
+    }
+
+    .topbar .tab {
+      font-size: 0.74rem;
+      padding: 0.4rem 0.46rem;
+    }
+
+    .contract-header {
+      border-radius: 22px;
+      padding: 0.9rem;
+    }
+
+    .contract-header h2 {
+      font-size: clamp(1.3rem, 7.2vw, 1.9rem);
+    }
+
+    .section-title {
+      margin-top: 0.15rem;
+    }
+
+    .stat-row {
+      grid-template-columns: 1fr;
+    }
+  }
 </style>
+
 </head>
 <body>
 
 <div class="topbar">
-  <span class="logo">CRZ Explorer</span>
+  <a class="logo" href="/" aria-label="CRZ Explorer">
+    <img class="brand-mark" src="/assets/zltastopa.png" alt="Žltá stopa logo">
+    <span>CRZ Explorer</span>
+  </a>
   <div class="tabs">
     <a class="tab" href="/">
-      <span class="tab-icon">&#9776;</span> Prehlad
+      <span class="tab-icon" aria-hidden="true">
+        <svg viewBox="0 0 16 16"><path d="M3 4.5h10M3 8h10M3 11.5h10"/></svg>
+      </span>
+      Prehľad
     </a>
-    <a class="tab" href="/browse">
-      <span class="tab-icon">&#9634;</span> Browse
+    <a class="tab active" href="/browse">
+      <span class="tab-icon" aria-hidden="true">
+        <svg viewBox="0 0 16 16"><rect x="2.5" y="2.5" width="4.5" height="4.5" rx="0.8"/><rect x="9" y="2.5" width="4.5" height="4.5" rx="0.8"/><rect x="2.5" y="9" width="4.5" height="4.5" rx="0.8"/><rect x="9" y="9" width="4.5" height="4.5" rx="0.8"/></svg>
+      </span>
+      Browse
     </a>
     <a class="tab" href="/search">
-      <span class="tab-icon">&#128269;</span> Hladat
+      <span class="tab-icon" aria-hidden="true">
+        <svg viewBox="0 0 16 16"><circle cx="7" cy="7" r="3.8"/><path d="M10 10l3.5 3.5"/></svg>
+      </span>
+      Hľadať
     </a>
     <a class="tab" href="/methodology">
-      <span class="tab-icon">&#9888;</span> Metodika
+      <span class="tab-icon" aria-hidden="true">
+        <svg viewBox="0 0 16 16"><path d="M8 2.5l5.3 9.3H2.7L8 2.5z"/><path d="M8 6.3v2.8M8 10.9h.01"/></svg>
+      </span>
+      Metodika
     </a>
   </div>
   <div class="spacer"></div>
@@ -189,7 +804,7 @@
 </div>
 
 <div class="container" id="content">
-  <div class="loading" id="loadingState">Nacitavam zmluvu...</div>
+  <div class="loading" id="loadingState">Načítavam zmluvu...</div>
 </div>
 
 <script>
@@ -277,8 +892,8 @@ function renderDetail(result) {
 
   if (result.error) {
     var err = el('div', 'error-state');
-    err.appendChild(el('h2', null, 'Zmluva nenajdena'));
-    err.appendChild(el('p', null, 'ID ' + getContractId() + ' neexistuje v databaze.'));
+    err.appendChild(el('h2', null, 'Zmluva nenájdená'));
+    err.appendChild(el('p', null, 'ID ' + getContractId() + ' neexistuje v databáze.'));
     container.appendChild(err);
     return;
   }
@@ -309,7 +924,7 @@ function renderDetail(result) {
     idLine.appendChild(el('span', 'tag', d.druh));
   }
   header.appendChild(idLine);
-  header.appendChild(el('h2', null, displayName || 'Bez nazvu'));
+  header.appendChild(el('h2', null, displayName || 'Bez názvu'));
   if (extraction && extraction.actual_subject && d.nazov_zmluvy && extraction.actual_subject !== d.nazov_zmluvy) {
     var sub = el('div', 'contract-subtitle', d.nazov_zmluvy);
     header.appendChild(sub);
@@ -328,7 +943,7 @@ function renderDetail(result) {
   stats.appendChild(s2);
   var s3 = el('div', 'stat-block');
   s3.appendChild(el('div', 'stat-value', formatDate(d.datum_zverejnenia)));
-  s3.appendChild(el('div', 'stat-label', 'Zverejnene'));
+  s3.appendChild(el('div', 'stat-label', 'Zverejnené'));
   stats.appendChild(s3);
   if (d.red_flags && d.red_flags.length > 0) {
     var s4 = el('div', 'stat-block danger');
@@ -339,7 +954,7 @@ function renderDetail(result) {
   if (extraction) {
     var s5 = el('div', 'stat-block warn');
     s5.appendChild(el('div', 'stat-value', String(extraction.hidden_entity_count || 0)));
-    s5.appendChild(el('div', 'stat-label', 'Skryte entity'));
+    s5.appendChild(el('div', 'stat-label', 'Skryté entity'));
     stats.appendChild(s5);
   }
   container.appendChild(stats);
@@ -364,15 +979,15 @@ function renderDetail(result) {
   }
 
   // Parties grid
-  container.appendChild(el('div', 'section-title', 'Zmluvne strany'));
+  container.appendChild(el('div', 'section-title', 'Zmluvné strany'));
   var partiesGrid = el('div', 'grid grid-2');
 
-  // Dodavatel
-  var dodCard = card('Dodavatel', 'card-accent');
+  // Dodávateľ
+  var dodCard = card('Dodávateľ', 'card-accent');
   dodCard.appendChild(el('div', 'entity-name', d.dodavatel || '-'));
   if (d.dodavatel_ico && d.dodavatel_ico !== '-') {
     var icoLink = el('a', 'entity-ico');
-    icoLink.textContent = 'ICO: ' + d.dodavatel_ico;
+    icoLink.textContent = 'IČO: ' + d.dodavatel_ico;
     icoLink.href = '/browse?dodavatel_ico=' + encodeURIComponent(d.dodavatel_ico);
     dodCard.appendChild(icoLink);
   }
@@ -384,12 +999,12 @@ function renderDetail(result) {
   }
   if (d.dodavatel_vszp_debt) {
     var vszpTag = el('span', 'tag tag-cancelled tax-tag',
-      'Dlznik VSZP: ' + Number(d.dodavatel_vszp_debt.amount).toLocaleString('sk-SK', {maximumFractionDigits: 2}) + ' EUR');
+      'Dlžník VSZP: ' + Number(d.dodavatel_vszp_debt.amount).toLocaleString('sk-SK', {maximumFractionDigits: 2}) + ' EUR');
     dodCard.appendChild(vszpTag);
   }
   if (d.dodavatel_socpoist_debt) {
     var spTag = el('span', 'tag tag-cancelled tax-tag',
-      'Dlznik Soc. poist.: ' + Number(d.dodavatel_socpoist_debt.amount).toLocaleString('sk-SK', {maximumFractionDigits: 2}) + ' EUR');
+      'Dlžník Soc. poist.: ' + Number(d.dodavatel_socpoist_debt.amount).toLocaleString('sk-SK', {maximumFractionDigits: 2}) + ' EUR');
     dodCard.appendChild(spTag);
   }
   if (d.dodavatel_ruz) {
@@ -407,17 +1022,17 @@ function renderDetail(result) {
     if (parts.length) ruzInfo.textContent = parts.join(' | ');
     if (parts.length) dodCard.appendChild(ruzInfo);
     if (ruz.terminated_on) {
-      dodCard.appendChild(el('span', 'tag tag-cancelled tax-tag', 'Zrusena firma: ' + ruz.terminated_on));
+      dodCard.appendChild(el('span', 'tag tag-cancelled tax-tag', 'Zrušená firma: ' + ruz.terminated_on));
     }
   }
   partiesGrid.appendChild(dodCard);
 
-  // Objednavatel
-  var objCard = card('Objednavatel', 'card-info');
+  // Objednávateľ
+  var objCard = card('Objednávateľ', 'card-info');
   objCard.appendChild(el('div', 'entity-name', d.objednavatel || '-'));
   if (d.objednavatel_ico) {
     var icoLink2 = el('a', 'entity-ico');
-    icoLink2.textContent = 'ICO: ' + d.objednavatel_ico;
+    icoLink2.textContent = 'IČO: ' + d.objednavatel_ico;
     icoLink2.href = '/browse?objednavatel_ico=' + encodeURIComponent(d.objednavatel_ico);
     objCard.appendChild(icoLink2);
   }
@@ -432,7 +1047,7 @@ function renderDetail(result) {
 
   // Hidden entities (includes subcontractors)
   if (ej && ej.hidden_entities && ej.hidden_entities.length > 0) {
-    container.appendChild(el('div', 'section-title', 'Skryte entity (' + ej.hidden_entities.length + ')'));
+    container.appendChild(el('div', 'section-title', 'Skryté entity (' + ej.hidden_entities.length + ')'));
     var heCard = card(null, 'card-warn');
     var maxPctVal = extraction ? parseFloat(extraction.subcontractor_max_percentage) : NaN;
     var maxPctStr = (maxPctVal > 0 && maxPctVal <= 100) ? maxPctVal.toFixed(1) + '%' : null;
@@ -450,7 +1065,7 @@ function renderDetail(result) {
       }
       ic.appendChild(nameEl);
       var metaParts = [];
-      if (he.ico) metaParts.push('ICO: ' + he.ico);
+      if (he.ico) metaParts.push('IČO: ' + he.ico);
       if (he.role) metaParts.push('Rola: ' + he.role);
       if (he.role === 'subcontractor' && maxPctStr) metaParts.push('Max. podiel: ' + maxPctStr);
       if (metaParts.length) ic.appendChild(el('div', 'item-meta', metaParts.join('  |  ')));
@@ -461,13 +1076,13 @@ function renderDetail(result) {
 
   // Signatories (right after hidden entities)
   if (ej && ej.signatories && ej.signatories.length > 0) {
-    container.appendChild(el('div', 'section-title', 'Podpisujuci (' + ej.signatories.length + ')'));
+    container.appendChild(el('div', 'section-title', 'Podpisujúci (' + ej.signatories.length + ')'));
     var sigGrid = el('div', 'grid grid-2');
     var buyerSigs = ej.signatories.filter(function(s) { return s.party === 'buyer'; });
     var supplierSigs = ej.signatories.filter(function(s) { return s.party !== 'buyer'; });
 
     if (supplierSigs.length > 0) {
-      var sCard = card('Dodavatel', 'card-accent');
+      var sCard = card('Dodávateľ', 'card-accent');
       supplierSigs.forEach(function(s) {
         var ic = el('div', 'item-card');
         if (s.name) {
@@ -489,7 +1104,7 @@ function renderDetail(result) {
     }
 
     if (buyerSigs.length > 0) {
-      var bCard = card('Objednavatel', 'card-info');
+      var bCard = card('Objednávateľ', 'card-info');
       buyerSigs.forEach(function(s) {
         var ic = el('div', 'item-card');
         if (s.name) {
@@ -520,20 +1135,20 @@ function renderDetail(result) {
     var extGrid = el('div', 'grid grid-2');
 
     // Classification
-    var classCard = card('Klasifikacia', 'card-info');
-    classCard.appendChild(kv('Kategoria sluzby', extraction.service_category || '-'));
-    classCard.appendChild(kv('Skutocny predmet', extraction.actual_subject || '-'));
+    var classCard = card('Klasifikácia', 'card-info');
+    classCard.appendChild(kv('Kategória služby', extraction.service_category || '-'));
+    classCard.appendChild(kv('Skutočný predmet', extraction.actual_subject || '-'));
     classCard.appendChild(kv('Typ financovania', extraction.funding_type || '-'));
-    if (extraction.grant_amount) classCard.appendChild(kv('Grant suma', extraction.grant_amount));
-    classCard.appendChild(kv('Bezodplatne', extraction.bezodplatne ? 'Ano' : 'Nie'));
-    classCard.appendChild(kv('Automaticke predlzenie', extraction.auto_renewal ? 'Ano' : 'Nie'));
+    if (extraction.grant_amount) classCard.appendChild(kv('Grantová suma', extraction.grant_amount));
+    classCard.appendChild(kv('Bezodplatné', extraction.bezodplatne ? 'Áno' : 'Nie'));
+    classCard.appendChild(kv('Automatické predĺženie', extraction.auto_renewal ? 'Áno' : 'Nie'));
     classCard.appendChild(kv('Model', extraction.model || '-', 'mono'));
     extGrid.appendChild(classCard);
 
     // Penalties card
     var penCard = card('Pokuty & asymetria', extraction.penalty_asymmetry === 'supplier_advantage' ? 'card-danger' : 'card-warn');
     penCard.appendChild(kv('Asymetria pokut', extraction.penalty_asymmetry || '-'));
-    penCard.appendChild(kv('Pocet pokut', String(extraction.penalty_count || 0)));
+    penCard.appendChild(kv('Počet pokút', String(extraction.penalty_count || 0)));
     if (ej && ej.penalties && ej.penalties.length > 0) {
       var penSep = el('div', 'kv-label', 'Detail pokut');
       penSep.style.marginTop = '12px';
@@ -541,8 +1156,8 @@ function renderDetail(result) {
       penCard.appendChild(penSep);
       ej.penalties.forEach(function(p) {
         var ic = el('div', 'item-card');
-        ic.appendChild(el('div', 'item-name', (p.penalized_party === 'buyer' ? 'Objednavatel' : p.penalized_party === 'supplier' ? 'Dodavatel' : p.penalized_party || '-')));
-        if (p.trigger) ic.appendChild(el('div', 'item-detail', 'Dovod: ' + p.trigger));
+        ic.appendChild(el('div', 'item-name', (p.penalized_party === 'buyer' ? 'Objednávateľ' : p.penalized_party === 'supplier' ? 'Dodávateľ' : p.penalized_party || '-')));
+        if (p.trigger) ic.appendChild(el('div', 'item-detail', 'Dôvod: ' + p.trigger));
         if (p.amount) ic.appendChild(el('div', 'item-meta', 'Suma/sadzba: ' + p.amount));
         penCard.appendChild(ic);
       });
@@ -554,16 +1169,16 @@ function renderDetail(result) {
     // Termination
     if (ej && ej.termination) {
       var t = ej.termination;
-      var termCard = card('Ukoncenie zmluvy', null);
-      termCard.appendChild(kv('Objednavatel moze ukoncit bez dovodu', t.buyer_can_terminate_without_cause ? 'Ano' : 'Nie'));
-      termCard.appendChild(kv('Dodavatel moze ukoncit bez dovodu', t.supplier_can_terminate_without_cause ? 'Ano' : 'Nie'));
-      termCard.appendChild(kv('Vypovedna lehota', t.notice_period || '-'));
+      var termCard = card('Ukončenie zmluvy', null);
+      termCard.appendChild(kv('Objednávateľ môže ukončiť bez dôvodu', t.buyer_can_terminate_without_cause ? 'Áno' : 'Nie'));
+      termCard.appendChild(kv('Dodávateľ môže ukončiť bez dôvodu', t.supplier_can_terminate_without_cause ? 'Áno' : 'Nie'));
+      termCard.appendChild(kv('Výpovedná lehota', t.notice_period || '-'));
       container.appendChild(termCard);
     }
 
     // Bank accounts
     if (ej && ej.bank_accounts && ej.bank_accounts.length > 0) {
-      container.appendChild(el('div', 'section-title', 'Bankove ucty (' + ej.bank_accounts.length + ')'));
+      container.appendChild(el('div', 'section-title', 'Bankové účty (' + ej.bank_accounts.length + ')'));
       var baCard = card(null, null);
       var baTable = el('table', 'mini-table');
       var baHead = document.createElement('thead');
@@ -574,7 +1189,7 @@ function renderDetail(result) {
       var baBody = document.createElement('tbody');
       ej.bank_accounts.forEach(function(ba) {
         var tr = document.createElement('tr');
-        tr.appendChild(el('td', null, ba.party === 'buyer' ? 'Objednavatel' : ba.party === 'supplier' ? 'Dodavatel' : (ba.party || '-')));
+        tr.appendChild(el('td', null, ba.party === 'buyer' ? 'Objednávateľ' : ba.party === 'supplier' ? 'Dodávateľ' : (ba.party || '-')));
         tr.appendChild(el('td', 'mono', ba.iban || '-'));
         baBody.appendChild(tr);
       });
@@ -587,28 +1202,28 @@ function renderDetail(result) {
     if (ej && ej.funding_source && (ej.funding_source.scheme_reference || ej.funding_source.grant_amount)) {
       var fsCard = card('Financovanie - detail', 'card-success');
       fsCard.appendChild(kv('Typ', ej.funding_source.type || '-'));
-      if (ej.funding_source.scheme_reference) fsCard.appendChild(kv('Schema/referencia', ej.funding_source.scheme_reference));
+      if (ej.funding_source.scheme_reference) fsCard.appendChild(kv('Schéma/referencia', ej.funding_source.scheme_reference));
       if (ej.funding_source.grant_amount) fsCard.appendChild(kv('Suma grantu', ej.funding_source.grant_amount));
       container.appendChild(fsCard);
     }
   } else {
     container.appendChild(el('div', 'section-title', 'LLM Extrakcia'));
-    container.appendChild(el('div', 'empty', 'Pre tuto zmluvu nie je dostupna LLM extrakcia.'));
+    container.appendChild(el('div', 'empty', 'Pre túto zmluvu nie je dostupná LLM extrakcia.'));
   }
 
   // Dates + details grid
   container.appendChild(el('div', 'section-title', 'Detaily zmluvy'));
   var detailGrid = el('div', 'grid grid-2');
 
-  var datesCard = card('Datumy', 'card-accent');
-  datesCard.appendChild(kv('Datum zverejnenia', d.datum_zverejnenia || '-'));
-  datesCard.appendChild(kv('Datum podpisu', d.datum_podpisu || '-'));
-  datesCard.appendChild(kv('Datum ucinnosti', d.datum_ucinnosti || '-'));
-  datesCard.appendChild(kv('Platnost do', d.platnost_do || '-'));
+  var datesCard = card('Dátumy', 'card-accent');
+  datesCard.appendChild(kv('Dátum zverejnenia', d.datum_zverejnenia || '-'));
+  datesCard.appendChild(kv('Dátum podpisu', d.datum_podpisu || '-'));
+  datesCard.appendChild(kv('Dátum účinnosti', d.datum_ucinnosti || '-'));
+  datesCard.appendChild(kv('Platnosť do', d.platnost_do || '-'));
   detailGrid.appendChild(datesCard);
 
   var metaCard = card('Metadata', null);
-  metaCard.appendChild(kv('Cislo zmluvy', d.cislo_zmluvy || '-', 'mono'));
+  metaCard.appendChild(kv('Číslo zmluvy', d.cislo_zmluvy || '-', 'mono'));
   metaCard.appendChild(kv('Rezort', d.rezort || '-'));
   metaCard.appendChild(kv('Zdroj', d.zdroj || '-'));
   if (d.crz_url) metaCard.appendChild(kvLink('CRZ odkaz', d.crz_url, d.crz_url));
@@ -616,11 +1231,11 @@ function renderDetail(result) {
   detailGrid.appendChild(metaCard);
   container.appendChild(detailGrid);
 
-  // Poznamka / Popis
+  // Poznámka / Popis
   if (d.poznamka || d.popis) {
     var textGrid = el('div', 'grid grid-2');
     if (d.poznamka) {
-      var pozCard = card('Poznamka', null);
+      var pozCard = card('Poznámka', null);
       pozCard.appendChild(el('div', null, d.poznamka));
       textGrid.appendChild(pozCard);
     }
@@ -632,14 +1247,14 @@ function renderDetail(result) {
     container.appendChild(textGrid);
   }
 
-  // Prilohy
+  // Prílohy
   if (d.prilohy && d.prilohy.length > 0) {
-    container.appendChild(el('div', 'section-title', 'Prilohy (' + d.prilohy.length + ')'));
+    container.appendChild(el('div', 'section-title', 'Prílohy (' + d.prilohy.length + ')'));
     var priCard = card(null, null);
     var priTable = el('table', 'mini-table');
     var priHead = document.createElement('thead');
     var priHr = document.createElement('tr');
-    ['Nazov', 'Subor', 'Odkaz'].forEach(function(h) { priHr.appendChild(el('th', null, h)); });
+    ['Názov', 'Súbor', 'Odkaz'].forEach(function(h) { priHr.appendChild(el('th', null, h)); });
     priHead.appendChild(priHr);
     priTable.appendChild(priHead);
     var priBody = document.createElement('tbody');
@@ -649,7 +1264,7 @@ function renderDetail(result) {
       tr.appendChild(el('td', 'mono', p.subor || '-'));
       var linkTd = document.createElement('td');
       if (p.url) {
-        var a = el('a', null, 'Stiahnut PDF');
+        var a = el('a', null, 'Stiahnuť PDF');
         a.href = p.url;
         a.target = '_blank';
         a.rel = 'noopener';
@@ -665,7 +1280,7 @@ function renderDetail(result) {
 
   // Related contracts
   if (d.related_supplier_contracts && d.related_supplier_contracts.length > 0) {
-    container.appendChild(el('div', 'section-title', 'Dalsie zmluvy s rovnakym dodavatelom'));
+    container.appendChild(el('div', 'section-title', 'Ďalšie zmluvy s rovnakým dodávateľom'));
     if (d.supplier_total_count) {
       var relStats = el('div', 'stat-row');
       var rs1 = el('div', 'stat-block info');
@@ -674,7 +1289,7 @@ function renderDetail(result) {
       relStats.appendChild(rs1);
       var rs2 = el('div', 'stat-block accent');
       rs2.appendChild(el('div', 'stat-value', formatEur(d.supplier_total_sum)));
-      rs2.appendChild(el('div', 'stat-label', 'Celkova suma'));
+      rs2.appendChild(el('div', 'stat-label', 'Celková suma'));
       relStats.appendChild(rs2);
       container.appendChild(relStats);
     }
@@ -682,7 +1297,7 @@ function renderDetail(result) {
     var relTable = el('table', 'mini-table');
     var relHead = document.createElement('thead');
     var relHr = document.createElement('tr');
-    ['ID', 'Nazov', 'Suma', 'Datum', 'Typ'].forEach(function(h) { relHr.appendChild(el('th', null, h)); });
+    ['ID', 'Názov', 'Suma', 'Dátum', 'Typ'].forEach(function(h) { relHr.appendChild(el('th', null, h)); });
     relHead.appendChild(relHr);
     relTable.appendChild(relHead);
     var relBody = document.createElement('tbody');
@@ -722,7 +1337,7 @@ fetch('/api/detail?id=' + encodeURIComponent(contractId))
     var container = document.getElementById('content');
     container.textContent = '';
     var errDiv = el('div', 'error-state');
-    errDiv.appendChild(el('h2', null, 'Chyba pri nacitavani'));
+    errDiv.appendChild(el('h2', null, 'Chyba pri načítavaní'));
     errDiv.appendChild(el('p', null, String(err)));
     container.appendChild(errDiv);
   });
