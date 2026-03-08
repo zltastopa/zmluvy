@@ -12,6 +12,8 @@ Usage:
     uv run python import_ruz_equity.py --refresh    # re-fetch all
 """
 
+import confpath  # noqa: F401
+
 import argparse
 import json
 import sqlite3

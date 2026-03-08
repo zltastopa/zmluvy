@@ -14,8 +14,7 @@ services:
       test:
         [
           "CMD",
-          "/app/.venv/bin/python",
-          "-c",
+          "/app/.venv/bin/python", "-c",
           "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8001/api/summary', timeout=5)"
         ]
       interval: 30s

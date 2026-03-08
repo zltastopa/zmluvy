@@ -37,6 +37,21 @@ CRZ.gov.sk only searches contract titles. But the actual service type is often b
 
 ---
 
+## Repository structure
+
+```
+├── frontend/          Dashboard and detail page HTML/JS
+├── server/            Web server (serve.py) and CLI runner (run.py)
+├── pipeline/          Data loading, LLM extraction, enrichment, and flagging scripts
+├── docs/              Reference documentation and investigation notes
+├── settings.py        Shared configuration (env vars, path resolution)
+├── Dockerfile         Container build
+├── compose.yaml       Docker Compose deployment
+└── crz.db             SQLite database (not in git — see Quick start)
+```
+
+---
+
 ## Quick start
 
 ```bash
@@ -52,10 +67,10 @@ curl -o data.zip https://www.crz.gov.sk/export/2026-03-05.zip
 unzip data.zip
 
 # Parse into SQLite
-uv run python load_crz.py 2026-03-05.xml
+uv run python pipeline/load_crz.py 2026-03-05.xml
 
 # Start the server (dashboard + datasette on one port)
-uv run python serve.py
+uv run python server/serve.py
 # → http://localhost:8001
 ```
 
@@ -119,7 +134,7 @@ done
 
 # Unzip and load all
 for f in data/*.zip; do unzip -o "$f" -d data/; done
-uv run python load_crz.py data/*.xml
+uv run python pipeline/load_crz.py data/*.xml
 ```
 
 ---
@@ -130,13 +145,13 @@ Extract structured data from contract PDFs using an LLM (default: Gemini 2.5 Fla
 
 ```bash
 # 1. Download PDFs for a month
-uv run python download_sample_pdfs.py --month 2026-02 --all
+uv run python pipeline/download_sample_pdfs.py --month 2026-02 --all
 
 # 2. Convert PDFs to text
-uv run python pdf_to_text.py
+uv run python pipeline/pdf_to_text.py
 
 # 3. Extract structured fields via LLM
-uv run python extract_contracts.py
+uv run python pipeline/extract_contracts.py
 ```
 
 All three scripts support `--workers` for parallel execution and show a tqdm progress bar. They skip already-processed files, so you can Ctrl+C and resume anytime.
@@ -152,7 +167,7 @@ Cross-reference contracts against the Financial Administration's [Tax Reliabilit
 ```bash
 curl -o ds_iz_ran.zip https://report.financnasprava.sk/ds_iz_ran.zip
 unzip ds_iz_ran.zip
-uv run python load_tax_reliability.py
+uv run python pipeline/load_tax_reliability.py
 ```
 
 This creates a `tax_reliability` table (~680K subjects) joinable on ICO:

@@ -6,6 +6,8 @@ amendment text, then attempts to match it against cislo_zmluvy in zmluvy.
 
 Finds amendment texts via the manifest.csv mapping and prilohy attachment IDs.
 """
+import confpath  # noqa: F401
+
 import json
 import os
 import re
@@ -325,7 +327,8 @@ def main():
     print(f"Parent ref found but not in DB:      {stats['no_match_in_db']}")
 
     # Save detailed results
-    out_path = os.path.join("data", "amendment_linking_experiment.json")
+    repo_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    out_path = os.path.join(repo_root, "data", "amendment_linking_experiment.json")
     with open(out_path, "w") as f:
         json.dump(results, f, ensure_ascii=False, indent=2)
     print(f"\nDetailed results saved to {out_path}")

@@ -8,6 +8,8 @@ Usage:
     python download_sample_pdfs.py --from 2026-01 --to 2026-03        # month range
     python download_sample_pdfs.py --all                    # all PDFs for the period (ignores --limit)
 """
+import confpath  # noqa: F401
+
 import sqlite_utils
 import httpx
 import os

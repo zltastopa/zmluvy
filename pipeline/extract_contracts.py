@@ -9,6 +9,8 @@ Usage:
     python extract_contracts.py --file 6578512.txt # extract one specific file
     python extract_contracts.py --dry-run          # show what would be processed
 """
+import confpath  # noqa: F401
+
 import json
 import os
 import csv

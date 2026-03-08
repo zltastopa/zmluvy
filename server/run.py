@@ -25,12 +25,12 @@ import sys
 import subprocess
 from pathlib import Path
 
-ROOT = Path(__file__).resolve().parent
+PIPELINE_DIR = Path(__file__).resolve().parent.parent / "pipeline"
 
 
 def run_script(name, extra_args):
-    """Run a sibling Python script via uv run, forwarding extra CLI args."""
-    script = ROOT / name
+    """Run a pipeline script via uv run, forwarding extra CLI args."""
+    script = PIPELINE_DIR / name
     if not script.exists():
         print(f"Error: {script} not found")
         sys.exit(1)

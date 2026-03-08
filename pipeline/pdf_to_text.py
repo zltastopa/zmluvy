@@ -7,6 +7,8 @@ Also writes a manifest CSV mapping filenames to contract metadata.
 
 from __future__ import annotations
 
+import confpath  # noqa: F401
+
 import argparse
 import csv
 import os

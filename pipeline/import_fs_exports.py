@@ -13,6 +13,8 @@ Usage:
     uv run python import_fs_exports.py
 """
 
+import confpath  # noqa: F401
+
 import sqlite3
 import xml.etree.ElementTree as ET
 from pathlib import Path
@@ -20,7 +22,7 @@ from pathlib import Path
 from settings import get_path, normalize_company_name
 
 DB_PATH = get_path("CRZ_DB_PATH", "crz.db")
-EXPORT_DIR = Path("data/fs_exports")
+EXPORT_DIR = Path(__file__).resolve().parent.parent / "data" / "fs_exports"
 
 
 def get_db():

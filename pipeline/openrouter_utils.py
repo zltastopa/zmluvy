@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import confpath  # noqa: F401
+
 import os
 import sys
 from pathlib import Path

@@ -19,6 +19,8 @@ Usage:
     python load_tax_reliability.py                    # default: ds_iz_ran.xml
     python load_tax_reliability.py path/to/file.xml   # custom path
 """
+import confpath  # noqa: F401
+
 import xml.etree.ElementTree as ET
 import sqlite_utils
 import sys
