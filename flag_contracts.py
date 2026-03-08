@@ -292,6 +292,39 @@ DEFAULT_RULES = [
         "sql_condition": "__custom__",
         "needs_extraction": 0,
     },
+    # --- New flags: Finančná správa open data ---
+    {
+        "id": "fs_tax_debtor",
+        "label": "Danovy dlznik FS",
+        "description": "Dodavatel je na zozname danovych dlznikov Financnej spravy SR (podla nazvu firmy)",
+        "severity": "danger",
+        "sql_condition": "__custom__",
+        "needs_extraction": 0,
+    },
+    {
+        "id": "fs_vat_deregistered",
+        "label": "Vymazany z DPH registra",
+        "description": "Dodavatel bol vymazany zo zoznamu platitelov DPH (podla ICO)",
+        "severity": "danger",
+        "sql_condition": "__custom__",
+        "needs_extraction": 0,
+    },
+    {
+        "id": "fs_vat_dereg_risk",
+        "label": "Dovody na zrusenie DPH",
+        "description": "U dodavatela nastali dovody na zrusenie registracie pre DPH (podla ICO)",
+        "severity": "danger",
+        "sql_condition": "__custom__",
+        "needs_extraction": 0,
+    },
+    {
+        "id": "negative_equity",
+        "label": "Zaporne vlastne imanie",
+        "description": "Dodavatel vykazuje zaporne vlastne imanie v poslednej uctovnej zavierke (podla RUZ)",
+        "severity": "danger",
+        "sql_condition": "__custom__",
+        "needs_extraction": 0,
+    },
 ]
 
 
@@ -332,12 +365,18 @@ def init_tables(db):
 
 
 def seed_rules(db):
-    """Insert default rules (skip existing)."""
+    """Insert or update default rules."""
     for rule in DEFAULT_RULES:
         db.execute(
-            """INSERT OR IGNORE INTO flag_rules
+            """INSERT INTO flag_rules
                (id, label, description, severity, sql_condition, needs_extraction)
-               VALUES (?, ?, ?, ?, ?, ?)""",
+               VALUES (?, ?, ?, ?, ?, ?)
+               ON CONFLICT(id) DO UPDATE SET
+                   label=excluded.label,
+                   description=excluded.description,
+                   severity=excluded.severity,
+                   sql_condition=excluded.sql_condition,
+                   needs_extraction=excluded.needs_extraction""",
             (rule["id"], rule["label"], rule["description"],
              rule["severity"], rule["sql_condition"], rule["needs_extraction"]),
         )
@@ -391,6 +430,12 @@ def _insert_remove_flags(db, flag_type, matching_ids, details=None):
             (zmluva_id, flag_type, detail),
         )
         inserted += cursor.rowcount
+        # Update detail if it was NULL (from a previous SQL-based evaluator)
+        if cursor.rowcount == 0 and detail:
+            db.execute(
+                "UPDATE red_flags SET detail = ? WHERE zmluva_id = ? AND flag_type = ? AND detail IS NULL",
+                (detail, zmluva_id, flag_type),
+            )
     placeholder = ",".join(str(i) for i in matching_ids) if matching_ids else "0"
     cursor2 = db.execute(
         f"DELETE FROM red_flags WHERE flag_type = ? AND zmluva_id NOT IN ({placeholder})",
@@ -890,6 +935,123 @@ def _eval_threshold_gaming(db):
             details[r["id"]] = detail
 
     return _insert_remove_flags(db, "threshold_gaming", matching_ids, details)
+
+
+@_custom("fs_vat_deregistered")
+def _eval_fs_vat_deregistered(db):
+    """Flag contracts where supplier was deregistered from VAT (ICO match)."""
+    has_table = db.execute(
+        "SELECT count(*) FROM sqlite_master WHERE type='table' AND name='fs_vat_deregistered'"
+    ).fetchone()[0]
+    if not has_table:
+        return 0, 0
+
+    rows = db.execute("""
+        SELECT z.id, v.nazov, v.rok_porusenia, v.dat_vymazu
+        FROM zmluvy z
+        JOIN fs_vat_deregistered v ON v.ico = replace(z.dodavatel_ico, ' ', '')
+        WHERE v.ico IS NOT NULL
+    """).fetchall()
+
+    matching_ids = set()
+    details = {}
+    for r in rows:
+        matching_ids.add(r["id"])
+        parts = [r["nazov"] or ""]
+        if r["rok_porusenia"]:
+            parts.append(f"rok porusenia: {r['rok_porusenia']}")
+        if r["dat_vymazu"]:
+            parts.append(f"vymazany: {r['dat_vymazu']}")
+        details[r["id"]] = ", ".join(parts)
+    return _insert_remove_flags(db, "fs_vat_deregistered", matching_ids, details)
+
+
+@_custom("fs_vat_dereg_risk")
+def _eval_fs_vat_dereg_risk(db):
+    """Flag contracts where supplier has active VAT deregistration reasons."""
+    has_table = db.execute(
+        "SELECT count(*) FROM sqlite_master WHERE type='table' AND name='fs_vat_dereg_reasons'"
+    ).fetchone()[0]
+    if not has_table:
+        return 0, 0
+
+    rows = db.execute("""
+        SELECT z.id, v.nazov, v.rok_porusenia, v.dat_zverejnenia
+        FROM zmluvy z
+        JOIN fs_vat_dereg_reasons v ON v.ico = replace(z.dodavatel_ico, ' ', '')
+        WHERE v.ico IS NOT NULL
+    """).fetchall()
+
+    matching_ids = set()
+    details = {}
+    for r in rows:
+        matching_ids.add(r["id"])
+        parts = [r["nazov"] or ""]
+        if r["rok_porusenia"]:
+            parts.append(f"rok porusenia: {r['rok_porusenia']}")
+        if r["dat_zverejnenia"]:
+            parts.append(f"zverejnene: {r['dat_zverejnenia']}")
+        details[r["id"]] = ", ".join(parts)
+    return _insert_remove_flags(db, "fs_vat_dereg_risk", matching_ids, details)
+
+
+@_custom("negative_equity")
+def _eval_negative_equity(db):
+    """Flag contracts where supplier has negative equity per RÚZ financial statements."""
+    has_table = db.execute(
+        "SELECT count(*) FROM sqlite_master WHERE type='table' AND name='ruz_equity'"
+    ).fetchone()[0]
+    if not has_table:
+        return 0, 0
+
+    rows = db.execute("""
+        SELECT z.id, e.nazov, e.vlastne_imanie, e.obdobie
+        FROM zmluvy z
+        JOIN ruz_equity e ON e.ico = replace(z.dodavatel_ico, ' ', '')
+        WHERE e.vlastne_imanie < 0
+    """).fetchall()
+
+    matching_ids = set()
+    details = {}
+    for r in rows:
+        matching_ids.add(r["id"])
+        details[r["id"]] = (
+            f"{r['nazov']}: vlastne imanie {r['vlastne_imanie']:,.0f} EUR "
+            f"(obdobie {r['obdobie']})"
+        )
+    return _insert_remove_flags(db, "negative_equity", matching_ids, details)
+
+
+@_custom("fs_tax_debtor")
+def _eval_fs_tax_debtor(db):
+    """Flag contracts where supplier is on the FS tax debtors list (name match)."""
+    # Check if table exists
+    has_table = db.execute(
+        "SELECT count(*) FROM sqlite_master WHERE type='table' AND name='fs_tax_debtors'"
+    ).fetchone()[0]
+    if not has_table:
+        return 0, 0
+
+    debtor_rows = db.execute(
+        "SELECT nazov_normalized, nazov, max(suma) as max_sum FROM fs_tax_debtors "
+        "WHERE nazov_normalized IS NOT NULL AND nazov_normalized != '' "
+        "GROUP BY nazov_normalized"
+    ).fetchall()
+    debtor_map = {r["nazov_normalized"]: (r["nazov"], r["max_sum"]) for r in debtor_rows}
+
+    contracts = db.execute(
+        "SELECT id, dodavatel FROM zmluvy WHERE dodavatel IS NOT NULL AND dodavatel != ''"
+    ).fetchall()
+
+    matching_ids = set()
+    details = {}
+    for c in contracts:
+        norm = normalize_company_name(c["dodavatel"])
+        if norm in debtor_map:
+            matching_ids.add(c["id"])
+            orig_name, amount = debtor_map[norm]
+            details[c["id"]] = f"{orig_name} (dlh: {amount:,.2f} EUR)" if amount else orig_name
+    return _insert_remove_flags(db, "fs_tax_debtor", matching_ids, details)
 
 
 def run_rules(db, rule_id=None):

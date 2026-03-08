@@ -1682,6 +1682,11 @@
         <div class="stat-card"><div class="value" id="s-max">-</div><div class="label">Najvyššia suma</div></div>
         <div class="stat-card"><div class="value" id="s-no-amount">-</div><div class="label">Bez uvedenej sumy</div></div>
         <div class="stat-card"><div class="value" id="s-amendments">-</div><div class="label">Dodatkov</div></div>
+        <div class="stat-card" style="border-left: 3px solid var(--danger);">
+          <div class="value" id="s-debtors" style="color: var(--danger);">-</div>
+          <div class="label">Zmluv s dlznikmi statu</div>
+          <div style="font-size: 11px; color: var(--muted); margin-top: 2px;" id="s-debtors-value"></div>
+        </div>
       </div>
 
       <div class="chart-grid full">
@@ -1822,6 +1827,18 @@
           <div class="source-card">
             <strong>Sociálna poisťovňa</strong>
             <p>Register dlžníkov Sociálnej poisťovne</p>
+          </div>
+          <div class="source-card">
+            <strong>FS Danovi dlznici</strong>
+            <p>Zoznam danovych dlznikov — Financna sprava SR (XML export)</p>
+          </div>
+          <div class="source-card">
+            <strong>FS DPH registre</strong>
+            <p>Vymazani platioci DPH a dovody na zrusenie registracie — Financna sprava SR</p>
+          </div>
+          <div class="source-card">
+            <strong>RUZ Uctovne zavierky</strong>
+            <p>Vlastne imanie z uctovnych zavierok — Register uctovnych zavierok (API)</p>
           </div>
         </div>
 
@@ -2130,6 +2147,8 @@ async function loadSummary(params) {
   document.getElementById('s-max').textContent = fmtEur(d.max_value) + ' EUR';
   document.getElementById('s-no-amount').textContent = fmtNum(d.total - d.with_amount);
   document.getElementById('s-amendments').textContent = fmtNum(d.amendments);
+  document.getElementById('s-debtors').textContent = fmtNum(d.debtor_contracts);
+  document.getElementById('s-debtors-value').textContent = d.debtor_value ? fmtEur(d.debtor_value) + ' EUR' : '';
 }
 
 async function loadTimeline(params) {
