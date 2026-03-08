@@ -105,7 +105,21 @@ def api_summary(db, params):
             count(CASE WHEN z.typ='dodatok' THEN 1 END) as amendments,
             count(CASE WHEN z.stav='zrušená' THEN 1 END) as cancelled
         FROM zmluvy z {_join(params)} WHERE {where}""", bindings).fetchone()
-    return dict(row)
+    result = dict(row)
+    debt_flags = ('vszp_debtor', 'socpoist_debtor', 'tax_unreliable')
+    placeholders = ','.join('?' for _ in debt_flags)
+    debt_row = db.execute(
+        f"""SELECT count(DISTINCT rf.zmluva_id) as debtor_contracts,
+            coalesce(sum(DISTINCT z.suma), 0) as debtor_value
+        FROM red_flags rf
+        JOIN zmluvy z ON z.id = rf.zmluva_id
+        {_join(params)}
+        WHERE rf.flag_type IN ({placeholders}) AND ({where})""",
+        list(debt_flags) + list(bindings),
+    ).fetchone()
+    result["debtor_contracts"] = debt_row["debtor_contracts"] if debt_row else 0
+    result["debtor_value"] = debt_row["debtor_value"] if debt_row else 0
+    return result
 
 
 def api_timeline(db, params):
