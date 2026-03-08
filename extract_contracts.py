@@ -36,7 +36,7 @@ Respond ONLY with valid JSON matching this schema — no markdown, no explanatio
   "hidden_entities": [{"name": "...", "ico": "...", "role": one of the roles listed below, "percentage": number or null, "subcontract_subject": "..." or null}],
   "penalties": [{"penalized_party": "supplier" or "buyer", "trigger": "...", "amount": "..."}],
   "penalty_asymmetry": one of the asymmetry values listed below,
-  "penalty_asymmetry_reason": short explanation (1 sentence) of why you chose this asymmetry value, referencing which party faces more/harsher penalties,
+  "penalty_asymmetry_reason": short explanation (1 sentence) of why you chose this asymmetry value, referencing only the explicit penalties you extracted,
   "termination": {"buyer_can_terminate_without_cause": bool, "supplier_can_terminate_without_cause": bool, "notice_period": "..." or null},
   "funding_source": {"type": one of "eu_recovery_plan", "eu_structural_funds", "erasmus", "de_minimis", "state_budget", "municipal_budget", "other_eu", "none" , "scheme_reference": "..." or null, "grant_amount": number or null},
   "signatories": [{"party": "supplier" or "buyer", "name": "...", "role": "...", "delegation": "statutory" or "poverenie" or "plnomocenstvo" or "mandatna_zmluva" or null}],
@@ -44,9 +44,16 @@ Respond ONLY with valid JSON matching this schema — no markdown, no explanatio
   "duration_end_date": "YYYY-MM-DD" or null (only for fixed_term, extract from "do DD.MM.YYYY" or similar),
   "bank_accounts": [{"party": "supplier" or "buyer", "iban": "SK..."}],
   "auto_renewal": bool,
-  "bezodplatne": bool
+  "bezodplatne": bool,
   "subcontracting_mentioned": bool
 }
+
+Important output constraints:
+- Return ALL top-level keys shown above on every response.
+- Use ONLY the enum values explicitly listed in this prompt.
+- Do NOT add extra keys anywhere in the JSON.
+- Boolean fields must always be true or false, never null.
+- If data is absent, use [] for arrays, null for optional strings/numbers, false for booleans, and the documented enum fallback values.
 
 Service categories (pick the best match):
 - construction_renovation — stavebné práce, rekonštrukcia, opravy budov, Zmluva o dielo on buildings/infrastructure
@@ -77,6 +84,13 @@ Service categories (pick the best match):
 - copyright_royalty — autorské práva, vysporiadanie odmeny, SLOVGRAM, SOZA, licencie na diela
 - competition_olympiad — súťaže, olympiády, školské/športové súťaže
 - other — use only if none of the above fits
+
+Category mapping guardrails:
+- Never invent a new service_category label outside the list above.
+- Transportation, logistics, passenger transport, and náhradná autobusová doprava -> procurement_purchase unless a better listed category clearly fits.
+- Security guard / strážna služba / SBS contracts -> professional_consulting unless a better listed category clearly fits.
+- Maintenance / servicing contracts for equipment or lifts -> procurement_purchase unless the contract is clearly about facility cleaning/management.
+- Healthcare or social-care service provision agreements -> employment_social or pharmaceutical_clinical, whichever is clearly closer. Never emit labels such as healthcare_services or health_social_services.
 
 Hidden entity roles (pick the best match):
 - manager_operator — správca, prevádzkovateľ: company managing property/facility on behalf of a party (e.g. ByPo, TEZAR, Pohrebníctvo DVONČ managing cemetery for a city)
@@ -110,12 +124,18 @@ Signatories — extract the people who actually signed, one per party:
   - "mandatna_zmluva" — acting under a mandátna zmluva (e.g. ByPo signing for Mesto Ružomberok)
   - null — delegation type not stated or unclear
 
+Signatories:
+- Extract all people who actually signed, not just one person per party.
+- Use "buyer" for the first/main contracting side and "supplier" for the other side for schema purposes, even in non-procurement contracts.
+- Do not put organizations into signatories unless the scan/text makes the person unreadable and only the organization name is visible.
+
 Rules:
 - hidden_entities: ONLY include organizations or persons that are NOT the two main contracting parties (dodávateľ/objednávateľ). Specifically:
   - Do NOT include the dodávateľ or objednávateľ themselves, even under a slightly different name or spelling. If an entity is one of the two main parties, SKIP it — even if it also plays another role (e.g. a dodávateľ who is also a consortium member). The main parties are already known.
   - If the contract is not a typical procurement contract (for example a kolektívna zmluva, dodatok ku kolektívnej zmluve, or another agreement with a union/association as a signatory party), treat those named signatory organizations as main contracting parties, not hidden entities. In such cases, `hidden_entities` will often correctly be [].
   - Do NOT include people who merely signed the contract (štatutárny zástupca, konateľ, starosta, riaditeľ) — these are signatories, not hidden entities.
   - Do NOT include bank account signatories (disponenti).
+  - Do NOT include funding bodies, grant providers, host institutions, receiving institutions, property owners, or vehicle owners unless they clearly match one of the allowed hidden-entity roles.
   - Do NOT include generic collecting societies (SOZA, LITA, Literárny fond) unless they are a contractual party.
   - Only use roles from the list above. Never invent new roles like "supplier", "buyer", "owner", "organizer". If an entity does not fit any defined role, skip it.
   - When no hidden-entity role clearly applies, return an empty array [] instead of force-fitting a named organization into an approximate role such as consortium_member.
@@ -124,8 +144,12 @@ Rules:
   - "percentage" and "subcontract_subject" fields ONLY apply to entities with role "subcontractor". Set both to null for all other roles.
   - For "percentage", extract the numeric share of total contract value (0-100). Ignore percentages that refer to DPH/VAT rates, zmluvná pokuta rates, discount rates, co-financing shares, or Russian sanctions thresholds (Article 5k, Regulation 833/2014).
 - subcontracting_mentioned: set to true if the contract text discusses subcontracting in any way (subdodávateľ, subdodávka, zoznam subdodávateľov), even if no named subcontractor is found. Set to false otherwise.
-- penalties: extract only explicit contractual penalties (zmluvná pokuta, úroky z omeškania with specific rates). Skip generic legal references.
+- penalties: extract only explicit contractual penalties or payment-default interest with a specific contractual or clearly stated rate/amount. Do NOT treat termination rights, odstúpenie, výpoveď, prerušenie plnenia, refund obligations, or generic return-of-funds clauses as penalties unless they are explicitly framed as zmluvná pokuta or a quantified sanction.
+- `penalized_party` must be exactly "supplier" or "buyer". Do not use synonyms such as payer.
+- penalty_asymmetry must be based only on the extracted `penalties` array, not on termination rights or general remedies.
 - bank_accounts: extract IBAN numbers (SK format).
+- funding_source.type uses its own enum and must never reuse service_category labels like grant_subsidy or erasmus_academic_mobility.
+- For fixed_term contracts without a precise calendar date, keep duration_type="fixed_term" and set duration_end_date to null unless the end date is explicitly clear from the text.
 - If a field has no data, use empty array [] for arrays, null for optional strings/numbers, false for booleans, "none_found" or "none" for enums.
 - Keep actual_subject concise but specific — it should disambiguate generic titles like "Zmluva o dielo"."""
 
