@@ -20,7 +20,7 @@ import sqlite_utils
 import httpx
 from tqdm import tqdm
 
-from settings import get_env, get_path
+from settings import get_env, get_path, normalize_company_name
 from openrouter_utils import OPENROUTER_BASE, load_openrouter_api_key
 
 
@@ -164,6 +164,108 @@ USER_PROMPT_INSTRUCTION = "Extract structured data from this Slovak government c
 
 
 import re
+
+
+VALID_SERVICE_CATEGORIES = {
+    "construction_renovation",
+    "software_it",
+    "cultural_event_production",
+    "utilities",
+    "insurance",
+    "professional_consulting",
+    "media_marketing",
+    "grant_subsidy",
+    "property_lease",
+    "cemetery",
+    "asset_transfer",
+    "employment_social",
+    "legal_services",
+    "cleaning_facility",
+    "digital_certification",
+    "hr_payroll_outsourcing",
+    "pharmaceutical_clinical",
+    "easement_encumbrance",
+    "procurement_purchase",
+    "vehicle_use",
+    "erasmus_academic_mobility",
+    "accommodation",
+    "waste_management",
+    "renewable_energy_voucher",
+    "donation",
+    "copyright_royalty",
+    "competition_olympiad",
+    "other",
+}
+
+VALID_HIDDEN_ENTITY_ROLES = {
+    "manager_operator",
+    "subcontractor",
+    "consortium_member",
+    "previous_operator",
+    "co_user",
+    "insurance_broker",
+    "authorized_representative",
+}
+
+VALID_FUNDING_TYPES = {
+    "eu_recovery_plan",
+    "eu_structural_funds",
+    "erasmus",
+    "de_minimis",
+    "state_budget",
+    "municipal_budget",
+    "other_eu",
+    "none",
+}
+
+VALID_PENALTY_ASYMMETRY = {
+    "strong_buyer_advantage",
+    "moderate_buyer_advantage",
+    "balanced",
+    "supplier_advantage",
+    "none_found",
+}
+
+VALID_DURATION_TYPES = {"fixed_term", "indefinite", "one_time"}
+VALID_DELEGATIONS = {"statutory", "poverenie", "plnomocenstvo", "mandatna_zmluva", None}
+
+SERVICE_CATEGORY_ALIASES = {
+    "transport": "procurement_purchase",
+    "transportation": "procurement_purchase",
+    "security_services": "professional_consulting",
+    "maintenance": "procurement_purchase",
+    "maintenance_repair": "procurement_purchase",
+    "healthcare": "employment_social",
+    "health_care": "employment_social",
+    "healthcare_services": "employment_social",
+    "health_care_services": "employment_social",
+    "health_social_services": "employment_social",
+    "health_and_social_services": "employment_social",
+    "social_services": "employment_social",
+}
+
+FUNDING_TYPE_ALIASES = {
+    "erasmus_academic_mobility": "erasmus",
+    "grant_subsidy": "other_eu",
+    "other": "none",
+}
+
+REMEDY_PATTERNS = [
+    r"(?i)\bodstúpi",
+    r"(?i)\bvýpove",
+    r"(?i)\bpreruši",
+    r"(?i)\bvráti",
+    r"(?i)\bvráten",
+    r"(?i)\bpozastav",
+    r"(?i)\bneposkytne\b",
+    r"(?i)nemá\s+nárok",
+]
+
+QUANTIFIED_PENALTY_PATTERNS = [
+    r"(?i)zmluvn[áé]\s*pokut",
+    r"(?i)\b\d+[,.]?\d*\s*%",
+    r"(?i)\b\d+[,.]?\d*\s*eur\b",
+]
 
 # Section headers that signal high-value content for extraction
 SECTION_PATTERNS = [
@@ -330,6 +432,230 @@ def get_manifest(texts_dir):
     return mapping
 
 
+def extract_main_party_names(meta: dict, text: str | None) -> set[str]:
+    """Collect normalized names for the two main contracting parties."""
+    names = set()
+
+    for key in ("dodavatel", "objednavatel"):
+        value = (meta or {}).get(key)
+        if value:
+            names.add(normalize_company_name(value))
+
+    if text:
+        patterns = [
+            r"(?im)^\s*(?:dodávateľ|dodavatel|predávajúci|poskytovateľ|zhotoviteľ|zamestnávateľ|účastník)\s*[:]\s*(.+)$",
+            r"(?im)^\s*(?:objednávateľ|objednavatel|kupujúci|klient|organizácia|úrad)\s*[:]\s*(.+)$",
+        ]
+        for pattern in patterns:
+            for match in re.findall(pattern, text):
+                head = match.split(",", 1)[0].strip()
+                if head:
+                    names.add(normalize_company_name(head))
+
+    return {name for name in names if name}
+
+
+def normalize_service_category(value: str | None, actual_subject: str | None) -> str:
+    """Map invalid or drifted service categories onto the supported enum."""
+    if value in VALID_SERVICE_CATEGORIES:
+        return value
+
+    if value in SERVICE_CATEGORY_ALIASES:
+        return SERVICE_CATEGORY_ALIASES[value]
+
+    subject = (actual_subject or "").lower()
+    if "náhradn" in subject and "autobus" in subject:
+        return "procurement_purchase"
+    if "strážn" in subject or "bezpečnostn" in subject:
+        return "professional_consulting"
+    if "údržb" in subject or "servis" in subject:
+        return "procurement_purchase"
+
+    return "other"
+
+
+def normalize_funding_type(value: str | None) -> str:
+    """Map invalid funding types onto the supported enum."""
+    if value in VALID_FUNDING_TYPES:
+        return value
+    if value in FUNDING_TYPE_ALIASES:
+        return FUNDING_TYPE_ALIASES[value]
+    return "none"
+
+
+def normalize_hidden_entities(
+    entities: list,
+    main_party_names: set[str],
+    service_category: str,
+    actual_subject: str | None,
+) -> list[dict]:
+    """Drop invalid hidden entities and main-party leaks."""
+    normalized = []
+    subject = (actual_subject or "").lower()
+    collective_context = "kolektívn" in subject
+    erasmus_context = service_category == "erasmus_academic_mobility"
+
+    for entity in entities or []:
+        if not isinstance(entity, dict):
+            continue
+        name = (entity.get("name") or "").strip()
+        role = entity.get("role")
+        if not name or role not in VALID_HIDDEN_ENTITY_ROLES:
+            continue
+
+        normalized_name = normalize_company_name(name)
+        if normalized_name and normalized_name in main_party_names:
+            continue
+
+        lowered = name.lower()
+        if collective_context and ("odbor" in lowered or "zväz" in lowered):
+            continue
+        if erasmus_context and ("university" in lowered or "instit" in lowered or "erasmus" in lowered):
+            continue
+
+        cleaned = {
+            "name": name,
+            "ico": entity.get("ico"),
+            "role": role,
+            "percentage": entity.get("percentage") if role == "subcontractor" else None,
+            "subcontract_subject": entity.get("subcontract_subject") if role == "subcontractor" else None,
+        }
+        normalized.append(cleaned)
+
+    return normalized
+
+
+def is_quantified_penalty(text: str) -> bool:
+    """Return true when text looks like a quantified penalty or late-payment interest."""
+    return any(re.search(pattern, text) for pattern in QUANTIFIED_PENALTY_PATTERNS)
+
+
+def is_remedy_only(trigger: str, amount: str) -> bool:
+    """Identify remedy-like clauses that should not be treated as penalties."""
+    combined = f"{trigger} {amount}".strip()
+    if not combined:
+        return True
+    if is_quantified_penalty(combined):
+        return False
+    return any(re.search(pattern, combined) for pattern in REMEDY_PATTERNS)
+
+
+def normalize_penalties(penalties: list) -> list[dict]:
+    """Keep only explicit penalties and normalize fields."""
+    normalized = []
+    for penalty in penalties or []:
+        if not isinstance(penalty, dict):
+            continue
+        party = penalty.get("penalized_party")
+        if party not in {"buyer", "supplier"}:
+            party = None
+        trigger = (penalty.get("trigger") or "").strip()
+        amount = (penalty.get("amount") or "").strip()
+        if not party or not trigger or not amount:
+            continue
+        if is_remedy_only(trigger, amount):
+            continue
+        normalized.append(
+            {
+                "penalized_party": party,
+                "trigger": trigger,
+                "amount": amount,
+            }
+        )
+    return normalized
+
+
+def derive_penalty_asymmetry(penalties: list[dict]) -> tuple[str, str | None]:
+    """Recompute asymmetry from the normalized penalties array."""
+    if not penalties:
+        return "none_found", None
+
+    buyer_count = sum(1 for penalty in penalties if penalty["penalized_party"] == "buyer")
+    supplier_count = sum(1 for penalty in penalties if penalty["penalized_party"] == "supplier")
+
+    if supplier_count and not buyer_count:
+        return "strong_buyer_advantage", "Len dodávateľ čelí explicitným sankciám v extrahovaných ustanoveniach."
+    if buyer_count and not supplier_count:
+        return "supplier_advantage", "Len objednávateľ čelí explicitným sankciám v extrahovaných ustanoveniach."
+    if supplier_count > buyer_count:
+        return "moderate_buyer_advantage", "Dodávateľ čelí viac explicitným sankciám než objednávateľ."
+    if buyer_count > supplier_count:
+        return "supplier_advantage", "Objednávateľ čelí viac explicitným sankciám než dodávateľ."
+    return "balanced", "Obe strany čelia porovnateľným explicitným sankciám."
+
+
+def normalize_signatories(signatories: list) -> list[dict]:
+    """Keep signatory records schema-conformant without inventing values."""
+    normalized = []
+    for signatory in signatories or []:
+        if not isinstance(signatory, dict):
+            continue
+        party = signatory.get("party")
+        if party not in {"buyer", "supplier"}:
+            continue
+        delegation = signatory.get("delegation")
+        if delegation not in VALID_DELEGATIONS:
+            delegation = None
+        normalized.append(
+            {
+                "party": party,
+                "name": signatory.get("name"),
+                "role": signatory.get("role"),
+                "delegation": delegation,
+            }
+        )
+    return normalized
+
+
+def sanitize_extraction(extraction: dict, meta: dict, text: str | None) -> dict:
+    """Normalize model output into the expected schema and enums."""
+    actual_subject = extraction.get("actual_subject")
+    service_category = normalize_service_category(extraction.get("service_category"), actual_subject)
+    funding_source = extraction.get("funding_source") or {}
+    main_party_names = extract_main_party_names(meta, text)
+
+    cleaned = {
+        "service_category": service_category,
+        "actual_subject": actual_subject,
+        "hidden_entities": normalize_hidden_entities(
+            extraction.get("hidden_entities", []),
+            main_party_names,
+            service_category,
+            actual_subject,
+        ),
+        "penalties": normalize_penalties(extraction.get("penalties", [])),
+        "termination": extraction.get("termination") or {},
+        "funding_source": {
+            "type": normalize_funding_type(funding_source.get("type")),
+            "scheme_reference": funding_source.get("scheme_reference"),
+            "grant_amount": funding_source.get("grant_amount"),
+        },
+        "signatories": normalize_signatories(extraction.get("signatories", [])),
+        "duration_type": extraction.get("duration_type") if extraction.get("duration_type") in VALID_DURATION_TYPES else "one_time",
+        "duration_end_date": extraction.get("duration_end_date"),
+        "bank_accounts": extraction.get("bank_accounts", []),
+        "auto_renewal": bool(extraction.get("auto_renewal", False)),
+        "bezodplatne": bool(extraction.get("bezodplatne", False)),
+        "subcontracting_mentioned": bool(extraction.get("subcontracting_mentioned", False)),
+    }
+
+    termination = cleaned["termination"]
+    cleaned["termination"] = {
+        "buyer_can_terminate_without_cause": bool(termination.get("buyer_can_terminate_without_cause", False)),
+        "supplier_can_terminate_without_cause": bool(termination.get("supplier_can_terminate_without_cause", False)),
+        "notice_period": termination.get("notice_period"),
+    }
+
+    if cleaned["duration_type"] != "fixed_term":
+        cleaned["duration_end_date"] = None
+
+    asymmetry, asymmetry_reason = derive_penalty_asymmetry(cleaned["penalties"])
+    cleaned["penalty_asymmetry"] = asymmetry if asymmetry in VALID_PENALTY_ASYMMETRY else "none_found"
+    cleaned["penalty_asymmetry_reason"] = asymmetry_reason
+
+    return cleaned
+
+
 def normalize_contract_arg(name: str) -> str:
     """Normalize --file input to the canonical .txt-based contract key."""
     if name.endswith(".txt"):
@@ -440,6 +766,7 @@ def main():
 
             # Add metadata
             meta = manifest.get(fname, {})
+            extraction = sanitize_extraction(extraction, meta, text)
             extraction["_source_file"] = fname
             extraction["_source_kind"] = source_kind
             extraction["_zmluva_id"] = meta.get("zmluva_id", fname.replace(".txt", ""))
