@@ -1,4 +1,4 @@
-"""Evaluate red flag rules against contracts and materialize results.
+"""Evaluate žltá stopa rules against contracts and materialize results.
 
 Usage:
     uv run python flag_contracts.py                # run all enabled rules
@@ -1106,7 +1106,7 @@ def list_rules(db):
 
 def add_rule_interactive(db):
     """Interactively add a new flag rule."""
-    print("Add new red flag rule")
+    print("Pridať novú žltú stopu")
     print("=" * 40)
     rule_id = input("ID (slug, e.g. 'high_value_no_ico'): ").strip()
     if not rule_id:
@@ -1145,7 +1145,7 @@ def add_rule_interactive(db):
 
 
 def main():
-    parser = argparse.ArgumentParser(description="CRZ Red Flag Evaluator")
+    parser = argparse.ArgumentParser(description="CRZ Žltá Stopa Evaluator")
     parser.add_argument("--init", action="store_true", help="Seed default rules only")
     parser.add_argument("--rule", type=str, help="Run a specific rule by ID")
     parser.add_argument("--list", action="store_true", help="List all rules and counts")
@@ -1164,7 +1164,7 @@ def main():
         print("Tables and default rules initialized.")
         list_rules(db)
     else:
-        print("Evaluating red flag rules...")
+        print("Evaluating žltá stopa rules...")
         run_rules(db, rule_id=args.rule)
 
     db.close()

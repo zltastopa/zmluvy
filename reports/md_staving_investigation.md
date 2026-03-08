@@ -156,7 +156,7 @@ Vsetky tri firmy su danovo spolahlivy bez dlhov — formalne su v poriadku.
 |---|---|---|
 | Aglomeracia Zarnovica - kanalizacia a COV | https://www.crz.gov.sk/zmluva/11885785/ | https://www.crz.gov.sk/data/att/6473206.pdf |
 
-### Red flags
+### Žlté stopy
 
 | Flag | Severity | Detail |
 |---|---|---|

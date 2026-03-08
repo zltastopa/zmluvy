@@ -90,7 +90,7 @@ V priebehu 3 tyzdnov (21.01.2026 - 10.02.2026) bol **Nicolas Vojtko** menovany z
 |---|---|---|
 | Ramcova dohoda (NCZI) | https://www.crz.gov.sk/zmluva/11914750/ | https://www.crz.gov.sk/data/att/6488380.pdf |
 
-### Red flags
+### Žlté stopy
 
 | Flag | Severity | Detail |
 |---|---|---|
@@ -122,7 +122,7 @@ Vsetky zmluvy boli podpisane **14.01.2026** — rovnaky den, co indikuje koordin
 - Vsetky zmluvy su na rovnaky den — 38 zmluv podpisanych sucasne
 - Entity Todos su skryte vo vnutri zmluv CSOB Leasing → NDS, nie su na prvom pohlade viditelne
 
-### Red flags
+### Žlté stopy
 
 | Flag | Severity | Detail |
 |---|---|---|
