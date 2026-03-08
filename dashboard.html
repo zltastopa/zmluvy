@@ -1398,10 +1398,68 @@
       gap: 0.45rem;
     }
   }
+
+  /* Floating bug report button */
+  .bug-fab {
+    position: fixed;
+    bottom: 1.5rem;
+    right: 1.5rem;
+    z-index: 9999;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.7rem 1.2rem;
+    background: var(--black);
+    color: var(--yellow);
+    font-family: 'Lexend', sans-serif;
+    font-weight: 600;
+    font-size: 0.82rem;
+    letter-spacing: 0.01em;
+    border: 2px solid var(--yellow);
+    border-radius: 999px;
+    cursor: pointer;
+    box-shadow: var(--shadow-lift);
+    transition: all 0.2s ease;
+    text-decoration: none;
+  }
+  .bug-fab:hover {
+    background: var(--yellow);
+    color: var(--black);
+    transform: translateY(-2px);
+    box-shadow: 0 20px 44px rgb(0 0 0 / 0.15), 0 6px 16px rgb(0 0 0 / 0.08);
+  }
+  .bug-fab:active {
+    transform: translateY(0);
+  }
+  .bug-fab svg {
+    width: 16px;
+    height: 16px;
+    fill: none;
+    stroke: currentColor;
+    stroke-width: 1.8;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+    flex-shrink: 0;
+  }
+
+  @media (max-width: 740px) {
+    .bug-fab {
+      bottom: 1rem;
+      right: 1rem;
+      padding: 0.6rem 1rem;
+      font-size: 0.76rem;
+    }
+  }
 </style>
 
 </head>
 <body>
+
+<!-- Floating bug report -->
+<a class="bug-fab" href="#" onclick="return openBugReport()">
+  <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 8v4M12 16h.01"/></svg>
+  Nahlás chybu
+</a>
 
 <!-- Top bar -->
 <div class="topbar">
@@ -1853,6 +1911,42 @@
 </div>
 
 <script>
+// ============================================================
+// Bug report
+// ============================================================
+function openBugReport() {
+  var lines = [];
+  lines.push('**Stránka:** ' + window.location.href);
+  lines.push('**Tab:** ' + currentTab);
+
+  if (currentTab === 'search' && searchQuery) {
+    lines.push('**Vyhľadávanie:** ' + searchQuery);
+  }
+
+  if (currentTab === 'browse') {
+    var activeFilters = [];
+    document.querySelectorAll('.filters input, .filters select').forEach(function(el) {
+      if (el.value && el.value !== '') {
+        var label = el.dataset.filter || el.name || el.id || '';
+        if (label) activeFilters.push(label + '=' + el.value);
+      }
+    });
+    if (activeFilters.length) {
+      lines.push('**Filtre:** ' + activeFilters.join(', '));
+    }
+  }
+
+  lines.push('');
+  lines.push('---');
+  lines.push('**Popis chyby:**');
+  lines.push('');
+
+  var title = encodeURIComponent('Chyba na stránke (' + currentTab + ')');
+  var body = encodeURIComponent(lines.join('\n'));
+  window.open('https://github.com/zltastopa/zmluvy/issues/new?title=' + title + '&body=' + body + '&labels=bug', '_blank');
+  return false;
+}
+
 // ============================================================
 // Shared utilities
 // ============================================================
