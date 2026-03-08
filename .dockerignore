@@ -1,0 +1,13 @@
+.git
+.venv
+__pycache__/
+*.py[oc]
+.env
+.python-version
+.playwright-mcp/
+crz.db
+crz.db.old
+data/
+tmp/
+*.zip
+*.sql

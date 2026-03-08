@@ -49,6 +49,41 @@ uv run python load_crz.py 2026-03-05.xml
 uv run python serve.py
 ```
 
+## Deploy with Docker Compose
+
+For the lowest-friction production setup, run the app in Docker and
+keep nginx on the host as the reverse proxy.
+
+1. Put `crz.db` in the repo root, or change the bind mount in
+   [`compose.yaml`](./compose.yaml) if you want to keep it elsewhere.
+
+2. Build and start the container:
+
+```bash
+docker compose up -d --build
+```
+
+The app will listen on `127.0.0.1:8001`, ready for host nginx to proxy
+to it inside the container, and Docker publishes it on
+`127.0.0.1:8321` on the host for nginx to proxy to.
+
+If you need custom runtime settings beyond the database path, create a
+repo-local `.env` file as described above. The server loads it
+automatically when present.
+
+Useful commands:
+
+```bash
+docker compose logs -f
+docker compose ps
+docker compose restart
+docker compose pull
+```
+
+The Compose setup mounts the SQLite database from the host instead of
+baking it into the image, which keeps deploys fast even with a large
+database file.
+
 Environment is loaded automatically from `.env` by all Python
 entrypoints. The main variables are:
 
