@@ -19,6 +19,8 @@ def load_openrouter_api_key() -> str:
     key = os.environ.get("OPENROUTER_API_KEY", "").strip()
     if not key:
         key_file = Path(__file__).resolve().parent / ".openrouter_key"
+        if not key_file.exists():
+            key_file = Path(__file__).resolve().parent.parent / ".openrouter_key"
         if key_file.exists():
             key = key_file.read_text().strip()
     if not key:
