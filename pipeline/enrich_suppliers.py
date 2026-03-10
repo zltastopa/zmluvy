@@ -12,6 +12,8 @@ Usage:
     python enrich_suppliers.py --flags-only             # skip scraping, just re-evaluate flags
     python enrich_suppliers.py --force                  # re-scrape even if data exists
 """
+import confpath  # noqa: F401
+
 import argparse
 import html
 import json

@@ -16,4 +16,4 @@ COPY . .
 
 EXPOSE 8001
 
-CMD ["/app/.venv/bin/python", "serve.py", "--host", "0.0.0.0", "--port", "8001"]
+CMD ["/app/.venv/bin/python", "server/serve.py", "--host", "0.0.0.0", "--port", "8001"]

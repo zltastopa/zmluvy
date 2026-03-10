@@ -761,10 +761,68 @@
       grid-template-columns: 1fr;
     }
   }
+
+  /* Floating bug report button */
+  .bug-fab {
+    position: fixed;
+    bottom: 1.5rem;
+    right: 1.5rem;
+    z-index: 9999;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.7rem 1.2rem;
+    background: var(--black);
+    color: var(--yellow);
+    font-family: 'Lexend', sans-serif;
+    font-weight: 600;
+    font-size: 0.82rem;
+    letter-spacing: 0.01em;
+    border: 2px solid var(--yellow);
+    border-radius: 999px;
+    cursor: pointer;
+    box-shadow: 0 18px 40px rgb(0 0 0 / 0.11), 0 5px 14px rgb(0 0 0 / 0.06);
+    transition: all 0.2s ease;
+    text-decoration: none;
+  }
+  .bug-fab:hover {
+    background: var(--yellow);
+    color: var(--black);
+    transform: translateY(-2px);
+    box-shadow: 0 20px 44px rgb(0 0 0 / 0.15), 0 6px 16px rgb(0 0 0 / 0.08);
+  }
+  .bug-fab:active {
+    transform: translateY(0);
+  }
+  .bug-fab svg {
+    width: 16px;
+    height: 16px;
+    fill: none;
+    stroke: currentColor;
+    stroke-width: 1.8;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+    flex-shrink: 0;
+  }
+
+  @media (max-width: 740px) {
+    .bug-fab {
+      bottom: 1rem;
+      right: 1rem;
+      padding: 0.6rem 1rem;
+      font-size: 0.76rem;
+    }
+  }
 </style>
 
 </head>
 <body>
+
+<!-- Floating bug report -->
+<a class="bug-fab" href="#" onclick="return openBugReport()">
+  <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 8v4M12 16h.01"/></svg>
+  Nahlás chybu
+</a>
 
 <div class="topbar">
   <a class="logo" href="/" aria-label="CRZ Explorer">
@@ -1328,11 +1386,38 @@ function renderDetail(result) {
   container.lastChild.style.height = '40px';
 }
 
+// Bug report
+var _contractData = null;
+function openBugReport() {
+  var lines = [];
+  lines.push('**Stránka:** ' + window.location.href);
+
+  if (_contractData) {
+    var d = _contractData;
+    lines.push('**Zmluva ID:** ' + (d.id || ''));
+    lines.push('**Názov:** ' + (d.nazov_zmluvy || ''));
+    lines.push('**Dodávateľ:** ' + (d.dodavatel || ''));
+    lines.push('**Objednávateľ:** ' + (d.objednavatel || ''));
+    lines.push('**Suma:** ' + (d.suma != null ? d.suma + ' EUR' : ''));
+  }
+
+  lines.push('');
+  lines.push('---');
+  lines.push('**Popis chyby:**');
+  lines.push('');
+
+  var id = _contractData ? _contractData.id : getContractId();
+  var title = encodeURIComponent('Chyba: Zmluva #' + id);
+  var body = encodeURIComponent(lines.join('\n'));
+  window.open('https://github.com/zltastopa/zmluvy/issues/new?title=' + title + '&body=' + body + '&labels=bug', '_blank');
+  return false;
+}
+
 // Load
 var contractId = getContractId();
 fetch('/api/detail?id=' + encodeURIComponent(contractId))
   .then(function(res) { return res.json(); })
-  .then(function(json) { renderDetail(json); })
+  .then(function(json) { _contractData = json.data || null; renderDetail(json); })
   .catch(function(err) {
     var container = document.getElementById('content');
     container.textContent = '';

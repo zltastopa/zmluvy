@@ -1,3 +1,5 @@
+import confpath  # noqa: F401
+
 from settings import ENV_PATH
 
 

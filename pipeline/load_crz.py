@@ -1,4 +1,6 @@
 """Parse CRZ daily XML export into SQLite for Datasette."""
+import confpath  # noqa: F401
+
 import xml.etree.ElementTree as ET
 import sqlite_utils
 import sys

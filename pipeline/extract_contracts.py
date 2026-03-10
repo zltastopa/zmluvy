@@ -9,6 +9,8 @@ Usage:
     python extract_contracts.py --file 6578512.txt # extract one specific file
     python extract_contracts.py --dry-run          # show what would be processed
 """
+import confpath  # noqa: F401
+
 import json
 import os
 import csv
@@ -691,6 +693,18 @@ def main():
     )
     parser.add_argument("--workers", type=int, default=8, help="Parallel workers (default: 8)")
     parser.add_argument("--force", action="store_true", help="Re-extract even if JSON already exists")
+    parser.add_argument(
+        "--from",
+        type=str,
+        dest="date_from",
+        help="Start date (YYYY-MM-DD) or month (YYYY-MM). Only extract contracts from this date.",
+    )
+    parser.add_argument(
+        "--to",
+        type=str,
+        dest="date_to",
+        help="End date (YYYY-MM-DD) or month (YYYY-MM). Inclusive.",
+    )
     args = parser.parse_args()
 
     api_key = load_openrouter_api_key()
@@ -700,8 +714,40 @@ def main():
     os.makedirs(output_dir, exist_ok=True)
 
     # Determine which files to process
+    db = sqlite_utils.Database(get_path("CRZ_DB_PATH", "crz.db"))
     if args.file:
         files = [normalize_contract_arg(args.file)]
+    elif args.date_from:
+        # Query DB for attachments in the date range
+        date_from = args.date_from + "-01" if len(args.date_from) == 7 else args.date_from
+        if args.date_to:
+            if len(args.date_to) == 7:
+                date_to_exclusive = args.date_to + "-01"
+                date_filter = "z.datum_zverejnenia >= ? AND z.datum_zverejnenia < date(?, '+1 month')"
+            else:
+                date_to_exclusive = args.date_to
+                date_filter = "z.datum_zverejnenia >= ? AND z.datum_zverejnenia <= ?"
+        else:
+            if len(args.date_from) == 7:
+                date_to_exclusive = args.date_from + "-01"
+                date_filter = "z.datum_zverejnenia >= ? AND z.datum_zverejnenia < date(?, '+1 month')"
+            else:
+                date_to_exclusive = args.date_from
+                date_filter = "z.datum_zverejnenia >= ? AND z.datum_zverejnenia <= ?"
+
+        rows = db.execute(
+            f"""
+            SELECT p.subor FROM prilohy p
+            JOIN zmluvy z ON p.zmluva_id = z.id
+            WHERE p.subor LIKE '%.pdf' AND {date_filter}
+            ORDER BY p.subor
+            """,
+            [date_from, date_to_exclusive],
+        ).fetchall()
+        stems = sorted(set(r[0][:-4] for r in rows))
+        files = [f"{stem}.txt" for stem in stems]
+        period = f"{args.date_from} to {args.date_to or args.date_from}"
+        print(f"Date filter {period}: {len(files)} contracts matched")
     else:
         txt_stems = {f[:-4] for f in os.listdir(texts_dir) if f.endswith(".txt")}
         pdf_stems = {f[:-4] for f in os.listdir(pdf_dir) if f.endswith(".pdf")}
@@ -732,9 +778,6 @@ def main():
 
     # Load manifest for metadata
     manifest = get_manifest(texts_dir)
-
-    # Set up DB for storing extractions
-    db = sqlite_utils.Database(get_path("CRZ_DB_PATH", "crz.db"))
 
     total_tokens = 0
     ok, fail = 0, 0

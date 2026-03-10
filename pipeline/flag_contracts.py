@@ -8,6 +8,8 @@ Usage:
     uv run python flag_contracts.py --add           # add a new rule interactively
 """
 
+import confpath  # noqa: F401
+
 import argparse
 import json
 import sqlite3

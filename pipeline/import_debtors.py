@@ -6,6 +6,8 @@ Usage:
     uv run python import_debtors.py --socpoist socpoist.sql  # Socpoist only
     uv run python import_debtors.py --ruz ruz.sql            # RUZ only
 """
+import confpath  # noqa: F401
+
 import argparse
 import sqlite3
 from pathlib import Path
@@ -13,7 +15,7 @@ from pathlib import Path
 from settings import get_path, normalize_company_name
 
 DB_PATH = get_path("CRZ_DB_PATH", "crz.db")
-ROOT = Path(__file__).parent
+ROOT = Path(__file__).resolve().parent.parent
 
 
 def get_db():

@@ -17,12 +17,14 @@ from urllib.parse import parse_qs
 import yaml
 from datasette.app import Datasette
 
+import sys
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 from settings import get_path, normalize_company_name
 
-ROOT = Path(__file__).parent
+REPO_ROOT = Path(__file__).resolve().parent.parent
 DB_PATH = get_path("CRZ_DB_PATH", "crz.db")
-DASHBOARD_HTML_PATH = ROOT / "dashboard.html"
-DETAIL_HTML_PATH = ROOT / "detail.html"
+DASHBOARD_HTML_PATH = REPO_ROOT / "frontend" / "dashboard.html"
+DETAIL_HTML_PATH = REPO_ROOT / "frontend" / "detail.html"
 
 
 # ---------------------------------------------------------------------------
@@ -1362,7 +1364,7 @@ class CRZApp:
 
 
 def create_app():
-    with open(ROOT / "metadata.yaml") as f:
+    with open(Path(__file__).parent / "metadata.yaml") as f:
         metadata = yaml.safe_load(f)
     ds = Datasette(
         files=[DB_PATH],

@@ -7,11 +7,14 @@ Also writes a manifest CSV mapping filenames to contract metadata.
 
 from __future__ import annotations
 
+import confpath  # noqa: F401
+
 import argparse
 import csv
 import os
 import subprocess
 from concurrent.futures import ThreadPoolExecutor, as_completed
+from datetime import date
 
 import sqlite_utils
 from tqdm import tqdm
@@ -107,6 +110,18 @@ def main() -> None:
     parser.add_argument("--force", action="store_true", help="Rebuild text even if output already exists")
     parser.add_argument("--workers", type=int, default=4, help="Parallel workers (default: 4)")
     parser.add_argument(
+        "--from",
+        type=str,
+        dest="date_from",
+        help="Start date (YYYY-MM-DD) or month (YYYY-MM). Only process PDFs for contracts from this date.",
+    )
+    parser.add_argument(
+        "--to",
+        type=str,
+        dest="date_to",
+        help="End date (YYYY-MM-DD) or month (YYYY-MM). Inclusive.",
+    )
+    parser.add_argument(
         "--pdf-dir",
         type=str,
         default=get_path("CRZ_PDF_DIR", "data/pdfs"),
@@ -130,6 +145,36 @@ def main() -> None:
 
     if args.file:
         pdf_files = [args.file]
+    elif args.date_from:
+        # Query DB for PDFs belonging to contracts in the date range
+        date_from = args.date_from + "-01" if len(args.date_from) == 7 else args.date_from
+        if args.date_to:
+            if len(args.date_to) == 7:
+                date_to_exclusive = args.date_to + "-01"
+                date_filter = "z.datum_zverejnenia >= ? AND z.datum_zverejnenia < date(?, '+1 month')"
+            else:
+                date_to_exclusive = args.date_to
+                date_filter = "z.datum_zverejnenia >= ? AND z.datum_zverejnenia <= ?"
+        else:
+            if len(args.date_from) == 7:
+                date_to_exclusive = args.date_from + "-01"
+                date_filter = "z.datum_zverejnenia >= ? AND z.datum_zverejnenia < date(?, '+1 month')"
+            else:
+                date_to_exclusive = args.date_from
+                date_filter = "z.datum_zverejnenia >= ? AND z.datum_zverejnenia <= ?"
+
+        rows = db.execute(
+            f"""
+            SELECT p.subor FROM prilohy p
+            JOIN zmluvy z ON p.zmluva_id = z.id
+            WHERE p.subor LIKE '%.pdf' AND {date_filter}
+            ORDER BY p.subor
+            """,
+            [date_from, date_to_exclusive],
+        ).fetchall()
+        pdf_files = sorted(set(r[0] for r in rows))
+        period = f"{args.date_from} to {args.date_to or args.date_from}"
+        print(f"Date filter {period}: {len(pdf_files)} PDFs matched")
     else:
         pdf_files = sorted(f for f in os.listdir(pdf_dir) if f.endswith(".pdf"))
 
