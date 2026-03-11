@@ -9,6 +9,7 @@ import argparse
 import csv
 import io
 import json
+import mimetypes
 import re
 import sqlite3
 from pathlib import Path
@@ -25,6 +26,7 @@ REPO_ROOT = Path(__file__).resolve().parent.parent
 DB_PATH = get_path("CRZ_DB_PATH", "crz.db")
 DASHBOARD_HTML_PATH = REPO_ROOT / "frontend" / "dashboard.html"
 DETAIL_HTML_PATH = REPO_ROOT / "frontend" / "detail.html"
+ASSETS_DIR = REPO_ROOT / "assets"
 
 
 # ---------------------------------------------------------------------------
@@ -1286,6 +1288,17 @@ async def handle_detail(scope, receive, send):
     await send_response(send, 200, "text/html; charset=utf-8", body)
 
 
+async def handle_asset(path, scope, receive, send):
+    rel = path.removeprefix("/assets/").lstrip("/")
+    asset_root = ASSETS_DIR.resolve()
+    asset_path = (ASSETS_DIR / rel).resolve()
+    if not str(asset_path).startswith(str(asset_root)) or not asset_path.is_file():
+        await send_response(send, 404, "text/plain; charset=utf-8", b"Not found")
+        return
+    content_type = mimetypes.guess_type(asset_path.name)[0] or "application/octet-stream"
+    await send_response(send, 200, content_type, asset_path.read_bytes())
+
+
 async def handle_api(path, scope, receive, send):
     qs = parse_qs(scope.get("query_string", b"").decode())
     params = {k: v[0] for k, v in qs.items()}
@@ -1332,6 +1345,11 @@ class CRZApp:
         # Dashboard HTML
         if path == "/" or path == "/dashboard":
             await handle_dashboard(scope, receive, send)
+            return
+
+        # Dashboard static assets
+        if path.startswith("/assets/"):
+            await handle_asset(path, scope, receive, send)
             return
 
         # Browse / Search page (same SPA)

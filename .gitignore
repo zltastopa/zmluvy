@@ -21,6 +21,7 @@ data/
 
 # Debug screenshots
 *.png
+!assets/zltastopa.png
 
 # Database backups
 crz.db.old

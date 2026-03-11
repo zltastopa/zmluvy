@@ -118,6 +118,30 @@
     line-height: 1;
   }
 
+  .topbar .parent-signature {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    text-decoration: none;
+    border-radius: 999px;
+    border: 0;
+    background: rgb(255 255 255 / 0.88);
+    color: var(--text);
+    font-size: 0.72rem;
+    font-weight: 820;
+    letter-spacing: -0.01em;
+    padding: 0.34rem 0.58rem;
+    box-shadow: inset 0 0 0 1px rgb(0 0 0 / 0.12);
+    transition: transform 170ms ease, background-color 170ms ease;
+    white-space: nowrap;
+  }
+
+  .topbar .parent-signature:hover {
+    background: var(--yellow);
+    transform: translateY(-1px);
+    text-decoration: none;
+  }
+
   .topbar .logo .brand-mark {
     width: 40px;
     height: auto;
@@ -218,6 +242,30 @@
   .container {
     width: min(var(--layout-max), calc(100% - 1.8rem));
     margin: 1rem auto 2.2rem;
+  }
+
+  .page-footer {
+    width: min(var(--layout-max), calc(100% - 1.8rem));
+    margin: 0 auto 1.4rem;
+    display: flex;
+    justify-content: flex-end;
+  }
+
+  .page-footer a {
+    display: inline-flex;
+    align-items: center;
+    text-decoration: none;
+    font-size: 0.8rem;
+    font-weight: 780;
+    border-radius: 999px;
+    padding: 0.4rem 0.72rem;
+    background: rgb(255 255 255 / 0.88);
+    box-shadow: inset 0 0 0 1px rgb(0 0 0 / 0.12);
+  }
+
+  .page-footer a:hover {
+    background: var(--yellow);
+    text-decoration: none;
   }
 
   .contract-header {
@@ -825,6 +873,7 @@
 </a>
 
 <div class="topbar">
+  <a class="parent-signature" href="https://www.zltastopa.sk" target="_blank" rel="noreferrer noopener">Žltá Stopa ↗</a>
   <a class="logo" href="/" aria-label="CRZ Explorer">
     <svg class="brand-mark" viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg"><circle cx="26" cy="26" r="18" stroke="#F5C518" stroke-width="5"/><line x1="39" y1="39" x2="56" y2="56" stroke="#F5C518" stroke-width="5" stroke-linecap="round"/><path d="M20 26c0-3.3 2.7-6 6-6" stroke="#fff" stroke-width="2.5" stroke-linecap="round" opacity=".5"/></svg>
     <span>CRZ Explorer</span>
@@ -864,6 +913,10 @@
 <div class="container" id="content">
   <div class="loading" id="loadingState">Načítavam zmluvu...</div>
 </div>
+
+<footer class="page-footer">
+  <a href="https://www.zltastopa.sk" target="_blank" rel="noreferrer noopener">Projekt Žltá Stopa ↗</a>
+</footer>
 
 <script>
 function esc(s) {
