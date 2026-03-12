@@ -29,3 +29,4 @@ crz.db.old
 
 # Large SQL dumps (downloaded separately)
 *.sql
+reports/*
