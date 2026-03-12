@@ -92,7 +92,7 @@ def main():
     if use_date_to_month:
         date_filter = "z.datum_zverejnenia >= ? AND z.datum_zverejnenia < date(?, '+1 month')"
     else:
-        date_filter = "z.datum_zverejnenia >= ? AND z.datum_zverejnenia <= ?"
+        date_filter = "z.datum_zverejnenia >= ? AND z.datum_zverejnenia < date(?, '+1 day')"
 
     query = f'''
         select p.url, p.subor, z.nazov_zmluvy, z.suma, z.rezort, z.id as zmluva_id

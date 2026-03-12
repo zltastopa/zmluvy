@@ -726,14 +726,14 @@ def main():
                 date_filter = "z.datum_zverejnenia >= ? AND z.datum_zverejnenia < date(?, '+1 month')"
             else:
                 date_to_exclusive = args.date_to
-                date_filter = "z.datum_zverejnenia >= ? AND z.datum_zverejnenia <= ?"
+                date_filter = "z.datum_zverejnenia >= ? AND z.datum_zverejnenia < date(?, '+1 day')"
         else:
             if len(args.date_from) == 7:
                 date_to_exclusive = args.date_from + "-01"
                 date_filter = "z.datum_zverejnenia >= ? AND z.datum_zverejnenia < date(?, '+1 month')"
             else:
                 date_to_exclusive = args.date_from
-                date_filter = "z.datum_zverejnenia >= ? AND z.datum_zverejnenia <= ?"
+                date_filter = "z.datum_zverejnenia >= ? AND z.datum_zverejnenia < date(?, '+1 day')"
 
         rows = db.execute(
             f"""

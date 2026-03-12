@@ -39,40 +39,12 @@
 
   body {
     font-family: 'Lexend', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-    background: linear-gradient(180deg, #f9f9f6 0%, var(--canvas) 100%);
+    background: #ecece8;
     color: var(--text);
     line-height: 1.45;
     font-size: 13px;
     letter-spacing: 0.002em;
     overflow-x: hidden;
-    position: relative;
-  }
-
-  body::before {
-    content: '';
-    position: fixed;
-    width: min(62vw, 940px);
-    height: min(62vw, 940px);
-    right: -14%;
-    top: -36%;
-    border-radius: 50%;
-    background: rgb(255 196 0 / 0.84);
-    pointer-events: none;
-    z-index: -3;
-  }
-
-  body::after {
-    content: '';
-    position: fixed;
-    width: 78px;
-    height: 78px;
-    left: 1%;
-    top: 116px;
-    border-radius: 50%;
-    background: rgb(255 196 0 / 0.82);
-    box-shadow: 172px 150px 0 -20px rgb(255 196 0 / 0.56), 1160px 420px 0 -34px rgb(255 196 0 / 0.5);
-    pointer-events: none;
-    z-index: -2;
   }
 
   a,
@@ -88,21 +60,19 @@
 
   .topbar {
     position: sticky;
-    top: 8px;
+    top: 6px;
     z-index: 140;
     width: min(var(--layout-max), calc(100% - 1.8rem));
-    min-height: 58px;
+    min-height: 62px;
     margin: 8px auto 0;
-    padding: 0.34rem 0.74rem;
+    padding: 0.42rem 0.8rem;
     display: flex;
     align-items: center;
-    gap: 0.52rem;
-    border: 0;
+    gap: 0.6rem;
+    border: 1px solid rgb(0 0 0 / 0.08);
     border-radius: 26px;
-    background: rgb(255 255 255 / 0.8);
-    box-shadow: var(--shadow-soft), inset 0 0 0 1px rgb(255 255 255 / 0.52);
-    backdrop-filter: blur(8px);
-    overflow: hidden;
+    background: var(--white);
+    box-shadow: 0 6px 18px rgb(0 0 0 / 0.06);
   }
 
   .topbar .logo {
@@ -131,9 +101,9 @@
   .topbar .tabs {
     display: flex;
     align-items: center;
-    gap: 0.2rem;
+    gap: 0.3rem;
     overflow-x: auto;
-    padding-bottom: 2px;
+    padding-bottom: 0;
   }
 
   .topbar .tab {
@@ -144,8 +114,8 @@
     border: 0;
     background: transparent;
     color: var(--text);
-    padding: 0.44rem 0.68rem;
-    font-size: 0.84rem;
+    padding: 0.5rem 0.8rem;
+    font-size: 0.86rem;
     font-weight: 800;
     letter-spacing: -0.01em;
     cursor: pointer;
@@ -154,7 +124,7 @@
   }
 
   .topbar .tab:hover {
-    background: var(--yellow);
+    background: #f4f4ef;
     transform: translateY(-1px);
   }
 
@@ -164,8 +134,8 @@
   }
 
   .topbar .tab-icon {
-    width: 14px;
-    height: 14px;
+    width: 15px;
+    height: 15px;
     display: inline-grid;
     place-items: center;
     line-height: 0;
@@ -174,14 +144,23 @@
   }
 
   .topbar .tab-icon svg {
-    width: 14px;
-    height: 14px;
+    width: 15px;
+    height: 15px;
     fill: none;
     stroke: currentColor;
-    stroke-width: 1.9;
+    stroke-width: 2.2;
     stroke-linecap: round;
     stroke-linejoin: round;
     display: block;
+  }
+
+  .topbar .tab-link {
+    text-decoration: none;
+    color: var(--text);
+  }
+
+  .topbar .tab-link:visited {
+    color: var(--text);
   }
 
   .topbar .spacer {
@@ -199,33 +178,72 @@
   .topbar .links {
     display: flex;
     gap: 0.4rem;
+    align-items: center;
   }
 
-  .topbar .links a {
+  .corner-brand-badge {
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    text-decoration: none;
     border-radius: 999px;
-    border: 0;
-    background: var(--yellow);
-    color: var(--black);
-    font-size: 0.8rem;
-    font-weight: 850;
-    padding: 0.48rem 0.82rem;
-    transition: transform 170ms ease, background-color 170ms ease, color 170ms ease;
+    border: 3px solid var(--yellow);
+    background: var(--white);
+    padding: 0.16rem 0.48rem;
+    text-decoration: none;
+    line-height: 1;
   }
 
-  .topbar .links a:hover {
-    background: var(--black);
-    color: var(--white);
+  .corner-brand-badge img {
+    display: block;
+    width: 88px;
+    height: auto;
+  }
+
+  .corner-brand-badge:hover {
     transform: translateY(-1px);
+    background: #fffdf3;
+  }
+
+  .topbar .links .corner-brand-badge {
+    background: var(--white);
+    border: 3px solid var(--yellow);
+    color: inherit;
+    padding: 0.16rem 0.48rem;
+  }
+
+  .topbar .links .corner-brand-badge:hover {
+    background: #fffdf3;
+    color: inherit;
   }
 
   .app {
     width: min(var(--layout-max), calc(100% - 1.8rem));
-    margin: 1rem auto 2.4rem;
+    margin: 0.75rem auto 2rem;
     display: block;
+  }
+
+  .page-footer {
+    width: min(var(--layout-max), calc(100% - 1.8rem));
+    margin: 0 auto 1.4rem;
+    display: flex;
+    justify-content: flex-end;
+  }
+
+  .page-footer a {
+    display: inline-flex;
+    align-items: center;
+    text-decoration: none;
+    font-size: 0.8rem;
+    font-weight: 780;
+    border-radius: 999px;
+    padding: 0.4rem 0.72rem;
+    background: rgb(255 255 255 / 0.88);
+    box-shadow: inset 0 0 0 1px rgb(0 0 0 / 0.12);
+  }
+
+  .page-footer a:hover {
+    background: var(--yellow);
+    text-decoration: none;
   }
 
   .app.browse-mode {
@@ -238,14 +256,13 @@
   .filters {
     display: none;
     border-radius: var(--card-radius);
-    background: rgb(255 255 255 / 0.88);
-    box-shadow: var(--shadow-soft);
+    background: var(--white);
+    box-shadow: 0 8px 22px rgb(0 0 0 / 0.08);
     padding: 1rem;
     overflow-y: auto;
     max-height: calc(100vh - 104px);
     position: sticky;
     top: 96px;
-    backdrop-filter: blur(1px);
   }
 
   .filters.visible {
@@ -264,20 +281,8 @@
     border-radius: 18px;
     padding: 0.72rem;
     background: var(--white);
-    box-shadow: inset 0 0 0 1px rgb(0 0 0 / 0.08), 0 3px 8px rgb(0 0 0 / 0.05);
+    box-shadow: inset 0 0 0 1px rgb(0 0 0 / 0.08);
     position: relative;
-    overflow: hidden;
-  }
-
-  .filter-section::after {
-    content: '';
-    position: absolute;
-    width: 26px;
-    height: 26px;
-    border-radius: 50%;
-    right: 0.45rem;
-    top: 0.45rem;
-    background: rgb(255 196 0 / 0.75);
   }
 
   .filter-section h3 {
@@ -386,16 +391,16 @@
   .content {
     min-width: 0;
     position: relative;
-    border-radius: var(--card-radius);
-    background: rgb(255 255 255 / 0.8);
-    box-shadow: var(--shadow-soft);
-    overflow: hidden;
-    backdrop-filter: blur(1px);
+    border-radius: 0;
+    background: transparent;
+    box-shadow: none;
+    overflow: visible;
   }
 
   #view-overview {
     display: none;
     padding: 1.35rem;
+    position: relative;
   }
 
   #view-overview.active {
@@ -429,36 +434,11 @@
   }
 
   .overview-hero {
-    border-radius: 30px;
+    border-radius: 24px;
     padding: clamp(1.05rem, 2.5vw, 1.5rem);
-    background: var(--white);
-    box-shadow: var(--shadow-lift);
-    position: relative;
-    overflow: hidden;
+    background: #f8f8f5;
+    box-shadow: inset 0 0 0 1px rgb(0 0 0 / 0.08);
     margin-bottom: 1rem;
-  }
-
-  .overview-hero::before {
-    content: '';
-    position: absolute;
-    width: 240px;
-    height: 240px;
-    border-radius: 50%;
-    right: -128px;
-    top: -142px;
-    background: rgb(255 196 0 / 0.72);
-  }
-
-  .overview-hero::after {
-    content: '';
-    position: absolute;
-    width: 16px;
-    height: 16px;
-    border-radius: 50%;
-    right: 126px;
-    top: 26px;
-    background: rgb(255 196 0 / 0.9);
-    box-shadow: -24px 16px 0 -4px rgb(255 196 0 / 0.72);
   }
 
   .overview-hero h1 {
@@ -466,8 +446,6 @@
     line-height: 0.94;
     letter-spacing: -0.045em;
     margin-bottom: 0.62rem;
-    position: relative;
-    z-index: 1;
     text-wrap: balance;
   }
 
@@ -476,24 +454,90 @@
     font-size: clamp(0.9rem, 1.35vw, 1.02rem);
     font-weight: 600;
     line-height: 1.42;
-    color: #242424;
-    position: relative;
-    z-index: 1;
+    color: #2e2e2e;
   }
 
   .overview-hero .wink {
     margin-top: 0.46rem;
     font-size: 0.78rem;
-    color: var(--muted);
+    color: #676767;
     font-weight: 650;
     letter-spacing: -0.01em;
-    position: relative;
-    z-index: 1;
+  }
+
+  .overview-search {
+    border-radius: 18px;
+    padding: 0.9rem;
+    background: var(--white);
+    box-shadow: inset 0 0 0 1px rgb(0 0 0 / 0.1);
+    margin-bottom: 1rem;
+  }
+
+  .overview-search-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.8rem;
+    margin-bottom: 0.62rem;
+  }
+
+  .overview-search-head strong {
+    font-size: 0.92rem;
+    letter-spacing: -0.01em;
+  }
+
+  .overview-search-head span {
+    font-size: 0.76rem;
+    color: var(--muted);
+    font-weight: 620;
+  }
+
+  .overview-search-row {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 0.5rem;
+  }
+
+  .overview-search-row input {
+    border: 0;
+    border-radius: 14px;
+    background: #f7f7f4;
+    box-shadow: inset 0 0 0 1px rgb(0 0 0 / 0.15);
+    padding: 0.78rem 0.9rem;
+    font-size: 0.98rem;
+    color: var(--text);
+    outline: none;
+    font-family: inherit;
+    font-weight: 620;
+  }
+
+  .overview-search-row input:focus {
+    box-shadow: inset 0 0 0 1px var(--black), 0 0 0 3px rgb(255 196 0 / 0.28);
+  }
+
+  .overview-search-row button {
+    border: 0;
+    border-radius: 14px;
+    background: var(--black);
+    color: var(--white);
+    min-width: 120px;
+    padding: 0.76rem 1rem;
+    font-size: 0.84rem;
+    font-family: inherit;
+    font-weight: 820;
+    cursor: pointer;
+    transition: transform 160ms ease, background-color 160ms ease, color 160ms ease;
+  }
+
+  .overview-search-row button:hover {
+    transform: translateY(-1px);
+    background: var(--yellow);
+    color: var(--black);
   }
 
   .stat-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+    grid-template-columns: repeat(4, minmax(0, 1fr));
     gap: 0.72rem;
     margin-bottom: 1rem;
   }
@@ -501,33 +545,9 @@
   .stat-card {
     border-radius: var(--card-radius);
     background: var(--white);
-    min-height: 120px;
+    min-height: 110px;
     padding: 1rem;
-    position: relative;
-    overflow: hidden;
-    box-shadow: var(--shadow-soft);
-  }
-
-  .stat-card::before {
-    content: '';
-    position: absolute;
-    width: 132px;
-    height: 132px;
-    border-radius: 50%;
-    right: -84px;
-    bottom: -88px;
-    background: rgb(255 196 0 / 0.28);
-  }
-
-  .stat-card::after {
-    content: '';
-    position: absolute;
-    width: 66px;
-    height: 66px;
-    border-radius: 50%;
-    right: -24px;
-    bottom: -22px;
-    background: rgb(255 196 0 / 0.5);
+    box-shadow: inset 0 0 0 1px rgb(0 0 0 / 0.09);
   }
 
   .stat-card .value {
@@ -535,8 +555,6 @@
     font-weight: 900;
     line-height: 1.06;
     letter-spacing: -0.038em;
-    position: relative;
-    z-index: 2;
     max-width: 10ch;
   }
 
@@ -545,25 +563,14 @@
     font-size: 0.78rem;
     color: var(--muted);
     font-weight: 640;
-    position: relative;
-    z-index: 2;
   }
 
-  .stat-card:nth-child(1) {
-    background: var(--black);
-    color: var(--white);
+  .stat-card-danger {
+    border-left: 3px solid var(--danger);
   }
 
-  .stat-card:nth-child(1)::after {
-    background: rgb(255 196 0 / 0.46);
-  }
-
-  .stat-card:nth-child(1)::before {
-    background: rgb(255 196 0 / 0.22);
-  }
-
-  .stat-card:nth-child(1) .label {
-    color: rgb(255 255 255 / 0.78);
+  .stat-card-danger .value {
+    color: var(--danger);
   }
 
   .chart-grid {
@@ -579,36 +586,10 @@
 
   .panel {
     background: var(--white);
-    border: 0;
+    border: 1px solid rgb(0 0 0 / 0.08);
     border-radius: var(--card-radius);
     padding: 1.1rem;
-    position: relative;
-    overflow: hidden;
-    box-shadow: var(--shadow-soft);
-  }
-
-  .panel::before {
-    content: '';
-    position: absolute;
-    width: 170px;
-    height: 170px;
-    border-radius: 50%;
-    right: -120px;
-    top: -110px;
-    background: rgb(255 196 0 / 0.21);
-    pointer-events: none;
-  }
-
-  .panel::after {
-    content: '';
-    position: absolute;
-    width: 12px;
-    height: 12px;
-    border-radius: 50%;
-    right: 14px;
-    top: 14px;
-    background: var(--yellow);
-    pointer-events: none;
+    box-shadow: none;
   }
 
   .panel h2 {
@@ -617,20 +598,14 @@
     line-height: 1.2;
     font-weight: 850;
     letter-spacing: -0.017em;
-    position: relative;
-    z-index: 1;
   }
 
   .panel canvas {
     max-height: 340px;
-    position: relative;
-    z-index: 1;
   }
 
   .anomaly-list {
     list-style: none;
-    position: relative;
-    z-index: 1;
   }
 
   .anomaly-item {
@@ -1106,24 +1081,11 @@
 
   .search-card {
     background: var(--white);
-    border: 0;
+    border: 1px solid rgb(0 0 0 / 0.09);
     border-radius: 20px;
     padding: 0.88rem;
     transition: transform 160ms ease, box-shadow 160ms ease, background-color 160ms ease;
-    box-shadow: var(--shadow-soft);
-    position: relative;
-    overflow: hidden;
-  }
-
-  .search-card::after {
-    content: '';
-    position: absolute;
-    width: 90px;
-    height: 90px;
-    border-radius: 50%;
-    right: -62px;
-    top: -62px;
-    background: rgb(255 196 0 / 0.28);
+    box-shadow: none;
   }
 
   .search-card:hover {
@@ -1138,8 +1100,6 @@
     justify-content: space-between;
     gap: 0.7rem;
     margin-bottom: 0.44rem;
-    position: relative;
-    z-index: 1;
   }
 
   .search-card-title {
@@ -1171,8 +1131,6 @@
     gap: 0.32rem;
     flex-shrink: 0;
     flex-wrap: wrap;
-    position: relative;
-    z-index: 1;
   }
 
   .search-card-body {
@@ -1181,8 +1139,6 @@
     gap: 0.7rem;
     font-size: 0.74rem;
     color: var(--muted);
-    position: relative;
-    z-index: 1;
   }
 
   .search-card-body .field {
@@ -1205,8 +1161,6 @@
     color: var(--muted);
     margin-top: 0.45rem;
     font-weight: 620;
-    position: relative;
-    z-index: 1;
   }
 
   .search-more {
@@ -1285,7 +1239,7 @@
     }
 
     .stat-grid {
-      grid-template-columns: repeat(auto-fit, minmax(184px, 1fr));
+      grid-template-columns: repeat(3, minmax(0, 1fr));
     }
   }
 
@@ -1305,6 +1259,10 @@
       width: 100%;
     }
 
+    .stat-grid {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
     .topbar .logo .brand-mark {
       width: 36px;
     }
@@ -1320,7 +1278,7 @@
     }
 
     .content {
-      border-radius: 22px;
+      border-radius: 0;
     }
   }
 
@@ -1332,6 +1290,15 @@
     .topbar .tabs {
       gap: 0.12rem;
       justify-content: space-between;
+    }
+
+    .topbar .links .corner-brand-badge {
+      padding: 0.14rem 0.4rem;
+      border-width: 2px;
+    }
+
+    .corner-brand-badge img {
+      width: 72px;
     }
 
     .topbar .tab-icon {
@@ -1371,6 +1338,7 @@
     }
 
     .stat-grid {
+      grid-template-columns: 1fr;
       gap: 0.55rem;
     }
 
@@ -1391,6 +1359,19 @@
 
     .search-box {
       flex-direction: column;
+    }
+
+    .overview-search-row {
+      grid-template-columns: 1fr;
+    }
+
+    .overview-search-head {
+      display: block;
+    }
+
+    .overview-search-head span {
+      display: block;
+      margin-top: 0.38rem;
     }
 
     .search-card-header {
@@ -1470,33 +1451,41 @@
   <div class="tabs">
     <div class="tab active" id="tab-overview" onclick="switchTab('overview')">
       <span class="tab-icon" aria-hidden="true">
-        <svg viewBox="0 0 16 16"><path d="M3 4.5h10M3 8h10M3 11.5h10"/></svg>
+        <svg viewBox="0 0 16 16"><rect x="2.3" y="2.3" width="4.8" height="4.8" rx="1"/><rect x="8.9" y="2.3" width="4.8" height="4.8" rx="1"/><rect x="2.3" y="8.9" width="4.8" height="4.8" rx="1"/><rect x="8.9" y="8.9" width="4.8" height="4.8" rx="1"/></svg>
       </span>
       Prehľad
     </div>
     <div class="tab" id="tab-browse" onclick="switchTab('browse')">
       <span class="tab-icon" aria-hidden="true">
-        <svg viewBox="0 0 16 16"><rect x="2.5" y="2.5" width="4.5" height="4.5" rx="0.8"/><rect x="9" y="2.5" width="4.5" height="4.5" rx="0.8"/><rect x="2.5" y="9" width="4.5" height="4.5" rx="0.8"/><rect x="9" y="9" width="4.5" height="4.5" rx="0.8"/></svg>
+        <svg viewBox="0 0 16 16"><path d="M3 4h10M3 8h10M3 12h10"/><circle cx="2.1" cy="4" r=".8" fill="currentColor" stroke="none"/><circle cx="2.1" cy="8" r=".8" fill="currentColor" stroke="none"/><circle cx="2.1" cy="12" r=".8" fill="currentColor" stroke="none"/></svg>
       </span>
-      Browse
+      Zoznam
     </div>
     <div class="tab" id="tab-search" onclick="switchTab('search')">
       <span class="tab-icon" aria-hidden="true">
-        <svg viewBox="0 0 16 16"><circle cx="7" cy="7" r="3.8"/><path d="M10 10l3.5 3.5"/></svg>
+        <svg viewBox="0 0 16 16"><circle cx="7" cy="7" r="3.8"/><path d="M10.2 10.2L13.7 13.7"/></svg>
       </span>
       Hľadať
     </div>
     <div class="tab" id="tab-methodology" onclick="switchTab('methodology')">
       <span class="tab-icon" aria-hidden="true">
-        <svg viewBox="0 0 16 16"><path d="M8 2.5l5.3 9.3H2.7L8 2.5z"/><path d="M8 6.3v2.8M8 10.9h.01"/></svg>
+        <svg viewBox="0 0 16 16"><path d="M4 2.8h6.7l1.3 1.3V13.2H4z"/><path d="M10.7 2.8v1.7h1.7"/><path d="M6 7h4M6 9.6h4"/></svg>
       </span>
       Metodika
     </div>
+    <a class="tab tab-link" href="/data">
+      <span class="tab-icon" aria-hidden="true">
+        <svg viewBox="0 0 16 16"><ellipse cx="8" cy="3.5" rx="4.8" ry="2.2"/><path d="M3.2 3.5v4.5c0 1.2 2.1 2.2 4.8 2.2s4.8-1 4.8-2.2V3.5"/><path d="M3.2 8v4.5c0 1.2 2.1 2.2 4.8 2.2s4.8-1 4.8-2.2V8"/></svg>
+      </span>
+      Datasette
+    </a>
   </div>
   <div class="spacer"></div>
   <span class="stats" id="totalStats"></span>
   <div class="links">
-    <a href="/data">Datasette</a>
+    <a class="corner-brand-badge" href="https://www.zltastopa.sk" target="_blank" rel="noreferrer noopener" aria-label="Projekt Žltá Stopa">
+      <img src="/assets/projekt-zlta-stopa.png" alt="Projekt Žltá Stopa">
+    </a>
   </div>
 </div>
 
@@ -1730,7 +1719,18 @@
       <div class="overview-hero">
         <h1>Niektoré dokumenty smrdia.</h1>
         <p>CRZ Explorer mení surové CRZ záznamy na jasný prehľad. Vyfiltruj podozrivé vzory, porovnaj rezorty a otvor detaily bez boja s tabuľkami.</p>
-        <p class="wink">Žltá stopa tu ostáva, ale dáta majú vždy prvú prioritu.</p>
+        <p class="wink">Rýchlo nájdi zmluvy, ktoré by v pôvodnom CRZ ostali skryté.</p>
+      </div>
+
+      <div class="overview-search">
+        <div class="overview-search-head">
+          <strong>Hľadaj naprieč celým CRZ</strong>
+          <span>Názov zmluvy, IČO, firma, predmet, poznámka, text príloh</span>
+        </div>
+        <div class="overview-search-row">
+          <input type="text" id="overviewSearchInput" placeholder="Skús: IČO, Robert, masáž, ministerstvo vnútra">
+          <button type="button" onclick="overviewSearchRun()">Vyhľadať</button>
+        </div>
       </div>
 
       <div class="stat-grid" id="stats">
@@ -1740,8 +1740,8 @@
         <div class="stat-card"><div class="value" id="s-max">-</div><div class="label">Najvyššia suma</div></div>
         <div class="stat-card"><div class="value" id="s-no-amount">-</div><div class="label">Bez uvedenej sumy</div></div>
         <div class="stat-card"><div class="value" id="s-amendments">-</div><div class="label">Dodatkov</div></div>
-        <div class="stat-card" style="border-left: 3px solid var(--danger);">
-          <div class="value" id="s-debtors" style="color: var(--danger);">-</div>
+        <div class="stat-card stat-card-danger">
+          <div class="value" id="s-debtors">-</div>
           <div class="label">Zmluv s dlznikmi statu</div>
           <div style="font-size: 11px; color: var(--muted); margin-top: 2px;" id="s-debtors-value"></div>
         </div>
@@ -1781,7 +1781,7 @@
           <h2>Asymetria zmluvných pokút</h2>
           <canvas id="chart-penalties"></canvas>
         </div>
-        <div class="panel" style="display:flex;flex-direction:column;justify-content:center;">
+        <div class="panel" style="display:flex;flex-direction:column;justify-content:center;min-height:220px;">
           <h2>Legenda pokut</h2>
           <div id="penalty-legend" style="font-size:13px;color:var(--muted);line-height:1.8;"></div>
         </div>
@@ -1828,7 +1828,7 @@
     <div id="view-search">
       <div class="search-container">
         <div class="search-box">
-          <input type="text" id="searchInput" placeholder="Hľadať zmluvy, dodávateľov, IČO, prílohy..." autofocus>
+          <input type="text" id="searchInput" placeholder="Hľadať zmluvy, dodávateľov, IČO, prílohy...">
           <button onclick="searchRun()">Hľadať</button>
         </div>
         <div id="searchMeta" class="search-meta"></div>
@@ -1909,6 +1909,10 @@
 
   </div>
 </div>
+
+<footer class="page-footer">
+  <a href="https://www.zltastopa.sk" target="_blank" rel="noreferrer noopener">Projekt Žltá Stopa ↗</a>
+</footer>
 
 <script>
 // ============================================================
@@ -2096,12 +2100,21 @@ const RANK_COLOR_STOPS = [
   '#5C8EBA',
 ];
 
+const HEAT_TO_BLUE_STOPS = [
+  '#EAC34F',
+  '#E6A75B',
+  '#D98A6B',
+  '#C9797C',
+  '#A783A8',
+  '#7390B8',
+];
+
 const PENALTY_COLOR_MAP = {
-  strong_buyer_advantage: '#CF4B4B',
-  moderate_buyer_advantage: '#F08E34',
-  balanced: '#3E9B65',
-  supplier_advantage: '#4F79C4',
-  none_found: '#9A9C96',
+  strong_buyer_advantage: '#EAC34F',
+  moderate_buyer_advantage: '#E6A75B',
+  balanced: '#D98A6B',
+  supplier_advantage: '#A783A8',
+  none_found: '#7390B8',
 };
 
 Chart.defaults.color = '#585850';
@@ -2290,7 +2303,12 @@ async function loadCategory(params) {
   var data = await api('/api/by_category', params);
   var sorted = data.slice().sort(function(a, b) { return (b.count || 0) - (a.count || 0); });
   destroyChart('category');
-  var categoryColors = buildRankColors(sorted.length, 0.95, 8);
+  var categoryColors = [];
+  for (var i = 0; i < sorted.length; i++) {
+    var t = sorted.length <= 1 ? 0 : (i / (sorted.length - 1));
+    var rgb = sampleColorStops(HEAT_TO_BLUE_STOPS, t);
+    categoryColors.push(rgb.replace('rgb(', 'rgba(').replace(')', ', 0.95)'));
+  }
   charts.category = new Chart(document.getElementById('chart-category'), {
     type: 'doughnut',
     data: {
@@ -2786,9 +2804,29 @@ var searchOffset = 0;
 var searchTotal = 0;
 var SEARCH_PAGE = 50;
 
+var overviewSearchInput = document.getElementById('overviewSearchInput');
+if (overviewSearchInput) {
+  overviewSearchInput.addEventListener('keydown', function(e) {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      overviewSearchRun();
+    }
+  });
+}
+
 document.getElementById('searchInput').addEventListener('keydown', function(e) {
   if (e.key === 'Enter') { e.preventDefault(); searchRun(); }
 });
+
+function overviewSearchRun() {
+  var input = document.getElementById('overviewSearchInput');
+  if (!input) return;
+  var q = input.value.trim();
+  if (!q) return;
+  switchTab('search');
+  document.getElementById('searchInput').value = q;
+  searchRun();
+}
 
 function searchExample(btn) {
   document.getElementById('searchInput').value = btn.textContent;
