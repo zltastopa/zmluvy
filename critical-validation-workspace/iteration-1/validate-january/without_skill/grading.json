@@ -1,0 +1,14 @@
+{
+  "eval_id": 1,
+  "variant": "without_skill",
+  "expectations": [
+    {"text": "dismisses_university_dotacia", "passed": false, "evidence": "Finding #5 marked 'POTVRDENE — nizke riziko' instead of DISMISSED. Report says 'Standardna rocna dotacia' but still classified as CONFIRMED"},
+    {"text": "dismisses_round_amount_grant", "passed": false, "evidence": "Finding #4 marked 'POTVRDENE — nizke riziko' instead of DISMISSED. Recognizes it's standard but doesn't use DISMISSED classification"},
+    {"text": "dismisses_sulc_matej", "passed": false, "evidence": "Marked 'NEPRAVDIVE — falozny pozitiv' but attributed to data not existing (only 1 contract found), not to freelancer/NULL ICO grouping pattern"},
+    {"text": "confirms_or_inconclusive_ejoin", "passed": true, "evidence": "Correctly marked 'POTVRDENE — vysoko podozrive' with full evidence of triple debtor status"},
+    {"text": "validates_weekend_publishing", "passed": true, "evidence": "Checked day of week, counted 158 contracts on Saturday vs 3000/day on weekdays, calculated 68.8% of Saturday value"},
+    {"text": "checks_state_org_equity", "passed": false, "evidence": "Finding #7 marked 'POTVRDENE — podozrive' without recognizing state org negative equity is normal by design"},
+    {"text": "follows_output_template", "passed": false, "evidence": "Uses custom format with 'Suhrn klasifikacie' table and 'Detailna validacia' sections — not the CONFIRMED/DISMISSED/INCONCLUSIVE template structure"},
+    {"text": "runs_validation_queries", "passed": true, "evidence": "Multiple queries executed: contract lookups, debtor checks, red_flags, weekend volume, STVR supplier analysis"}
+  ]
+}

@@ -1,0 +1,12 @@
+{
+  "eval_id": 2,
+  "eval_name": "validate-mixed-findings-feb",
+  "prompt": "Tu su najdy z februara 2026 na validaciu: 6 findings including WAY INDUSTRIES double debtor, foreign researcher, twin amounts, late publication, SFRB budget transfer, KEPICOVA NULL ICO",
+  "assertions": [
+    {"name": "dismisses_sfrb", "type": "semantic", "check": "Finding #5 (MD → SFRB 490M) is DISMISSED as standard housing fund budget transfer"},
+    {"name": "investigates_kepicova", "type": "semantic", "check": "Finding #6 (Jana KEPICOVA 13K contracts) is investigated as a data artifact — likely NULL ICO grouping"},
+    {"name": "confirms_way_industries", "type": "semantic", "check": "Finding #1 (WAY INDUSTRIES double debtor 145M) is CONFIRMED or at minimum INCONCLUSIVE"},
+    {"name": "confirms_sfinga_delay", "type": "semantic", "check": "Finding #4 (SFINGA 489 days late) is CONFIRMED or INCONCLUSIVE"},
+    {"name": "investigates_perset_twin", "type": "semantic", "check": "Finding #3 (PERSET + Asset Real identical amounts) is investigated for ownership links"}
+  ]
+}

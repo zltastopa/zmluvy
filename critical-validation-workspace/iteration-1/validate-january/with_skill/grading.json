@@ -1,0 +1,14 @@
+{
+  "eval_id": 1,
+  "variant": "with_skill",
+  "expectations": [
+    {"text": "dismisses_university_dotacia", "passed": true, "evidence": "Finding #5 (UK Bratislava 206.5M) placed in DISMISSED table: 'Standardna rozpoctova alokacia... Ministry -> university dotacie'"},
+    {"text": "dismisses_round_amount_grant", "passed": true, "evidence": "Finding #4 (Fond na podporu sportu 60M) placed in DISMISSED table: 'Standardna statna dotacia... okruhla suma je typicka pre rozpoctove pridelenie'"},
+    {"text": "dismisses_sulc_matej", "passed": true, "evidence": "Finding #3 placed in DISMISSED table: 'Datovy artefakt... NULL ICO zgrupovalo 967 freelancerov... Freelancer micro-contracts for broadcasters'"},
+    {"text": "confirms_or_inconclusive_ejoin", "passed": true, "evidence": "Finding #2 CONFIRMED as DANGER: triple debtor (VSZP+SocPoist+FS), 7 zlte stopy, danovo nespolahlivy"},
+    {"text": "validates_weekend_publishing", "passed": true, "evidence": "Ran query checking volume on 31.1 (158 contracts), compared with Friday 30.1 (3542 contracts), checked time of publication (09:57 and 14:26)"},
+    {"text": "checks_state_org_equity", "passed": true, "evidence": "Finding #7 classified INCONCLUSIVE, explicitly noting: 'statnej prispevkovej organizacii je bezne... Hospitals, rescue services often have negative equity by design'"},
+    {"text": "follows_output_template", "passed": true, "evidence": "Report has: Sumar validacie (3 CONFIRMED, 3 DISMISSED, 1 INCONCLUSIVE), CONFIRMED najdy section, INCONCLUSIVE najdy section, Preverene a vylucene (DISMISSED) table"},
+    {"text": "runs_validation_queries", "passed": true, "evidence": "Multiple SQL queries executed via Datasette: contract lookup, VSZP/SocPoist debtor checks, red_flags joins, weekend volume analysis, STVR freelancer count"}
+  ]
+}

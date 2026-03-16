@@ -1,0 +1,14 @@
+{
+  "eval_id": 1,
+  "variant": "with_skill_v2",
+  "expectations": [
+    {"text": "dismisses_university_dotacia", "passed": true, "evidence": "DISMISSED: 'Standardna ministerska dotacia pre univerzitu. Odpoveda patternu Ministry -> university dotacie'"},
+    {"text": "dismisses_round_amount_grant", "passed": true, "evidence": "DISMISSED: 'Standardna statna alokacia. Fond na podporu sportu je statny fond so zakonnym rozpoctom'"},
+    {"text": "dismisses_sulc_matej", "passed": true, "evidence": "DISMISSED: 'Datovy artefakt (NULL ICO zlucovanie). STVR ma 2 372 roznych freelancerov... Sulc Matej ma iba 1 zmluvu'"},
+    {"text": "confirms_or_inconclusive_ejoin", "passed": true, "evidence": "CONFIRMED as DANGER: triple debtor VSZP 7238 + SocPoist 37378 + FS 6626 EUR"},
+    {"text": "validates_weekend_publishing", "passed": true, "evidence": "INCONCLUSIVE with validation: checked 158 contracts on Saturday, 656 weekend contracts in Jan, Alanata founded 2022"},
+    {"text": "checks_state_org_equity", "passed": true, "evidence": "DISMISSED: 'Statna prispevkova organizacia. Odpoveda patternu State org negative equity'"},
+    {"text": "follows_output_template", "passed": true, "evidence": "Exact template: Sumar validacie, CONFIRMED najdy, INCONCLUSIVE najdy, Preverene a vylucene (DISMISSED) table"},
+    {"text": "runs_validation_queries", "passed": true, "evidence": "Batch register lookup, STVR freelancer count, RUZ lookups, contract verification queries"}
+  ]
+}

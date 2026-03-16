@@ -1,0 +1,11 @@
+{
+  "eval_id": 3,
+  "variant": "without_skill",
+  "expectations": [
+    {"text": "dismisses_env_fund", "passed": true, "evidence": "Finding #2 marked 'LEGITIMNE': 'Modernizacny fond... Okruhla suma je pri dotaciach bezna, nie podozriva'"},
+    {"text": "dismisses_student_loans", "passed": false, "evidence": "Finding #3 marked 'NEVERIFIKOVANE' — recognized data doesn't exist but didn't connect to student loan fund pattern or use DISMISSED classification"},
+    {"text": "investigates_null_ico_grouping", "passed": true, "evidence": "Finding #4 'NEPRAVDIVY NALEZ (false positive)': found 10 contracts for 15 EUR each = 150 EUR total. Investigated thoroughly but didn't identify NULL ICO grouping as root cause"},
+    {"text": "dismisses_apvv_reviewers", "passed": false, "evidence": "Finding #5 marked 'NEVERIFIKOVANE' — found only 1 contract but used 'unverifiable' instead of dismissing with APVV reviewer pattern explanation"},
+    {"text": "defense_contract_inconclusive", "passed": false, "evidence": "Finding #1 marked 'LEGITIMNE, ale zasluzi dozor' — closer to dismissed than inconclusive. Did mention UVO absence but overall treated as legitimate"}
+  ]
+}

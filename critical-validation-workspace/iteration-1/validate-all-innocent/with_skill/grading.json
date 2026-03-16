@@ -1,0 +1,11 @@
+{
+  "eval_id": 3,
+  "variant": "with_skill",
+  "expectations": [
+    {"text": "dismisses_env_fund", "passed": false, "evidence": "Finding #2 classified INCONCLUSIVE, not DISMISSED. Report says 'Vodohospodarska vystavba nie je v RUZ... 30M EUR je znacna suma'. Recognized innocent pattern but kept as inconclusive"},
+    {"text": "dismisses_student_loans", "passed": true, "evidence": "Finding #3 DISMISSED: 'Tomas Hengerics v databaze vobec neexistuje (0 zaznamov)'. Noted Fond na podporu vzdelavania is student loan fund"},
+    {"text": "investigates_null_ico_grouping", "passed": true, "evidence": "Finding #4 DISMISSED after investigating: 'Hruzova Zuzana do not exist anywhere in the CRZ database (0 records)'. Verified data artifact"},
+    {"text": "dismisses_apvv_reviewers", "passed": true, "evidence": "Finding #5 DISMISSED: 'Carmona has exactly 1 contract (not 49)'. Recognized APVV pattern of individual research contracts"},
+    {"text": "defense_contract_inconclusive", "passed": true, "evidence": "Finding #1 INCONCLUSIVE: 'firma nie je v RUZ... ICO 08993289 naznacuje zalozenie okolo roku 2019... Nevieme overit, ci prebehlo riadne obstaravanie (UVO)'. Recommended FinStat, RPVS, UVO checks"}
+  ]
+}

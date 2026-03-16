@@ -1,0 +1,11 @@
+{
+  "eval_id": 2,
+  "variant": "with_skill_v2",
+  "expectations": [
+    {"text": "dismisses_sfrb", "passed": true, "evidence": "DISMISSED: 'SFRB (Statny fond rozvoja byvania) -- instant-dismiss pattern... rutinna rozpoctova operacia'"},
+    {"text": "investigates_kepicova", "passed": true, "evidence": "DISMISSED with correct reasoning: 'NULL ICO artefakt (Sulc Matej vzor). V databaze existuje len 1 zmluva... za 290,80 EUR'"},
+    {"text": "confirms_way_industries", "passed": true, "evidence": "CONFIRMED as DANGER: triple debtor VSZP 62094 + SocPoist 179116 + FS 320636 = 562K EUR total"},
+    {"text": "confirms_sfinga_delay", "passed": true, "evidence": "CONFIRMED as WARNING: 489 dni potvrdene, 5.4x zakonny limit, nie EU/Erasmus, jedina zmluva firmy"},
+    {"text": "investigates_perset_twin", "passed": true, "evidence": "CONFIRMED: same signatory JUDr. Kovacic, PERSET 3-4 employees, hidden_entities flag, identical sum to same cooperation agreement"}
+  ]
+}

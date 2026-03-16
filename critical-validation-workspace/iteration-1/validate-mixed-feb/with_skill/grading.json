@@ -1,0 +1,11 @@
+{
+  "eval_id": 2,
+  "variant": "with_skill",
+  "expectations": [
+    {"text": "dismisses_sfrb", "passed": true, "evidence": "Finding #5 in DISMISSED table: 'Dodatok c. 2 k Zmluve o financovani... SFRB housing fund contracts zo zoznamu beznych nevinnych patternov'"},
+    {"text": "investigates_kepicova", "passed": true, "evidence": "Finding #6 DISMISSED with correct reasoning: 'datovy artefakt NULL-ICO groupovania... klasicky priklad Sulc Matej lesson'"},
+    {"text": "confirms_way_industries", "passed": true, "evidence": "Finding #1 CONFIRMED as DANGER: triple debtor (VSZP 62K + SocPoist 179K + FS 321K), private defense company, 6 red flags"},
+    {"text": "confirms_sfinga_delay", "passed": true, "evidence": "Finding #4 CONFIRMED as WARNING: 489 days confirmed, not EU/Erasmus, small construction firm, non-profit buyer"},
+    {"text": "investigates_perset_twin", "passed": true, "evidence": "Finding #3 INCONCLUSIVE: investigated same address, Kovacic brothers as signatories, hidden entity MTS SVK Development, recommended RPVS/foaf.sk"}
+  ]
+}

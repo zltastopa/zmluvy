@@ -1,0 +1,121 @@
+{
+  "skill_name": "critical-validation",
+  "evals": [
+    {
+      "id": 1,
+      "name": "validate-january-findings",
+      "prompt": "Validuj tieto najdy z analyzy zmluv za januar 2026:\n\n1. Vikendove zverejnenie 31.1.2026 (sobota) — Slovak Telekom 22.7M, Alanata 14.8M EUR\n2. Ejoin s.r.o. (ICO 51900921) — dvojity dlznik VSZP+SocPoist, zmluva 97K EUR\n3. Sulc Matej — 659 zmluv so STVR za 747K EUR, potencialne delenie zakazky\n4. Fond na podporu sportu — 60 000 000 EUR okruhla suma\n5. UK Bratislava — 206.5M EUR dotacia od Ministerstva skolstva\n6. SMART CORPORATION s.r.o. — 9.25M EUR bez ICO na nahradne diely\n7. Operacne stredisko ZZS SR — 30.8M EUR, zaporne vlastne imanie -2.65M EUR\n\nPouzij Datasette na validacne dopyty.",
+      "expected_output": "Structured validation report classifying each finding as CONFIRMED, DISMISSED, or INCONCLUSIVE with evidence.",
+      "assertions": [
+        {
+          "name": "dismisses_university_dotacia",
+          "type": "semantic",
+          "check": "Finding #5 (UK Bratislava 206.5M) is DISMISSED as a standard ministry-to-university annual dotacia"
+        },
+        {
+          "name": "dismisses_round_amount_grant",
+          "type": "semantic",
+          "check": "Finding #4 (Fond na podporu sportu 60M) is DISMISSED as a standard state fund allocation with naturally round amount"
+        },
+        {
+          "name": "dismisses_sulc_matej",
+          "type": "semantic",
+          "check": "Finding #3 (Sulc Matej 659 contracts with STVR) is DISMISSED as freelancer micro-contracts for a broadcaster"
+        },
+        {
+          "name": "confirms_or_inconclusive_ejoin",
+          "type": "semantic",
+          "check": "Finding #2 (Ejoin double debtor) is CONFIRMED or INCONCLUSIVE — NOT dismissed, because being a double debtor while receiving public money is genuinely problematic"
+        },
+        {
+          "name": "validates_weekend_publishing",
+          "type": "semantic",
+          "check": "Finding #1 (weekend publishing) runs a validation query to check if 31.1.2026 was end-of-month and how many other contracts were published that day"
+        },
+        {
+          "name": "checks_state_org_equity",
+          "type": "semantic",
+          "check": "Finding #7 (OSZZS negative equity) is checked whether OSZZS is a state organization — state orgs can have negative equity by design"
+        },
+        {
+          "name": "follows_output_template",
+          "type": "semantic",
+          "check": "Output follows the template: Sumar validacie, CONFIRMED najdy, INCONCLUSIVE najdy, Preverene a vylucene (DISMISSED) table"
+        },
+        {
+          "name": "runs_validation_queries",
+          "type": "semantic",
+          "check": "At least 3 validation SQL queries are actually executed against Datasette or local DB to verify findings"
+        }
+      ],
+      "files": []
+    },
+    {
+      "id": 2,
+      "name": "validate-mixed-findings-feb",
+      "prompt": "Tu su najdy z februara 2026 na validaciu:\n\n1. WAY INDUSTRIES a.s. (ICO 44965257) — 145M EUR od MO SR, dlznik VSZP (62K) aj SocPoist (179K)\n2. Angel Antonio Carbonell Barrachina — 169 zmluv s Min. skolstva za 2.9M bez ICO\n3. PERSET a.s. + Asset Real a.s. — po 32.57M EUR pre Bratislavu, rovnake sumy\n4. SFINGA s.r.o. — zmluva za 1.29M EUR zverejnena 489 dni po podpise\n5. Ministerstvo dopravy → SFRB — 490M EUR jedina zmluva\n6. Jana KEPICOVA — 13 382 zmluv za 85.6M EUR bez ICO\n\nOver kazdy najd a zarad ho ako CONFIRMED, DISMISSED, alebo INCONCLUSIVE.",
+      "expected_output": "Validation report that correctly identifies the SFRB contract and KEPICOVA as likely false positives, while confirming WAY INDUSTRIES and SFINGA as genuinely suspicious.",
+      "assertions": [
+        {
+          "name": "dismisses_sfrb",
+          "type": "semantic",
+          "check": "Finding #5 (MD → SFRB 490M) is DISMISSED as standard housing fund budget transfer"
+        },
+        {
+          "name": "investigates_kepicova",
+          "type": "semantic",
+          "check": "Finding #6 (Jana KEPICOVA 13K contracts) is investigated as a data artifact — likely NULL ICO grouping of many distinct individuals"
+        },
+        {
+          "name": "confirms_way_industries",
+          "type": "semantic",
+          "check": "Finding #1 (WAY INDUSTRIES double debtor 145M) is CONFIRMED or at minimum INCONCLUSIVE — a double debtor receiving 145M is genuinely concerning"
+        },
+        {
+          "name": "confirms_sfinga_delay",
+          "type": "semantic",
+          "check": "Finding #4 (SFINGA 489 days late) is CONFIRMED or INCONCLUSIVE after checking it's not an EU/Erasmus grant"
+        },
+        {
+          "name": "investigates_perset_twin",
+          "type": "semantic",
+          "check": "Finding #3 (PERSET + Asset Real identical amounts) is investigated for ownership links — identical amounts published at same time is suspicious"
+        }
+      ],
+      "files": []
+    },
+    {
+      "id": 3,
+      "name": "validate-all-innocent",
+      "prompt": "Over tieto najdy z Q4 2025:\n\n1. TATRA DEFENCE SYSTEMS — 1.03 mld EUR od Ministerstva obrany (ramcova zmluva)\n2. Environmentalny fond — 30M EUR okruhla suma pre Vodohospodarsku vystavbu\n3. Fond na podporu vzdelavania → Tomas Hengerics — 457 zmluv za 4.2M EUR\n4. Hruzova Zuzana, Bc. — 506 zmluv za 13.6M EUR bez ICO\n5. Eduardo Carmona — 49 zmluv pre APVV po 700 EUR\n\nSu tieto najdy skutocne podozrive, alebo maju nevine vysvetlenie?",
+      "assertions": [
+        {
+          "name": "dismisses_env_fund",
+          "type": "semantic",
+          "check": "Finding #2 (Environmentalny fond 30M) is DISMISSED as standard environmental dotacia with naturally round amount"
+        },
+        {
+          "name": "dismisses_student_loans",
+          "type": "semantic",
+          "check": "Finding #3 (Fond na podporu vzdelavania → Hengerics) is DISMISSED as student loan fund operations"
+        },
+        {
+          "name": "investigates_null_ico_grouping",
+          "type": "semantic",
+          "check": "Finding #4 (Hruzova Zuzana) is investigated for NULL ICO grouping — runs a validation query to check if it's one person or many grouped together"
+        },
+        {
+          "name": "dismisses_apvv_reviewers",
+          "type": "semantic",
+          "check": "Finding #5 (Eduardo Carmona 49 contracts for APVV) is DISMISSED as peer review/evaluation contracts for research agency"
+        },
+        {
+          "name": "defense_contract_inconclusive",
+          "type": "semantic",
+          "check": "Finding #1 (TATRA DEFENCE 1B) is either CONFIRMED for further procurement check or INCONCLUSIVE — a billion EUR contract warrants at minimum UVO verification even if defense contracts are expected to be large"
+        }
+      ],
+      "files": []
+    }
+  ]
+}
