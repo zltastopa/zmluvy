@@ -1,0 +1,10 @@
+{
+  "eval_id": 2,
+  "variant": "with_skill",
+  "expectations": [
+    {"text": "fetches_finstat_data", "passed": true, "evidence": "Fetched finstat.sk/51671824 via curl, extracted trzby 454K, zisk 5K, vlastny kapital 59K, Highcharts series data"},
+    {"text": "evaluates_revenue_ratio", "passed": true, "evidence": "Contract 1.29M is 2.84x annual revenue 454K — flagged as DANGER contract_exceeds_2x_revenue"},
+    {"text": "checks_company_age", "passed": true, "evidence": "Founded 25.05.2018, company is ~6 years old — noted but no young_company flag (correct, as >1 year)"},
+    {"text": "gives_assessment", "passed": true, "evidence": "Equity 59K covers only 4.6% of contract value. Heavy reliance on subcontractors and external financing needed."}
+  ]
+}

@@ -1,0 +1,11 @@
+{
+  "eval_id": 1,
+  "variant": "without_skill",
+  "expectations": [
+    {"text": "uses_finstat_urls", "passed": true, "evidence": "Fetched finstat.sk for all 3 ICOs via Playwright browser"},
+    {"text": "checks_local_registers", "passed": true, "evidence": "Checked FS, SP, VSZP debtors, tax reliability, RUZ entities"},
+    {"text": "evaluates_zlte_stopy", "passed": false, "evidence": "No formal zlte stopy evaluation with named rules. Used ad-hoc risk levels (KRITICKE/VYSOKE/STREDNE) but didn't systematically evaluate the 7 defined flag types"},
+    {"text": "follows_output_template", "passed": false, "evidence": "Custom format with numbered sections, no Sumar header, no zlte stopy table per supplier, no standardized template"},
+    {"text": "flags_way_industries_size", "passed": true, "evidence": "WAY INDUSTRIES flagged: 145M is 11x annual revenue, negative equity -1.35M, triple debtor 500K+"}
+  ]
+}

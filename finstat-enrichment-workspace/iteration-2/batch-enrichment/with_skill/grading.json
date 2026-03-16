@@ -1,0 +1,9 @@
+{
+  "eval_id": 3,
+  "variant": "with_skill_v2",
+  "expectations": [
+    {"text": "correct_pipeline_command", "passed": true, "evidence": "Ran: enrich_suppliers.py --from 2026-01 --to 2026-03 --limit 200"},
+    {"text": "queries_results_after", "passed": true, "evidence": "Queried supplier_red_flags + supplier_financials, applied framework annualization, filtered state institutions"},
+    {"text": "identifies_top_risks", "passed": true, "evidence": "Found PERSET (110x), Reality development (127x), Biomedical Engineering (28x) as CRITICAL. Correctly downgraded WAY INDUSTRIES/zares/INVEST 9 after annualization"}
+  ]
+}

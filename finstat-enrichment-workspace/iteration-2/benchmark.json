@@ -1,0 +1,31 @@
+{
+  "skill_name": "finstat-enrichment",
+  "iteration": 2,
+  "configurations": [
+    {
+      "name": "with_skill_v2",
+      "evals": [
+        {"eval_name": "enrich-confirmed-suppliers", "pass_rate": 1.0, "passed": 5, "total": 5, "tokens": 47704, "duration_s": 151.6, "tool_uses": 22},
+        {"eval_name": "enrich-single-company", "pass_rate": 1.0, "passed": 4, "total": 4, "tokens": 39066, "duration_s": 123.1, "tool_uses": 18},
+        {"eval_name": "batch-enrichment-command", "pass_rate": 1.0, "passed": 3, "total": 3, "tokens": 59952, "duration_s": 269.8, "tool_uses": 22}
+      ],
+      "aggregate": {"mean_pass_rate": 1.0, "mean_tokens": 48907, "mean_duration_s": 181.5, "mean_tool_uses": 20.7}
+    },
+    {
+      "name": "with_skill_v1 (previous iteration)",
+      "evals": [
+        {"eval_name": "enrich-confirmed-suppliers", "pass_rate": 1.0, "passed": 5, "total": 5, "tokens": 29945, "duration_s": 193.4, "tool_uses": 38},
+        {"eval_name": "enrich-single-company", "pass_rate": 1.0, "passed": 4, "total": 4, "tokens": 40301, "duration_s": 141.6, "tool_uses": 22},
+        {"eval_name": "batch-enrichment-command", "pass_rate": 1.0, "passed": 3, "total": 3, "tokens": 37765, "duration_s": 133.9, "tool_uses": 13}
+      ],
+      "aggregate": {"mean_pass_rate": 1.0, "mean_tokens": 36004, "mean_duration_s": 156.3, "mean_tool_uses": 24.3}
+    }
+  ],
+  "delta": {
+    "pass_rate": "0% (both 100%)",
+    "tokens": "+36% more tokens (v2 enriched 200 suppliers vs v1's 50 in batch)",
+    "duration": "+16% slower (181s vs 156s — batch ran 4x more suppliers)",
+    "tool_uses": "-15% fewer tool calls (21 vs 24)",
+    "quality": "v2 adds framework annualization, risk rubric (LOW/MEDIUM/HIGH/CRITICAL), found 2 additional CRITICAL suppliers missed by v1"
+  }
+}

@@ -1,0 +1,92 @@
+{
+  "skill_name": "finstat-enrichment",
+  "evals": [
+    {
+      "id": 1,
+      "name": "enrich-confirmed-suppliers",
+      "prompt": "Z kritickej validacie vysli tieto CONFIRMED najdy ktore treba financne obohatit:\n\n1. Ejoin s.r.o. (ICO 51900921) — trojity dlznik, zmluvy za 251K EUR\n2. SMART CORPORATION s.r.o. (ICO 45552584) — 9.25M EUR zmluva, chybajuce ICO v CRZ\n3. WAY INDUSTRIES a.s. (ICO 44965257) — 145M EUR od MO SR, trojity dlznik\n\nOver ich financne zdravie cez FinStat a vyhodnot financne zlte stopy.",
+      "expected_output": "Financial enrichment report for 3 suppliers with revenue, profit, equity data and zlte stopy evaluation",
+      "assertions": [
+        {
+          "name": "uses_finstat_urls",
+          "type": "semantic",
+          "check": "Agent fetches data from finstat.sk/{ico} URLs for at least 2 of the 3 ICOs"
+        },
+        {
+          "name": "checks_local_registers",
+          "type": "semantic",
+          "check": "Agent also queries local DB registers (vszp_debtors, socpoist_debtors, fs_tax_debtors, ruz_equity) for the ICOs"
+        },
+        {
+          "name": "evaluates_zlte_stopy",
+          "type": "semantic",
+          "check": "Agent evaluates at least 3 of the 7 zlte stopy rules (contract_exceeds_2x_revenue, negative_equity, tax_unreliable, young_company, etc.) against the data"
+        },
+        {
+          "name": "follows_output_template",
+          "type": "semantic",
+          "check": "Output includes per-supplier sections with financial table (trzby, zisk, vlastny kapital), zlte stopy table, and hodnotenie assessment"
+        },
+        {
+          "name": "flags_way_industries_size",
+          "type": "semantic",
+          "check": "WAY INDUSTRIES is flagged for contract_exceeds_2x_revenue or equivalent — a 145M EUR contract likely exceeds 2x their annual revenue"
+        }
+      ],
+      "files": []
+    },
+    {
+      "id": 2,
+      "name": "enrich-single-company",
+      "prompt": "Over financne zdravie firmy SFINGA s.r.o. (ICO 51671824). Tato firma mala zmluvu za 1.29M EUR s neziskovou organizaciou PE-ES, n.o., zverejnenu 489 dni po podpise. Chcem vediet ci je financne schopna takuto zakazku realizovat.",
+      "expected_output": "Detailed financial profile of SFINGA s.r.o. with assessment of whether the company can deliver a 1.29M contract",
+      "assertions": [
+        {
+          "name": "fetches_finstat_data",
+          "type": "semantic",
+          "check": "Agent fetches finstat.sk/51671824 and extracts financial data (revenue, profit, equity, or founding date)"
+        },
+        {
+          "name": "evaluates_revenue_ratio",
+          "type": "semantic",
+          "check": "Agent compares the 1.29M contract value against SFINGA's annual revenue to assess if the contract is too large for the firm"
+        },
+        {
+          "name": "checks_company_age",
+          "type": "semantic",
+          "check": "Agent notes or evaluates SFINGA's founding date (2018) relative to the contract"
+        },
+        {
+          "name": "gives_assessment",
+          "type": "semantic",
+          "check": "Agent provides a clear assessment of whether SFINGA is financially capable of delivering the 1.29M EUR contract"
+        }
+      ],
+      "files": []
+    },
+    {
+      "id": 3,
+      "name": "batch-enrichment-command",
+      "prompt": "Potrebujem financne obohatit top dodavatelov za Q1 2026 (januar az marec). Spusti enrichment pipeline a potom ukazujem najrizikovejsich dodavatelov.",
+      "expected_output": "Agent constructs and runs the correct pipeline command, then queries results",
+      "assertions": [
+        {
+          "name": "correct_pipeline_command",
+          "type": "semantic",
+          "check": "Agent constructs a command like: uv run python pipeline/enrich_suppliers.py --from 2026-01 --to 2026-03 (or --to 2026-04) with appropriate --limit"
+        },
+        {
+          "name": "queries_results_after",
+          "type": "semantic",
+          "check": "After running the pipeline, agent queries supplier_red_flags and/or supplier_financials tables to show top flagged suppliers"
+        },
+        {
+          "name": "identifies_top_risks",
+          "type": "semantic",
+          "check": "Agent presents results highlighting the most flagged or highest-risk suppliers from the enrichment"
+        }
+      ],
+      "files": []
+    }
+  ]
+}

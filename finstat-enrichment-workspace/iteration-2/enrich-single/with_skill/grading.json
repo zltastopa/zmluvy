@@ -1,0 +1,10 @@
+{
+  "eval_id": 2,
+  "variant": "with_skill_v2",
+  "expectations": [
+    {"text": "fetches_finstat_data", "passed": true, "evidence": "Fetched finstat.sk/51671824 via curl, extracted trzby 454K, zisk 5K, equity 59K"},
+    {"text": "evaluates_revenue_ratio", "passed": true, "evidence": "Contract 1.29M is 2.84x revenue 454K — flagged as DANGER contract_exceeds_2x_revenue"},
+    {"text": "checks_company_age", "passed": true, "evidence": "Founded 25 May 2018 — noted, no young_company flag (correct)"},
+    {"text": "gives_assessment", "passed": true, "evidence": "Risk: MEDIUM using rubric (2.84x in 1-3x band, positive equity). Net profit only 5K, debt ratio 77.58%"}
+  ]
+}
