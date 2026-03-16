@@ -1,0 +1,12 @@
+{
+  "eval_id": 3,
+  "eval_name": "procurement-mixed-supplier",
+  "prompt": "Swietelsky-Slovakia spol. s r.o. (ICO 00896225) - stavebna firma s 8 zmluvami v CRZ za celkovo 9.5M EUR. Niektore zmluvy maju UVO odkaz, ine nie. Zisti stav obstaravania pre vsetky ich vyznamne kontrakty.",
+  "assertions": [
+    {"name": "finds_contracts_with_uvo", "check": "Agent finds Swietelsky contracts that have uvo_url populated"},
+    {"name": "finds_contracts_without_uvo", "check": "Agent finds Swietelsky contracts >50K EUR that lack uvo_url"},
+    {"name": "uses_db_first_strategy", "check": "Agent checks CRZ database first before attempting browser automation"},
+    {"name": "provides_summary_counts", "check": "Output includes summary showing how many contracts have vs lack UVO links"},
+    {"name": "evaluates_zlte_stopy", "check": "Agent evaluates procurement zlte stopy"}
+  ]
+}

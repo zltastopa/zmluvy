@@ -1,0 +1,102 @@
+{
+  "skill_name": "uvo-procurement",
+  "evals": [
+    {
+      "id": 1,
+      "name": "procurement-check-with-uvo-links",
+      "prompt": "Over verejne obstaravanie pre SLOVNAFT, a.s. (ICO 31322832). Maju viacero veľkych zmluv v CRZ. Chcem vediet ci presli riadnym obstaravanim a kolko ponuk bolo v sutazi.",
+      "expected_output": "Procurement report for SLOVNAFT showing contracts with existing UVO links, contracts without procurement, and zlte stopy evaluation",
+      "assertions": [
+        {
+          "name": "queries_crz_for_uvo_links",
+          "type": "semantic",
+          "check": "Agent queries the zmluvy table to find contracts with existing uvo_url for ICO 31322832"
+        },
+        {
+          "name": "finds_existing_uvo_urls",
+          "type": "semantic",
+          "check": "Agent identifies that SLOVNAFT has contracts with existing UVO links (at least 3 — some via uvo.gov.sk, some via josephine.proebiz.com)"
+        },
+        {
+          "name": "checks_contracts_without_uvo",
+          "type": "semantic",
+          "check": "Agent also queries for large contracts WITHOUT uvo_url to identify potential procurement gaps"
+        },
+        {
+          "name": "follows_output_template",
+          "type": "semantic",
+          "check": "Output includes summary section (contracts with/without UVO), per-contract sections with CRZ data table, and zlte stopy evaluation"
+        },
+        {
+          "name": "assesses_procurement_risk",
+          "type": "semantic",
+          "check": "Agent provides a procurement risk assessment — notes that having UVO links is positive, or flags contracts that lack procurement"
+        }
+      ],
+      "files": []
+    },
+    {
+      "id": 2,
+      "name": "procurement-check-no-uvo-links",
+      "prompt": "Firma STRABAG s.r.o. (ICO 17317282) ma zmluvy za skoro 10 milionov EUR v CRZ. Over ci presli verejnym obstaravanim.",
+      "expected_output": "Procurement report for STRABAG showing that large contracts lack UVO links, flagging procurement gaps",
+      "assertions": [
+        {
+          "name": "queries_crz_for_uvo_links",
+          "type": "semantic",
+          "check": "Agent queries zmluvy table for ICO 17317282 to check for existing uvo_url values"
+        },
+        {
+          "name": "identifies_missing_procurement",
+          "type": "semantic",
+          "check": "Agent identifies that STRABAG has large contracts (>50K EUR) without UVO links and flags this"
+        },
+        {
+          "name": "flags_no_uvo_record",
+          "type": "semantic",
+          "check": "Agent raises a no_uvo_record or equivalent zlta stopa for contracts exceeding procurement thresholds without UVO links"
+        },
+        {
+          "name": "lists_specific_contracts",
+          "type": "semantic",
+          "check": "Agent lists at least 2 specific STRABAG contracts with their values that lack procurement records"
+        }
+      ],
+      "files": []
+    },
+    {
+      "id": 3,
+      "name": "procurement-mixed-supplier",
+      "prompt": "Swietelsky-Slovakia spol. s r.o. (ICO 00896225) - stavebna firma s 8 zmluvami v CRZ za celkovo 9.5M EUR. Niektore zmluvy maju UVO odkaz, ine nie. Zisti stav obstaravania pre vsetky ich vyznamne kontrakty.",
+      "expected_output": "Mixed procurement report showing some contracts with UVO links (competition verified) and others without, with risk assessment",
+      "assertions": [
+        {
+          "name": "finds_contracts_with_uvo",
+          "type": "semantic",
+          "check": "Agent finds Swietelsky contracts that have uvo_url populated (parking Osuského, chodník Draždiak, etc.)"
+        },
+        {
+          "name": "finds_contracts_without_uvo",
+          "type": "semantic",
+          "check": "Agent finds Swietelsky contracts >50K EUR that lack uvo_url (cyklotrasa, zmluva o dielo 1.76M, etc.)"
+        },
+        {
+          "name": "uses_db_first_strategy",
+          "type": "semantic",
+          "check": "Agent checks the CRZ database first for existing UVO links before attempting browser automation"
+        },
+        {
+          "name": "provides_summary_counts",
+          "type": "semantic",
+          "check": "Output includes summary showing how many contracts have vs lack UVO links (approximately 3 with, several without)"
+        },
+        {
+          "name": "evaluates_zlte_stopy",
+          "type": "semantic",
+          "check": "Agent evaluates procurement zlte stopy — at minimum flags large contracts without UVO records"
+        }
+      ],
+      "files": []
+    }
+  ]
+}

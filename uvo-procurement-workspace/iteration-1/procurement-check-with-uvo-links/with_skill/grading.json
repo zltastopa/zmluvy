@@ -1,0 +1,11 @@
+{
+  "eval_id": 1,
+  "variant": "with_skill",
+  "expectations": [
+    {"text": "queries_crz_for_uvo_links", "passed": true, "evidence": "Queried zmluvy table for ICO 31322832, found contracts with existing uvo_url in Step 1"},
+    {"text": "finds_existing_uvo_urls", "passed": true, "evidence": "Found 10 contracts with UVO links: 5 on UVO portal, 3 on Josephine, 2 on EKS"},
+    {"text": "checks_contracts_without_uvo", "passed": true, "evidence": "Step 2 found 1 contract >50K EUR without UVO (Statna skolska inspekcia 56,791.56 EUR)"},
+    {"text": "follows_output_template", "passed": true, "evidence": "Output has Sumar section, per-contract CRZ data tables, zlte stopy tables, hodnotenie per contract, and closing summary"},
+    {"text": "assesses_procurement_risk", "passed": true, "evidence": "Celkove hodnotenie section: 'SLOVNAFT ma relativne dobru evidenciu obstaravania', notes 2 DANGER flags on pokuty, 1 contract without UVO"}
+  ]
+}

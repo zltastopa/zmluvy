@@ -1,0 +1,12 @@
+{
+  "eval_id": 1,
+  "eval_name": "procurement-check-with-uvo-links",
+  "prompt": "Over verejne obstaravanie pre SLOVNAFT, a.s. (ICO 31322832). Maju viacero veľkych zmluv v CRZ. Chcem vediet ci presli riadnym obstaravanim a kolko ponuk bolo v sutazi.",
+  "assertions": [
+    {"name": "queries_crz_for_uvo_links", "check": "Agent queries the zmluvy table to find contracts with existing uvo_url for ICO 31322832"},
+    {"name": "finds_existing_uvo_urls", "check": "Agent identifies that SLOVNAFT has contracts with existing UVO links (at least 3)"},
+    {"name": "checks_contracts_without_uvo", "check": "Agent also queries for large contracts WITHOUT uvo_url"},
+    {"name": "follows_output_template", "check": "Output includes summary section, per-contract sections, and zlte stopy evaluation"},
+    {"name": "assesses_procurement_risk", "check": "Agent provides a procurement risk assessment"}
+  ]
+}

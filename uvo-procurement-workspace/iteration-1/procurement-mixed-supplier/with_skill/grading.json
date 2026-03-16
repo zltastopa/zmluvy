@@ -1,0 +1,11 @@
+{
+  "eval_id": 3,
+  "variant": "with_skill",
+  "expectations": [
+    {"text": "finds_contracts_with_uvo", "passed": true, "evidence": "Found 3 contracts with UVO: Petrzalka parking 336K, Bardejov 297K, Drazdiak chodnik 107K"},
+    {"text": "finds_contracts_without_uvo", "passed": true, "evidence": "Found 6 contracts >50K without UVO: Vranov 2x ~3M, Jezersko 1.76M, Martin 916K, Vysna Hutka 258K, Rohoznik 86K"},
+    {"text": "uses_db_first_strategy", "passed": true, "evidence": "Explicitly references 'Step 1' and 'Step 2' from skill, notes 'kroky 1-2 zo SKILL.md (DB-first strategia)'"},
+    {"text": "provides_summary_counts", "passed": true, "evidence": "Summary: 'Kontrakty s UVO odkazom: 3 z 10, Kontrakty BEZ obstaravania (>50 000 EUR): 6'"},
+    {"text": "evaluates_zlte_stopy", "passed": true, "evidence": "Per-contract zlte stopy tables plus summary table with 6 procurement flags. DANGER flags on VKS ELTO and supplier-favorable penalties"}
+  ]
+}

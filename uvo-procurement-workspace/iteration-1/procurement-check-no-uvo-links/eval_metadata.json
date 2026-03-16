@@ -1,0 +1,11 @@
+{
+  "eval_id": 2,
+  "eval_name": "procurement-check-no-uvo-links",
+  "prompt": "Firma STRABAG s.r.o. (ICO 17317282) ma zmluvy za skoro 10 milionov EUR v CRZ. Over ci presli verejnym obstaravanim.",
+  "assertions": [
+    {"name": "queries_crz_for_uvo_links", "check": "Agent queries zmluvy table for ICO 17317282 to check for existing uvo_url values"},
+    {"name": "identifies_missing_procurement", "check": "Agent identifies that STRABAG has large contracts without UVO links"},
+    {"name": "flags_no_uvo_record", "check": "Agent raises a no_uvo_record or equivalent zlta stopa"},
+    {"name": "lists_specific_contracts", "check": "Agent lists at least 2 specific STRABAG contracts that lack procurement records"}
+  ]
+}

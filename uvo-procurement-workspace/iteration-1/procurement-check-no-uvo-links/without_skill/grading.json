@@ -1,0 +1,10 @@
+{
+  "eval_id": 2,
+  "variant": "without_skill",
+  "expectations": [
+    {"text": "queries_crz_for_uvo_links", "passed": true, "evidence": "Queried zmluvy for ICO 17317282, found contracts with/without UVO links"},
+    {"text": "identifies_missing_procurement", "passed": true, "evidence": "Found 9 contracts without UVO links totaling 10M EUR. Differentiated quality of UVO links (profile-only vs specific procurement)"},
+    {"text": "flags_no_uvo_record", "passed": false, "evidence": "Notes risk categories (vysoke/stredne) but doesn't use standardized zlta stopa format. Uses 'cervene upozornenie' instead"},
+    {"text": "lists_specific_contracts", "passed": true, "evidence": "Lists Zive namestie 7M, Zilina 1.56M, Kanianka 565K, Krasnany 488K, Nizny Klatov 336K, Raca 55K"}
+  ]
+}

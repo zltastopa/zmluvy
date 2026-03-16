@@ -1,0 +1,11 @@
+{
+  "eval_id": 3,
+  "variant": "without_skill",
+  "expectations": [
+    {"text": "finds_contracts_with_uvo", "passed": true, "evidence": "Found 3 contracts with UVO: Petrzalka 2x (336K + 107K) and Bardejov (297K)"},
+    {"text": "finds_contracts_without_uvo", "passed": true, "evidence": "Found 8 contracts without UVO links, including Jezersko 1.76M, Vysna Hutka 258K, and 5 dodatky"},
+    {"text": "uses_db_first_strategy", "passed": true, "evidence": "Queried CRZ database first — natural approach even without skill instructions"},
+    {"text": "provides_summary_counts", "passed": true, "evidence": "Summary table: 3 with UVO, 8 without UVO. Also has risk-level breakdown (3 OK, 5 unknown, 2 risk)"},
+    {"text": "evaluates_zlte_stopy", "passed": false, "evidence": "No zlte stopy tables. Uses 'CHYBA UVO ODKAZ' and 'POTENCIALNE RIZIKO' labels but not standardized severity-based zlte stopy format"}
+  ]
+}
