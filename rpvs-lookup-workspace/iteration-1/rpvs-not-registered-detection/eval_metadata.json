@@ -1,0 +1,11 @@
+{
+  "eval_id": 3,
+  "eval_name": "rpvs-not-registered-detection",
+  "prompt": "Firma COMBIN BANSKA STIAVNICA, s.r.o. (ICO 31631134) ma kontrakty za 16.4M EUR v CRZ. Over ci je registrovana v RPVS ako partner verejneho sektora.",
+  "assertions": [
+    {"name": "searches_rpvs", "check": "Agent navigates to rpvs.gov.sk and searches for ICO 31631134"},
+    {"name": "reports_registration_status", "check": "Agent states whether COMBIN is registered or not"},
+    {"name": "evaluates_missing_rpvs_risk", "check": "If not registered: DANGER flag. If registered: extracts UBO data"},
+    {"name": "notes_contract_context", "check": "Agent notes 16.4M EUR in contracts as context"}
+  ]
+}

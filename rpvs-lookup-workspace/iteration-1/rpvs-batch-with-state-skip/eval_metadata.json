@@ -1,0 +1,11 @@
+{
+  "eval_id": 2,
+  "eval_name": "rpvs-batch-with-state-skip",
+  "prompt": "Potrebujem RPVS lookup pre tieto firmy z najdov sql-analytics:\n1. Alanata, a.s. (ICO 54629331) — 35M EUR v CRZ kontraktoch\n2. Ministerstvo investicii (ICO 50349287) — 336M EUR\n3. ejoin s.r.o. (ICO 51900921) — trojity dlznik, 251K EUR",
+  "assertions": [
+    {"name": "skips_state_entity", "check": "Agent skips Ministerstvo investicii as state entity"},
+    {"name": "looks_up_private_companies", "check": "Agent looks up both Alanata and ejoin"},
+    {"name": "extracts_ubos_for_both", "check": "Agent extracts UBO names for at least one private company"},
+    {"name": "cross_references_ubos", "check": "Agent checks for UBO overlap between companies"}
+  ]
+}

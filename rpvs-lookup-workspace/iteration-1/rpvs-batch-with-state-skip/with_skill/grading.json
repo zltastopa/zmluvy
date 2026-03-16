@@ -1,0 +1,10 @@
+{
+  "eval_id": 2,
+  "variant": "with_skill",
+  "expectations": [
+    {"text": "skips_state_entity", "passed": true, "evidence": "Correctly identified Ministerstvo investicii as state entity, marked PRESKOCENE -- STATNY SEKTOR"},
+    {"text": "looks_up_private_companies", "passed": true, "evidence": "Searched RPVS for both Alanata (ICO 54629331) and ejoin (ICO 51900921)"},
+    {"text": "extracts_ubos_for_both", "passed": false, "evidence": "Only extracted ejoin UBOs (Vasek, Vasekova). Alanata search returned 0 results (Playwright flakiness) — falsely reported as NEREGISTROVANY when baseline confirmed it IS registered (vlozka 37284, 3 UBOs)"},
+    {"text": "cross_references_ubos", "passed": true, "evidence": "Checked for UBO overlap, ran SQL cross-reference query for shared buyers. Noted limitation due to missing Alanata data"}
+  ]
+}

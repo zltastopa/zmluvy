@@ -1,0 +1,10 @@
+{
+  "eval_id": 2,
+  "variant": "without_skill",
+  "expectations": [
+    {"text": "skips_state_entity", "passed": true, "evidence": "Correctly noted Ministerstvo investicii is not applicable for RPVS, explained why state organs don't register"},
+    {"text": "looks_up_private_companies", "passed": true, "evidence": "Looked up both Alanata and ejoin on rpvs.gov.sk"},
+    {"text": "extracts_ubos_for_both", "passed": true, "evidence": "Extracted Alanata 3 UBOs (Petergac, Mokry, Kotuliak) and ejoin 2 UBOs (Vasek, Vasekova)"},
+    {"text": "cross_references_ubos", "passed": true, "evidence": "Detailed overlap analysis: no overlap found, compared geography (Bratislava vs Ilava), demographics (1962-68 vs 1985-87), authorized persons"}
+  ]
+}

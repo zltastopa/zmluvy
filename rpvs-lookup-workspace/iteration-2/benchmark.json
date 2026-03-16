@@ -1,0 +1,48 @@
+{
+  "skill_name": "rpvs-lookup",
+  "iteration": 2,
+  "configurations": [
+    {
+      "name": "with_skill_v2",
+      "evals": [
+        {"eval_name": "rpvs-single-company", "pass_rate": 1.0, "passed": 5, "total": 5, "tokens": 49665, "duration_s": 193.3, "tool_uses": 28},
+        {"eval_name": "rpvs-batch-with-state-skip", "pass_rate": 1.0, "passed": 4, "total": 4, "tokens": 69077, "duration_s": 308.7, "tool_uses": 48},
+        {"eval_name": "rpvs-not-registered-detection", "pass_rate": 1.0, "passed": 4, "total": 4, "tokens": 65960, "duration_s": 242.7, "tool_uses": 39}
+      ],
+      "aggregate": {"mean_pass_rate": 1.0, "mean_tokens": 61567, "mean_duration_s": 248.2, "mean_tool_uses": 38.3}
+    },
+    {
+      "name": "with_skill_v1 (iteration 1)",
+      "evals": [
+        {"eval_name": "rpvs-single-company", "pass_rate": 1.0, "passed": 5, "total": 5, "tokens": 74806, "duration_s": 373.2, "tool_uses": 55},
+        {"eval_name": "rpvs-batch-with-state-skip", "pass_rate": 0.75, "passed": 3, "total": 4, "tokens": 53087, "duration_s": 257.8, "tool_uses": 36},
+        {"eval_name": "rpvs-not-registered-detection", "pass_rate": 1.0, "passed": 4, "total": 4, "tokens": 38405, "duration_s": 136.2, "tool_uses": 25}
+      ],
+      "aggregate": {"mean_pass_rate": 0.92, "mean_tokens": 55433, "mean_duration_s": 255.7, "mean_tool_uses": 38.7}
+    },
+    {
+      "name": "without_skill (iteration 1 baseline)",
+      "evals": [
+        {"eval_name": "rpvs-single-company", "pass_rate": 0.8, "passed": 4, "total": 5, "tokens": 48901, "duration_s": 166.1, "tool_uses": 28},
+        {"eval_name": "rpvs-batch-with-state-skip", "pass_rate": 1.0, "passed": 4, "total": 4, "tokens": 64551, "duration_s": 328.1, "tool_uses": 42},
+        {"eval_name": "rpvs-not-registered-detection", "pass_rate": 1.0, "passed": 4, "total": 4, "tokens": 43703, "duration_s": 158.0, "tool_uses": 31}
+      ],
+      "aggregate": {"mean_pass_rate": 0.93, "mean_tokens": 52385, "mean_duration_s": 217.4, "mean_tool_uses": 33.7}
+    }
+  ],
+  "delta": {
+    "v2_vs_v1": {
+      "pass_rate": "+8% (100% vs 92%) — fixed Alanata false negative",
+      "tokens": "+11% more tokens (62K vs 55K — v2 extracts more reliably but slightly verbose)",
+      "duration": "-3% faster (248s vs 256s)",
+      "tool_uses": "-1% fewer (38.3 vs 38.7)"
+    },
+    "v2_vs_baseline": {
+      "pass_rate": "+7% (100% vs 93%)",
+      "tokens": "+18% more tokens (62K vs 52K — deeper extraction)",
+      "duration": "+14% slower (248s vs 217s — deeper historical data)",
+      "quality": "v2 produces structured output template, deeper analytical insights (UBO change timeline, verifier changes, historical data). Baseline is faster but misses output structure."
+    },
+    "eval1_v2_vs_v1": "Tokens: -34% (50K vs 75K), Tool calls: -49% (28 vs 55), Duration: -48% (193s vs 373s). Efficiency guidance worked perfectly."
+  }
+}

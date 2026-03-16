@@ -1,0 +1,97 @@
+{
+  "skill_name": "rpvs-lookup",
+  "evals": [
+    {
+      "id": 1,
+      "name": "rpvs-single-company",
+      "prompt": "Over RPVS registraciu pre WAY INDUSTRIES, a.s. (ICO 44965257). Tato firma ma zmluvu za 145M EUR s Ministerstvom obrany SR. Zisti kto su konecni uzivatelia vyhod.",
+      "expected_output": "RPVS lookup showing WAY INDUSTRIES registration status, UBO names, and any zlte stopy",
+      "assertions": [
+        {
+          "name": "navigates_to_rpvs",
+          "type": "semantic",
+          "check": "Agent navigates to rpvs.gov.sk and searches for ICO 44965257"
+        },
+        {
+          "name": "extracts_rpvs_status",
+          "type": "semantic",
+          "check": "Agent reports whether WAY INDUSTRIES is registered in RPVS (Platny/Neplatny) or not registered"
+        },
+        {
+          "name": "extracts_ubo_names",
+          "type": "semantic",
+          "check": "Agent extracts at least one UBO name (meno konecneho uzivatela vyhod) from the RPVS detail page"
+        },
+        {
+          "name": "checks_verejny_funkcionar",
+          "type": "semantic",
+          "check": "Agent checks and reports whether any UBO is a public official (Verejny funkcionar = Ano/Nie)"
+        },
+        {
+          "name": "follows_output_template",
+          "type": "semantic",
+          "check": "Output includes RPVS status table, UBO table with names, and zlte stopy evaluation"
+        }
+      ],
+      "files": []
+    },
+    {
+      "id": 2,
+      "name": "rpvs-batch-with-state-skip",
+      "prompt": "Potrebujem RPVS lookup pre tieto firmy z najdov sql-analytics:\n1. Alanata, a.s. (ICO 54629331) — 35M EUR v CRZ kontraktoch\n2. Ministerstvo investicii (ICO 50349287) — 336M EUR\n3. ejoin s.r.o. (ICO 51900921) — trojity dlznik, 251K EUR\n\nKto su ich konecni uzivatelia vyhod? Prekryvaju sa?",
+      "expected_output": "RPVS lookup for 3 entities with state entity skipped, UBOs extracted for 2 private companies, cross-reference check",
+      "assertions": [
+        {
+          "name": "skips_state_entity",
+          "type": "semantic",
+          "check": "Agent skips or notes that Ministerstvo investicii (ICO 50349287) is a state entity that doesn't need RPVS lookup"
+        },
+        {
+          "name": "looks_up_private_companies",
+          "type": "semantic",
+          "check": "Agent performs RPVS lookup for both Alanata and ejoin (the two private companies)"
+        },
+        {
+          "name": "extracts_ubos_for_both",
+          "type": "semantic",
+          "check": "Agent extracts UBO names for at least one of the two private companies"
+        },
+        {
+          "name": "cross_references_ubos",
+          "type": "semantic",
+          "check": "Agent checks whether any UBO names overlap between Alanata and ejoin, or states no overlap found"
+        }
+      ],
+      "files": []
+    },
+    {
+      "id": 3,
+      "name": "rpvs-not-registered-detection",
+      "prompt": "Firma COMBIN BANSKA STIAVNICA, s.r.o. (ICO 31631134) ma kontrakty za 16.4M EUR v CRZ. Over ci je registrovana v RPVS ako partner verejneho sektora.",
+      "expected_output": "RPVS lookup for COMBIN showing registration status — if not registered, flag as DANGER given >100K contract value",
+      "assertions": [
+        {
+          "name": "searches_rpvs",
+          "type": "semantic",
+          "check": "Agent navigates to rpvs.gov.sk and searches for ICO 31631134"
+        },
+        {
+          "name": "reports_registration_status",
+          "type": "semantic",
+          "check": "Agent clearly states whether COMBIN is registered or not registered in RPVS"
+        },
+        {
+          "name": "evaluates_missing_rpvs_risk",
+          "type": "semantic",
+          "check": "If not registered: agent flags as DANGER (>100K public money). If registered: agent extracts UBO data"
+        },
+        {
+          "name": "notes_contract_context",
+          "type": "semantic",
+          "check": "Agent notes the 16.4M EUR in contracts as context for why RPVS registration matters"
+        }
+      ],
+      "files": []
+    }
+  ]
+}

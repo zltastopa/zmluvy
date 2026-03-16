@@ -1,0 +1,11 @@
+{
+  "eval_id": 1,
+  "variant": "without_skill",
+  "expectations": [
+    {"text": "navigates_to_rpvs", "passed": true, "evidence": "Navigated to rpvs.gov.sk, searched ICO 44965257, found vlozka 20677"},
+    {"text": "extracts_rpvs_status", "passed": true, "evidence": "Reported Platny status, vlozka 20677, datum zapisu 10.11.2017"},
+    {"text": "extracts_ubo_names", "passed": true, "evidence": "Extracted current UBO Mgr. Jozef Marinic + 3 historical UBOs"},
+    {"text": "checks_verejny_funkcionar", "passed": true, "evidence": "Noted 'Not a public official' for current UBO"},
+    {"text": "follows_output_template", "passed": false, "evidence": "Different format — no structured Sumar section, no zlte stopy table. Good content but non-standard layout"}
+  ]
+}

@@ -1,0 +1,12 @@
+{
+  "eval_id": 1,
+  "eval_name": "rpvs-single-company",
+  "prompt": "Over RPVS registraciu pre WAY INDUSTRIES, a.s. (ICO 44965257). Tato firma ma zmluvu za 145M EUR s Ministerstvom obrany SR. Zisti kto su konecni uzivatelia vyhod.",
+  "assertions": [
+    {"name": "navigates_to_rpvs", "check": "Agent navigates to rpvs.gov.sk and searches for ICO 44965257"},
+    {"name": "extracts_rpvs_status", "check": "Agent reports RPVS registration status"},
+    {"name": "extracts_ubo_names", "check": "Agent extracts at least one UBO name"},
+    {"name": "checks_verejny_funkcionar", "check": "Agent checks public official status"},
+    {"name": "follows_output_template", "check": "Output includes RPVS status table, UBO table, zlte stopy"}
+  ]
+}

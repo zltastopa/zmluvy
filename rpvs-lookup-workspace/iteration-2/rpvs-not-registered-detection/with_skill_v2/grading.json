@@ -1,0 +1,10 @@
+{
+  "eval_id": 3,
+  "variant": "with_skill_v2",
+  "expectations": [
+    {"text": "searches_rpvs", "passed": true, "evidence": "Navigated to rpvs.gov.sk, searched ICO 31631134, found vlozka 9478"},
+    {"text": "reports_registration_status", "passed": true, "evidence": "Clearly reported Platny, vlozka 9478, registered since 01.02.2017"},
+    {"text": "evaluates_missing_rpvs_risk", "passed": true, "evidence": "Company registered — extracted full UBO data (Gallo, Janocko), historical data, 18 verifications. 0 zlte stopy"},
+    {"text": "notes_contract_context", "passed": true, "evidence": "23.13M EUR in 16 contracts, detailed CRZ table with 11 contracts >100K EUR listed"}
+  ]
+}
