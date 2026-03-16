@@ -1,0 +1,16 @@
+{
+  "eval_id": 1,
+  "variant": "with_skill_v2",
+  "expectations": [
+    {"text": "correct_date_range", "passed": true, "evidence": "All queries use 2026-01-01 and 2026-02-01"},
+    {"text": "all_20_queries_attempted", "passed": true, "evidence": "Report states 'Pocet spustenych dopytov: 20', 17 with results (Q10, Q11 empty, Q19 timed out on Datasette but ran locally)"},
+    {"text": "has_top5_highlights", "passed": true, "evidence": "Top 5 najdov section present with: 1) Jan 27 spike 1.1B, 2) Slovak Telekom weekend, 3) OSZZS negative equity, 4) Ejoin double debtor, 5) MED-ART dormant"},
+    {"text": "output_has_7_categories", "passed": true, "evidence": "Sections 1-7 present: Toky penazi, Manipulacia obstaravania, Casove anomalie, Fantomovi dodavatelia, Extrakcie, Dlznicki, Bonusove kontroly"},
+    {"text": "has_markdown_tables", "passed": true, "evidence": "Every query result uses pipe-delimited markdown tables"},
+    {"text": "has_summary_table", "passed": true, "evidence": "Zhrnutie najdov table present at end"},
+    {"text": "has_sumar_section", "passed": true, "evidence": "Sumar section with 49953 contracts, 3.1B EUR, 20 queries"},
+    {"text": "no_premature_conclusions", "passed": true, "evidence": "Ends with validation disclaimer"},
+    {"text": "uses_datasette_api", "passed": true, "evidence": "Used Datasette API via curl (fell back to local for Q19 timeout)"},
+    {"text": "has_bonus_queries", "passed": true, "evidence": "Section 7 includes negative equity (OSZZS -2.65M, Lavaton -519K), dormant firms (MED-ART, Operativna med.), and daily volume (Jan 27 spike)"}
+  ]
+}

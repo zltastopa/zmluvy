@@ -1,0 +1,14 @@
+{
+  "eval_id": 1,
+  "variant": "without_skill",
+  "expectations": [
+    {"text": "correct_date_range", "passed": true, "evidence": "Queries used January 2026 date range"},
+    {"text": "all_17_queries_attempted", "passed": false, "evidence": "Ran ~15 custom queries but missed several from the standard 17 (no bezodplatne, no konzorcia, no supplier_advantage, no double debtors query)"},
+    {"text": "output_has_6_categories", "passed": false, "evidence": "Uses custom structure: Celkovy prehlad, Prehlad Red Flags, Najvyssie rizikove zistenia, Koncentracia, Casove vzory — not the 6 standard categories"},
+    {"text": "has_markdown_tables", "passed": true, "evidence": "Uses markdown tables throughout"},
+    {"text": "has_summary_table", "passed": true, "evidence": "Has 'Odporucania na hlbsi vysetrovanie' section with prioritized list, though not in table format"},
+    {"text": "has_sumar_section", "passed": true, "evidence": "Section 1 'Celkovy prehlad' has contract count, amounts, flag counts"},
+    {"text": "no_premature_conclusions", "passed": false, "evidence": "Report draws direct conclusions like 'priamy rozpor so zakonom o verejnom obstaravani' without noting these need validation"},
+    {"text": "uses_datasette_api", "passed": true, "evidence": "Used Datasette API via WebFetch"}
+  ]
+}

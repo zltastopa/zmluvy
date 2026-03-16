@@ -1,0 +1,10 @@
+{
+  "eval_id": 3,
+  "variant": "without_skill",
+  "expectations": [
+    {"text": "triggers_correctly", "passed": true, "evidence": "Agent understood the request and ran relevant queries for February 2026"},
+    {"text": "correct_feb_dates", "passed": true, "evidence": "Used February 2026 date range"},
+    {"text": "structured_output", "passed": false, "evidence": "Custom freeform structure, not the skill template. No numbered categories, no Zhrnutie najdov table, uses custom sections like 'Najvacsie zmluvy mesiaca', 'Najzaujimavejsie nalezy'"},
+    {"text": "slovak_language", "passed": true, "evidence": "Report is in Slovak throughout"}
+  ]
+}

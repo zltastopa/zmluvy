@@ -1,0 +1,9 @@
+{
+  "eval_id": 2,
+  "variant": "with_skill",
+  "expectations": [
+    {"text": "correct_q4_dates", "passed": true, "evidence": "Title shows '2025-10-01 -- 2026-01-01', all queries use these bounds"},
+    {"text": "follows_output_template", "passed": true, "evidence": "Perfect template adherence: Sumar → numbered sections (1-6) → Zhrnutie najdov table"},
+    {"text": "interpretations_present", "passed": true, "evidence": "Every non-empty query section has '**Interpretacia:**' paragraph explaining what stands out"}
+  ]
+}

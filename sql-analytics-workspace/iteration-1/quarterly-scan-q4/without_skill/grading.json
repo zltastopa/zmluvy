@@ -1,0 +1,9 @@
+{
+  "eval_id": 2,
+  "variant": "without_skill",
+  "expectations": [
+    {"text": "correct_q4_dates", "passed": true, "evidence": "Queries used 2025-10-01 to 2025-12-31 range (slightly different end date but covers Q4)"},
+    {"text": "follows_output_template", "passed": false, "evidence": "Custom freeform structure: Prehlad, Mesacny rozpad, Najvacsie zmluvy, Rezorty, Red flags, Podozrive vzory — no numbered categories or Zhrnutie najdov table"},
+    {"text": "interpretations_present", "passed": true, "evidence": "Each section has narrative explanations of findings"}
+  ]
+}

@@ -1,0 +1,10 @@
+{
+  "eval_id": 3,
+  "variant": "with_skill",
+  "expectations": [
+    {"text": "triggers_correctly", "passed": true, "evidence": "Agent read the skill, interpreted 'februar 2026' as the date range, and ran all 17 queries"},
+    {"text": "correct_feb_dates", "passed": true, "evidence": "Title shows '2026-02-01 -- 2026-03-01', all queries use these bounds"},
+    {"text": "structured_output", "passed": true, "evidence": "Follows template exactly: Sumar → 6 numbered categories → Zhrnutie najdov table"},
+    {"text": "slovak_language", "passed": true, "evidence": "All headings (Sumar, Toky penazi, Manipulacia obstaravania, etc.) and interpretations are in Slovak"}
+  ]
+}
