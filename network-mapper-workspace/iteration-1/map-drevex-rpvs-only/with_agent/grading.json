@@ -1,0 +1,11 @@
+{
+  "eval_id": 7,
+  "variant": "with_agent",
+  "expectations": [
+    {"text": "outputs_valid_json", "passed": true, "evidence": "Valid JSON matching network-mapper schema: suppliers_investigated, buyer (null), persons[], person_matrix (null), connections (null), rpvs[], zlte_stopy[], summary{}."},
+    {"text": "rpvs_section_populated", "passed": true, "evidence": "rpvs array has entry for ICO 36835463: registered=true, status='Platny', vlozka='17829', verification_date='2026-01-09'. Also includes historical entry vlozka 7426."},
+    {"text": "extracts_ubos_or_notes_missing", "passed": true, "evidence": "ubos array contains Zdenka Krizanova with birth_date '1969-04-06', nationality 'SK', public_official=false."},
+    {"text": "no_fabricated_connections", "passed": true, "evidence": "connections and person_matrix set to null (foaf phase not requested). No fabricated data."},
+    {"text": "summary_present", "passed": true, "evidence": "summary has suppliers_checked=1, persons_found=1, connections_found=0, rpvs_registered=1, rpvs_missing=0, zlte_stopy_count=0."}
+  ]
+}

@@ -1,0 +1,13 @@
+{
+  "eval_id": 6,
+  "eval_name": "map-yemanity-foaf-shallow",
+  "prompt": "Map YEMANITY s.r.o. (ICO 55002072) corporate network using foaf phase only, shallow depth. Known signatories: Jan Sutiak, Filip Sobol. Buyer: Ekonomicka univerzita v Bratislave (ICO 00399957).",
+  "assertions": [
+    {"text": "outputs_valid_json", "description": "Output is valid JSON matching the network-mapper output schema"},
+    {"text": "finds_persons", "description": "persons array contains at least Jan Sutiak and Filip Sobol"},
+    {"text": "builds_person_matrix", "description": "person_matrix section is present with headers and rows"},
+    {"text": "runs_crz_crossref", "description": "Ran SQL to check if foaf-connected companies also contract with the same buyer"},
+    {"text": "records_connections", "description": "connections array populated (even if empty, must exist)"},
+    {"text": "summary_present", "description": "summary section with suppliers_checked, persons_found, connections_found"}
+  ]
+}

@@ -1,0 +1,40 @@
+{
+  "skill_name": "network-mapper",
+  "iteration": 1,
+  "configurations": [
+    {
+      "name": "with_agent",
+      "evals": [
+        {"eval_name": "map-yemanity-foaf-shallow", "pass_rate": 1.0, "passed": 6, "total": 6, "tokens": 38670, "duration_s": 94.3, "tool_uses": 13},
+        {"eval_name": "map-drevex-rpvs-only", "pass_rate": 1.0, "passed": 5, "total": 5, "tokens": 51502, "duration_s": 144.8, "tool_uses": 27}
+      ],
+      "aggregate": {"mean_pass_rate": 1.0, "mean_tokens": 45086, "mean_duration_s": 119.6, "mean_tool_uses": 20.0}
+    },
+    {
+      "name": "without_agent",
+      "evals": [
+        {"eval_name": "map-yemanity-foaf-shallow", "pass_rate": 0.33, "passed": 2, "total": 6, "tokens": 31067, "duration_s": 136.6, "tool_uses": 23},
+        {"eval_name": "map-drevex-rpvs-only", "pass_rate": 0.40, "passed": 2, "total": 5, "tokens": 47123, "duration_s": 132.7, "tool_uses": 25}
+      ],
+      "aggregate": {"mean_pass_rate": 0.37, "mean_tokens": 39095, "mean_duration_s": 134.7, "mean_tool_uses": 24.0}
+    }
+  ],
+  "delta": {
+    "with_agent_vs_baseline": {
+      "pass_rate": "+63% (100% vs 37%) — baseline fails all schema and structure assertions",
+      "tokens": "+15% more tokens (45K vs 39K — agent reads two instruction files)",
+      "duration": "-11% faster (120s vs 135s — agent is more focused despite reading instructions)",
+      "tool_uses": "-17% fewer (20 vs 24 — agent follows efficient extraction plan)",
+      "quality": "Agent produces schema-compliant JSON consumable by downstream agents. Baseline finds equivalent data (same persons, same UBOs, same foaf details) but invents its own schema every time. Baseline DREVEX run actually produced richer analysis (risk_assessment with prior deletion flags, prose summary) but in incompatible format. Baseline foaf run also added CRZ contract details and red flag analysis beyond what was asked."
+    }
+  },
+  "notes": [
+    "Schema compliance gap is larger here than supplier-profiler (63% vs 24%) — network data has more structured fields to get wrong",
+    "Content assertions pass in both configs: finds_persons, extracts_ubos, no_fabricated_connections, runs_crz_crossref",
+    "Structure assertions always fail in baseline: outputs_valid_json, builds_person_matrix, records_connections, summary_present",
+    "Baseline is slower despite fewer tokens — spent more tool uses on exploratory queries and red flag analysis",
+    "Baseline adds valuable analysis the agent skips: risk_assessment, recommended_next_steps, red_flags by_type — useful but not schema-compatible",
+    "Both agents handled browser automation successfully — foaf.sk and rpvs.gov.sk pages loaded and were parsed correctly",
+    "Agent correctly sets unrequested phases to null; baseline omits them entirely"
+  ]
+}

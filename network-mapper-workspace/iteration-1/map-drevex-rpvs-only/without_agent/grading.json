@@ -1,0 +1,11 @@
+{
+  "eval_id": 7,
+  "variant": "without_agent",
+  "expectations": [
+    {"text": "outputs_valid_json", "passed": false, "evidence": "Valid JSON but different schema: uses subject{}, rpvs_registration{entries[]}, ubo_data{}, risk_assessment{}, summary (string). Missing: suppliers_investigated, persons[], connections, rpvs[], zlte_stopy[]."},
+    {"text": "rpvs_section_populated", "passed": false, "evidence": "rpvs_registration.entries has the data but NOT as rpvs[] array with registered/status/vlozka/ubos/verification_date fields matching the specified schema."},
+    {"text": "extracts_ubos_or_notes_missing", "passed": true, "evidence": "ubo_data.konecni_uzivatelia_vyhod has Zdenka Krizanova with date_of_birth, nationality, address, public_official=false."},
+    {"text": "no_fabricated_connections", "passed": true, "evidence": "No fabricated connections. risk_assessment.flags mentions single UBO and prior deletion but these are real findings."},
+    {"text": "summary_present", "passed": false, "evidence": "summary is a prose string, not a structured object with rpvs_registered count. risk_assessment has rpvs_registered=true but not in summary format."}
+  ]
+}

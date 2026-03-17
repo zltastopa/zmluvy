@@ -1,0 +1,12 @@
+{
+  "eval_id": 7,
+  "eval_name": "map-drevex-rpvs-only",
+  "prompt": "Check RPVS registration for DREVEX s.r.o. (ICO 36835463) using rpvs phase only. Context: threshold gaming flag, 912K EUR in public contracts.",
+  "assertions": [
+    {"text": "outputs_valid_json", "description": "Output is valid JSON matching the network-mapper output schema"},
+    {"text": "rpvs_section_populated", "description": "rpvs array has entry for ICO 36835463 with registered status (true/false)"},
+    {"text": "extracts_ubos_or_notes_missing", "description": "If registered: ubos array with names. If not: registered=false noted."},
+    {"text": "no_fabricated_connections", "description": "Does not fabricate person connections that weren't found in RPVS"},
+    {"text": "summary_present", "description": "summary section with rpvs_registered count"}
+  ]
+}

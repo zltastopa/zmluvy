@@ -1,0 +1,12 @@
+{
+  "eval_id": 6,
+  "variant": "with_agent",
+  "expectations": [
+    {"text": "outputs_valid_json", "passed": true, "evidence": "Valid JSON matching network-mapper schema: suppliers_investigated, buyer, persons[], person_matrix{headers,rows}, connections[], rpvs (null), related_crz_contracts[], zlte_stopy[], summary{}."},
+    {"text": "finds_persons", "passed": true, "evidence": "persons array contains Filip Sobol (konatel+spolocnik), Jan Sutiak (konatel+spolocnik), and Tomas Polka (historical spolocnik). All 3 with roles and dates."},
+    {"text": "builds_person_matrix", "passed": true, "evidence": "person_matrix has headers ['55002072 YEMANITY'] and rows for konatel, spolocnik, and historical spolocnik roles."},
+    {"text": "runs_crz_crossref", "passed": true, "evidence": "related_crz_contracts field present (empty array — no connected companies found in shallow mode, which is correct)."},
+    {"text": "records_connections", "passed": true, "evidence": "connections array present (empty [] — no cross-supplier connections with single supplier, correct)."},
+    {"text": "summary_present", "passed": true, "evidence": "summary has suppliers_checked=1, persons_found=3, connections_found=0, zlte_stopy_count=0."}
+  ]
+}
