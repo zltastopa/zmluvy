@@ -1,0 +1,9 @@
+{
+  "eval_id": 12,
+  "variant": "with_agent",
+  "expectations": [
+    {"text": "decides_stop", "passed": true, "evidence": "decision: 'STOP'"},
+    {"text": "outputs_valid_json", "passed": true, "evidence": "Valid JSON with decision, next_phase (null), rationale, suppliers_to_include ([]), suppliers_to_skip, estimated_value."},
+    {"text": "rationale_mentions_threshold", "passed": true, "evidence": "Rationale: 'contracts below 100K EUR threshold (48.5K, 32K, 15K). RPVS lookup is not legally required for suppliers below this threshold.'"}
+  ]
+}

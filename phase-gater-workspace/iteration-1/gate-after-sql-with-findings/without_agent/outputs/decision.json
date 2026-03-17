@@ -1,0 +1,36 @@
+{
+  "decision": "GO",
+  "rationale": "12 findings with meaningful severity distribution (2 DANGER, 5 WARNING, 5 INFO) justify critical-validation phase. Top findings exhibit established risk patterns: NACE mismatch combined with micro-supplier status (YEMANITY), and threshold gaming behavior (DREVEX). Critical-validation will distinguish legitimate explanations from genuine anomalies before deeper investigation.",
+  "suppliers_to_include": [
+    {
+      "company": "YEMANITY s.r.o.",
+      "ico": "55002072",
+      "severity": "DANGER",
+      "contract_value_eur": 892000,
+      "risk_flags": ["NACE mismatch", "micro supplier"]
+    },
+    {
+      "company": "DREVEX s.r.o.",
+      "ico": "36835463",
+      "severity": "DANGER",
+      "contract_value_eur": 213000,
+      "risk_flags": ["threshold gaming"]
+    },
+    {
+      "severity": "WARNING",
+      "count": 5,
+      "selection_strategy": "All WARNING-level findings; validate before deprioritizing"
+    },
+    {
+      "severity": "INFO",
+      "count": 5,
+      "selection_strategy": "Include INFO findings for comprehensive validation; may reveal context for higher-severity findings"
+    }
+  ],
+  "next_steps": [
+    "Execute critical-validation phase on all 12 findings",
+    "Focus validation effort on DANGER-level suppliers (YEMANITY, DREVEX)",
+    "Document innocent explanations to refine future query logic",
+    "Prepare findings that pass validation for deep-investigate phase"
+  ]
+}

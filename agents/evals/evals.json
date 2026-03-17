@@ -107,6 +107,75 @@
           ]
         }
       ]
+    },
+    {
+      "agent_name": "cross-referencer",
+      "evals": [
+        {
+          "id": 8,
+          "eval_name": "crossref-yemanity-profile",
+          "prompt": "Cross-reference YEMANITY s.r.o. supplier profile and network data. Identify patterns across contracts, flags, and persons. Classify findings as CONFIRMED/INCONCLUSIVE/DISMISSED.",
+          "assertions": [
+            {"text": "outputs_valid_json", "description": "Output is valid JSON matching the cross-referencer output schema"},
+            {"text": "identifies_nace_construction_pattern", "description": "Identifies systematic NACE mismatch — consulting firm doing construction across ALL contracts, not just individual flag"},
+            {"text": "identifies_micro_capacity_concern", "description": "Notes that 1-employee firm handling 892K EUR is a capacity red flag"},
+            {"text": "uses_confirmed_inconclusive_dismissed", "description": "All findings classified as CONFIRMED, INCONCLUSIVE, or DISMISSED"},
+            {"text": "no_fabricated_connections", "description": "Does not invent network connections not present in the input data"},
+            {"text": "quantifies_combined_impact", "description": "Computes combined contract value and/or combined flag count across the pattern"},
+            {"text": "summary_with_risk_level", "description": "summary section includes risk_level and confirmed/inconclusive/dismissed counts"}
+          ]
+        },
+        {
+          "id": 9,
+          "eval_name": "crossref-drevex-threshold",
+          "prompt": "Cross-reference DREVEX s.r.o. supplier profile with RPVS data. Focus on threshold gaming pattern and buyer concentration with Obec Liptovske Sliace.",
+          "assertions": [
+            {"text": "outputs_valid_json", "description": "Output is valid JSON matching the cross-referencer output schema"},
+            {"text": "identifies_threshold_pattern", "description": "Identifies that dodatok reduced amount to just below EU threshold — not just flagging the number but explaining the implication"},
+            {"text": "identifies_buyer_concentration", "description": "Notes 3 of 4 contracts from same buyer as a pattern, not just individual observation"},
+            {"text": "checks_innocent_explanations", "description": "Considers whether buyer concentration could be innocent (rural municipality, limited suppliers) before confirming"},
+            {"text": "uses_confirmed_inconclusive_dismissed", "description": "All findings classified using the framework"},
+            {"text": "no_fabricated_data", "description": "Does not fabricate financial data, connections, or UVO results not in the input"}
+          ]
+        }
+      ]
+    },
+    {
+      "agent_name": "phase-gater",
+      "evals": [
+        {
+          "id": 10,
+          "eval_name": "gate-after-sql-with-findings",
+          "prompt": "Decide whether to proceed from sql-analytics to critical-validation. Findings: 12 total (2 DANGER: YEMANITY NACE mismatch 892K, DREVEX threshold gaming 213K; 5 WARNING; 5 INFO). No findings dismissed yet.",
+          "assertions": [
+            {"text": "decides_go", "description": "Decision is GO — there are 12 findings including DANGER-level that need validation"},
+            {"text": "outputs_valid_json", "description": "Output matches phase-gater schema with decision, rationale, suppliers_to_include"},
+            {"text": "rationale_mentions_danger", "description": "Rationale references the DANGER-level findings as justification"},
+            {"text": "includes_both_suppliers", "description": "suppliers_to_include contains both 55002072 and 36835463"}
+          ]
+        },
+        {
+          "id": 11,
+          "eval_name": "gate-after-validation-all-dismissed",
+          "prompt": "Decide whether to proceed from critical-validation to finstat-enrichment. Findings: 8 total, all DISMISSED. Reasons: 3x ministry dotacie (normal budget allocations), 2x SFRB housing loans, 2x freelancer micro-contracts (STVR), 1x round amount grant.",
+          "assertions": [
+            {"text": "decides_stop", "description": "Decision is STOP — all findings were dismissed, no CONFIRMED or INCONCLUSIVE to enrich"},
+            {"text": "outputs_valid_json", "description": "Output matches phase-gater schema"},
+            {"text": "rationale_mentions_dismissed", "description": "Rationale notes that all findings were dismissed/innocent"},
+            {"text": "no_suppliers_to_include", "description": "suppliers_to_include is empty array or null"}
+          ]
+        },
+        {
+          "id": 12,
+          "eval_name": "gate-rpvs-small-contracts",
+          "prompt": "Decide whether to proceed from critical-validation to rpvs-lookup. Findings: 3 CONFIRMED findings, but all suppliers have contracts under 50K EUR (largest is 48,500 EUR). No DANGER-level findings.",
+          "assertions": [
+            {"text": "decides_stop", "description": "Decision is STOP — RPVS is not legally required for contracts under 100K EUR, and all are under 50K"},
+            {"text": "outputs_valid_json", "description": "Output matches phase-gater schema"},
+            {"text": "rationale_mentions_threshold", "description": "Rationale references the 100K EUR RPVS threshold"}
+          ]
+        }
+      ]
     }
   ]
 }

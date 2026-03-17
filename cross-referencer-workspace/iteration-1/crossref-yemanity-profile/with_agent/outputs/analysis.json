@@ -1,0 +1,189 @@
+{
+  "investigation_context": {
+    "type": "deep_dive",
+    "target": {"name": "YEMANITY s.r.o.", "ico": "55002072"},
+    "buyer_focus": "Ekonomicka univerzita v Bratislave",
+    "suppliers_analyzed": 1,
+    "network_data_available": true,
+    "data_sources": ["crz.db", "supplier-profiler output", "network-mapper (foaf shallow)"]
+  },
+  "findings": [
+    {
+      "id": 1,
+      "headline": "YEMANITY -- micro consulting firm winning large construction contracts (892K EUR total)",
+      "category": "nace_mismatch_with_scale",
+      "status": "CONFIRMED",
+      "severity": "DANGER",
+      "evidence": {
+        "suppliers": ["55002072"],
+        "ico": "55002072",
+        "nace": "70220 - Poradenske cinnosti v podnikani (business consulting)",
+        "actual_work": "construction and renovation (stavebna cast, vystavba posilnovne)",
+        "company_size": "1 zamestnanec (micro-entity)",
+        "company_founded": "2022-11-16",
+        "company_age_at_first_large_contract": "3 years and 2 months",
+        "total_crz_value": 892261.56,
+        "contract_ids": [11889441, 12036751, 12088132, 12058696, 12075436],
+        "construction_contracts": [
+          {"id": 11889441, "amount": 467641.57, "desc": "Vystavba posilnovne pri VSH"},
+          {"id": 12036751, "amount": 266657.41, "desc": "Zmluva o dielo - Obec Skalite"},
+          {"id": 12088132, "amount": 157610.59, "desc": "Zvysenie bezpecnosti budov V1 a V2 - stavebna cast"},
+          {"id": 12058696, "amount": 351.99, "desc": "Dodatok - Mesto Zilina"}
+        ],
+        "address": "Vychylovka 1045, Nova Bystrica (director Jan Sutiak's home address)",
+        "financials_2024": {
+          "revenue": 962988,
+          "equity": 51647,
+          "net_profit": 31421,
+          "debt_ratio_pct": 72.71,
+          "gross_margin_pct": 6.15
+        }
+      },
+      "why_not_innocent": "This is NOT a case of a consulting firm subcontracting occasional small works. YEMANITY is registered for NACE 70220 (business consulting) with 1 employee, yet 100% of its CRZ contracts are construction/renovation works totaling 892K EUR. The company is registered at the director's home in rural Nova Bystrica (Kysuce region). Revenue of 963K with a gross margin of only 6.15% is consistent with construction pass-through (subcontracting the actual work), not consulting. A legitimate consulting firm would not win a 468K gym construction contract or a 267K municipal construction contract. The NACE mismatch is systematic, not incidental.",
+      "next_steps": ["Verify if YEMANITY holds any construction trade licenses (zivnostenske opravnenia)", "Check UVO bid records for number of competing bidders on contract 544941"]
+    },
+    {
+      "id": 2,
+      "headline": "Building security project split: YEMANITY (158K, no UVO) + Time & Data (385K, with UVO) = 543K combined",
+      "category": "potential_contract_splitting",
+      "status": "INCONCLUSIVE",
+      "severity": "WARNING",
+      "evidence": {
+        "project": "Zvysenie bezpecnosti vyucbovych budov V1 a V2 Ekonomickej univerzity v Bratislave",
+        "parts": [
+          {
+            "supplier": "Time & Data s.r.o.",
+            "ico": "44862831",
+            "contract_id": 11949257,
+            "amount": 384990.80,
+            "date_signed": "2026-02-05",
+            "scope": "dodavka a montaz turniketov a EPS",
+            "uvo_url": "https://www.uvo.gov.sk/vyhladavanie/vyhladavanie-zakaziek/detail/547623",
+            "has_uvo": true
+          },
+          {
+            "supplier": "YEMANITY s.r.o.",
+            "ico": "55002072",
+            "contract_id": 12088132,
+            "amount": 157610.59,
+            "date_signed": "2026-03-10",
+            "scope": "stavebna cast (construction part)",
+            "uvo_url": "",
+            "has_uvo": false,
+            "poznamka": "s108 (low-value procurement exception)"
+            }
+        ],
+        "combined_value": 542601.39,
+        "time_gap_days": 33
+      },
+      "why_not_innocent": "Splitting a single building security project into technology (385K with public procurement) and construction (158K under s108 exception without public procurement) is a recognized risk pattern. The construction part was awarded to YEMANITY -- a 1-employee consulting firm from rural Kysuce -- without a UVO procurement process. However, it is also common practice to legitimately separate technology delivery from construction works in building projects, as they require different competencies. The s108 threshold for construction works (below 180K/215K) could legitimately apply to the construction-only portion.",
+      "next_steps": [
+        "Check UVO bid record 547623 for Time & Data to see if YEMANITY was mentioned as subcontractor",
+        "Review PDF of contract 12088132 for any reference to Time & Data or the joint project scope",
+        "Verify whether EUBA estimated the full project value before splitting into parts"
+      ]
+    },
+    {
+      "id": 3,
+      "headline": "Two large EUBA contracts (625K total) to YEMANITY within 53 days -- rapid repeat awarding",
+      "category": "buyer_concentration",
+      "status": "CONFIRMED",
+      "severity": "WARNING",
+      "evidence": {
+        "buyer": {"name": "Ekonomicka univerzita v Bratislave", "ico": "00399957"},
+        "supplier": {"name": "YEMANITY s.r.o.", "ico": "55002072"},
+        "contracts": [
+          {"id": 11889441, "amount": 467641.57, "date": "2026-01-16", "desc": "Vystavba posilnovne pri VSH"},
+          {"id": 12088132, "amount": 157610.59, "date": "2026-03-10", "desc": "Stavebna cast bezpecnosti budov V1+V2"}
+        ],
+        "combined_euba_value": 625252.16,
+        "days_between": 53,
+        "euba_share_of_total": "70.1% of YEMANITY's total CRZ revenue",
+        "buyer_signed_by": "prof. Ing. Ferdinand Dano, PhD. - rektor"
+      },
+      "why_not_innocent": "YEMANITY receives 70% of its total CRZ contract value from a single buyer (Ekonomicka univerzita). Both contracts are for construction work awarded to a consulting firm. The first contract (468K gym construction) had a UVO procurement reference, but the second (158K building security) did not, despite being related construction work for the same institution. This pattern of a buyer repeatedly awarding construction contracts to a micro consulting firm -- especially when the second contract lacks formal procurement -- exceeds what coincidence or routine procurement would explain. Note: Prof. Ferdinand Dano as rektor signs for many suppliers (flagged for 15 different suppliers), which is expected for a university rector and does NOT constitute suspicious signatory overlap on the buyer side.",
+      "next_steps": ["Check UVO record 544941 for the gym contract -- how many bidders competed?", "Review whether EUBA has a framework agreement with YEMANITY"]
+    },
+    {
+      "id": 4,
+      "headline": "Company registered at director's home in rural Kysuce, winning Bratislava construction contracts",
+      "category": "geographic_anomaly",
+      "status": "INCONCLUSIVE",
+      "severity": "INFO",
+      "evidence": {
+        "company_address": "Vychylovka 1045, 02305 Nova Bystrica (Kysuce region, ~300 km from Bratislava)",
+        "director_address": "Vychylovka 1045, 02305 Nova Bystrica (same as company)",
+        "bratislava_contracts_value": 625252.16,
+        "bratislava_contracts": [11889441, 12088132]
+      },
+      "why_not_innocent": "A 1-employee firm registered at a residential address in a remote Kysuce village winning construction contracts worth 625K in Bratislava is atypical. Construction firms typically operate closer to their projects. However, this alone is not dispositive -- the firm could employ subcontractors in Bratislava. Many small Slovak firms are registered at the owner's home for tax/administrative reasons. This is a supporting indicator, not a standalone finding.",
+      "next_steps": ["Check if YEMANITY has a branch office or registered establishment in Bratislava"]
+    },
+    {
+      "id": 5,
+      "headline": "No RPVS registration despite public contract value exceeding 100K threshold",
+      "category": "missing_rpvs",
+      "status": "INCONCLUSIVE",
+      "severity": "WARNING",
+      "evidence": {
+        "rpvs_data": null,
+        "total_public_contracts": 892261.56,
+        "threshold": "Partners must be registered in RPVS for public contracts above certain thresholds",
+        "foaf_persons": [
+          {"name": "Jan Sutiak", "role": "konatel + 50% spolocnik", "since": "2022-11-16"},
+          {"name": "Filip Sobol", "role": "konatel + 50% spolocnik", "since": "2024-03-19"}
+        ]
+      },
+      "why_not_innocent": "The network mapper did not find RPVS registration data for YEMANITY. For contracts awarded under standard procurement (not s108 exceptions), RPVS registration of beneficial owners is typically required. The first EUBA contract (468K with UVO reference) would normally require this. However, the network scan was shallow (foaf-only), so the RPVS data may simply not have been checked. This needs direct RPVS verification.",
+      "next_steps": ["Run RPVS lookup at rpvs.gov.sk for ICO 55002072", "Verify whether s110 procurement (referenced on contract 11889441) requires RPVS registration"]
+    }
+  ],
+  "dismissed": [
+    {
+      "pattern": "Signatory overlap -- Prof. Ing. Ferdinand Dano signs for 15 different suppliers",
+      "reason": "Ferdinand Dano is the Rektor of Ekonomicka univerzita. As the statutory head of the university, he signs ALL contracts on the buyer side. The flag counts him as signing 'for' 15 suppliers, but he is the buyer representative, not a supplier-side signatory. This is a data artifact of how the signatory_overlap flag is computed -- it conflates buyer-side and supplier-side signatories."
+    },
+    {
+      "pattern": "Signatory overlap -- Mgr. Peter Fiabane signs for 24 different suppliers",
+      "reason": "Peter Fiabane is the Primator (mayor) of Mesto Zilina. He signs all municipal contracts on the buyer side. The 'Dodatok c. 1 k zmluve o dielo 802/2025' (351.99 EUR) is a trivial amendment to an existing construction contract. Mayor signing municipal contracts is entirely routine."
+    },
+    {
+      "pattern": "Signatory overlap -- PaedDr. Jozef Cech signs for 11 different suppliers",
+      "reason": "Jozef Cech is the Starosta (mayor) of Obec Skalite. Same pattern as above -- municipal head signing buyer-side contracts. The two Skalite contracts (266K + 0 EUR dodatok) are normal municipal procurement."
+    },
+    {
+      "pattern": "Missing expiry dates on all 5 contracts",
+      "reason": "Construction contracts (zmluva o dielo) commonly do not have fixed end dates -- they end upon completion of works and final handover. This is standard practice for construction contracts and does not indicate an anomaly."
+    },
+    {
+      "pattern": "Hidden price on contract 12075436 (Dodatok k zmluve, Obec Skalite)",
+      "reason": "This is an amendment (dodatok) with 0.00 EUR value. Amendments that modify terms without changing the price legitimately have zero or null amounts. The underlying contract (12036751) has a disclosed price of 266,657.41 EUR."
+    },
+    {
+      "pattern": "Penalty asymmetry (strong_buyer_advantage) on contracts 12036751 and 12088132",
+      "reason": "Buyer-favorable penalty clauses are standard in Slovak public procurement, especially for construction contracts. Public bodies routinely include higher penalties for supplier delay than for their own late payment. This is a systemic feature of public procurement, not specific to YEMANITY."
+    }
+  ],
+  "network_analysis": {
+    "persons_found": 3,
+    "current_directors": ["Jan Sutiak", "Filip Sobol"],
+    "current_owners": {"Jan Sutiak": "50%", "Filip Sobol": "50%"},
+    "historical_persons": ["Tomas Polka (former spolocnik, exited)"],
+    "cross_company_connections": 0,
+    "note": "Shallow foaf scan found no connections to other companies for any of the three persons. Jan Sutiak and Filip Sobol appear only in YEMANITY. Tomas Polka is historical. No multi-company network detected. A deeper foaf scan (level 2+) could reveal connections through other companies or historical roles not captured in the shallow scan.",
+    "address_clustering": "No other CRZ suppliers found at Vychylovka 1045, Nova Bystrica"
+  },
+  "summary": {
+    "total_patterns_checked": 11,
+    "confirmed": 2,
+    "inconclusive": 3,
+    "dismissed": 6,
+    "risk_level": "HIGH",
+    "key_findings": [
+      "nace_mismatch_with_scale: 1-employee consulting firm winning 892K in construction contracts",
+      "buyer_concentration: 70% of revenue from single buyer (EUBA) with rapid repeat awarding",
+      "potential_contract_splitting: Building security project split into two suppliers, YEMANITY portion lacks UVO procurement"
+    ],
+    "narrative": "YEMANITY s.r.o. is a micro-entity (1 employee) registered for business consulting (NACE 70220) at a residential address in rural Kysuce. Despite this profile, 100% of its CRZ contracts are construction and renovation works totaling 892K EUR. The company has strong concentration on Ekonomicka univerzita v Bratislave (70% of total value, 2 contracts in 53 days). The most concerning pattern is the building security project at EUBA, where the construction portion (158K) was awarded to YEMANITY without a UVO procurement process (marked as s108 exception), while the technology portion (385K) went to Time & Data s.r.o. through standard procurement. The combined project value of 543K raises questions about whether this split was designed to keep individual parts below procurement thresholds. Network analysis found no multi-company web -- the two directors (Sutiak, Sobol) appear only in YEMANITY. However, deeper foaf/RPVS analysis was not performed in the shallow scan. The financial profile (963K revenue, 6% gross margin, 73% debt ratio) is consistent with a construction pass-through entity rather than a genuine consulting firm."
+  }
+}

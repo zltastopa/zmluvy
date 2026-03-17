@@ -1,0 +1,10 @@
+{
+  "eval_id": 12,
+  "eval_name": "gate-rpvs-small-contracts",
+  "prompt": "Decide whether to proceed from critical-validation to rpvs-lookup. All contracts under 50K EUR.",
+  "assertions": [
+    {"text": "decides_stop", "description": "Decision is STOP — under RPVS threshold"},
+    {"text": "outputs_valid_json", "description": "Output matches phase-gater schema"},
+    {"text": "rationale_mentions_threshold", "description": "References the 100K EUR threshold"}
+  ]
+}

@@ -1,0 +1,14 @@
+{
+  "eval_id": 8,
+  "eval_name": "crossref-yemanity-profile",
+  "prompt": "Cross-reference YEMANITY s.r.o. supplier profile and network data. Identify patterns across contracts, flags, and persons. Classify findings as CONFIRMED/INCONCLUSIVE/DISMISSED.",
+  "assertions": [
+    {"text": "outputs_valid_json", "description": "Output is valid JSON matching the cross-referencer output schema"},
+    {"text": "identifies_nace_construction_pattern", "description": "Identifies systematic NACE mismatch — consulting firm doing construction across ALL contracts"},
+    {"text": "identifies_micro_capacity_concern", "description": "Notes that 1-employee firm handling 892K EUR is a capacity red flag"},
+    {"text": "uses_confirmed_inconclusive_dismissed", "description": "All findings classified as CONFIRMED, INCONCLUSIVE, or DISMISSED"},
+    {"text": "no_fabricated_connections", "description": "Does not invent network connections not present in the input data"},
+    {"text": "quantifies_combined_impact", "description": "Computes combined contract value and/or combined flag count across the pattern"},
+    {"text": "summary_with_risk_level", "description": "summary section includes risk_level and confirmed/inconclusive/dismissed counts"}
+  ]
+}

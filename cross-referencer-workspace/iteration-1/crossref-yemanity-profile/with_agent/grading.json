@@ -1,0 +1,13 @@
+{
+  "eval_id": 8,
+  "variant": "with_agent",
+  "expectations": [
+    {"text": "outputs_valid_json", "passed": true, "evidence": "Valid JSON matching schema: investigation_context{}, findings[], dismissed[], network_analysis{}, summary{}."},
+    {"text": "identifies_nace_construction_pattern", "passed": true, "evidence": "Finding 1: '100% of its CRZ contracts are construction/renovation works totaling 892K EUR'. Identifies systematic pattern across ALL contracts, not just individual flag."},
+    {"text": "identifies_micro_capacity_concern", "passed": true, "evidence": "Finding 1: '1 zamestnanec (micro-entity)', total_crz_value 892261.56. 'A legitimate consulting firm would not win a 468K gym construction contract.'"},
+    {"text": "uses_confirmed_inconclusive_dismissed", "passed": true, "evidence": "2 CONFIRMED (NACE mismatch, buyer concentration), 3 INCONCLUSIVE (contract splitting, geographic, missing RPVS), 6 DISMISSED (signatories, expiry, hidden price, penalty asymmetry)."},
+    {"text": "no_fabricated_connections", "passed": true, "evidence": "Contract splitting finding (Time & Data) discovered via actual SQL query against crz.db. Network analysis explicitly states 'no connections' from shallow scan."},
+    {"text": "quantifies_combined_impact", "passed": true, "evidence": "Multiple quantifications: combined_euba_value 625252.16, combined_value 542601.39 (building security split), total 892261.56, 70.1% buyer concentration."},
+    {"text": "summary_with_risk_level", "passed": true, "evidence": "summary: risk_level 'HIGH', confirmed 2, inconclusive 3, dismissed 6, key_findings array, full narrative paragraph."}
+  ]
+}

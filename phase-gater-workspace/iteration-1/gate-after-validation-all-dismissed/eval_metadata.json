@@ -1,0 +1,11 @@
+{
+  "eval_id": 11,
+  "eval_name": "gate-after-validation-all-dismissed",
+  "prompt": "Decide whether to proceed from critical-validation to finstat-enrichment. All 8 findings dismissed.",
+  "assertions": [
+    {"text": "decides_stop", "description": "Decision is STOP"},
+    {"text": "outputs_valid_json", "description": "Output matches phase-gater schema"},
+    {"text": "rationale_mentions_dismissed", "description": "Notes all findings dismissed"},
+    {"text": "no_suppliers_to_include", "description": "Empty suppliers_to_include"}
+  ]
+}

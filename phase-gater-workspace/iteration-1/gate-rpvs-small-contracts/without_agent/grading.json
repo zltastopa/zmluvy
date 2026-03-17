@@ -1,0 +1,9 @@
+{
+  "eval_id": 12,
+  "variant": "without_agent",
+  "expectations": [
+    {"text": "decides_stop", "passed": true, "evidence": "decision: 'STOP'"},
+    {"text": "outputs_valid_json", "passed": false, "evidence": "Missing next_phase, suppliers_to_skip, estimated_value fields. Has non-schema 'threshold_analysis' object."},
+    {"text": "rationale_mentions_threshold", "passed": true, "evidence": "Rationale mentions '100K EUR RPVS verification threshold' and lists each supplier below it."}
+  ]
+}

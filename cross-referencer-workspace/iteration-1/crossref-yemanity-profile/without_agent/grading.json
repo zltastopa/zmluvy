@@ -1,0 +1,13 @@
+{
+  "eval_id": 8,
+  "variant": "without_agent",
+  "expectations": [
+    {"text": "outputs_valid_json", "passed": false, "evidence": "Valid JSON but different schema: uses subject{}, contracts{}, risk_assessment{} instead of investigation_context, summary{}. Findings use 'F1' string IDs and 'classification' field instead of 'status'. Missing dismissed[] as separate array — dismissed items embedded in findings array."},
+    {"text": "identifies_nace_construction_pattern", "passed": true, "evidence": "F1: 'NACE mismatch: consulting firm winning construction contracts'. Evidence lists all contracts as construction/renovation. 'complete category disconnect'."},
+    {"text": "identifies_micro_capacity_concern", "passed": true, "evidence": "F2: '1 employee', 'Equity of 51,647 EUR vs. total contract value of 892,261 EUR (17.3x leverage)'. 'cannot physically execute 892K in construction work'."},
+    {"text": "uses_confirmed_inconclusive_dismissed", "passed": true, "evidence": "3 CONFIRMED (F1, F2, F6), 4 INCONCLUSIVE (F3, F4, F8, F10), 3 DISMISSED (F5, F7, F9). All properly classified."},
+    {"text": "no_fabricated_connections", "passed": true, "evidence": "F9 explicitly notes 'foaf.sk shallow scan found 0 cross-supplier connections'. No fabricated data."},
+    {"text": "quantifies_combined_impact", "passed": true, "evidence": "Extensive: 892K total, 625,252 EUBA combined, 17.3x leverage, 72.71% debt ratio, 3 concurrent projects. Very thorough."},
+    {"text": "summary_with_risk_level", "passed": false, "evidence": "risk_assessment.overall_risk='HIGH' with confirmed_count/inconclusive_count/dismissed_count. But field is 'risk_assessment' not 'summary', missing key_findings array."}
+  ]
+}

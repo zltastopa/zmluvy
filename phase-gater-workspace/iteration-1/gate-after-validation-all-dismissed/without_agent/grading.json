@@ -1,0 +1,10 @@
+{
+  "eval_id": 11,
+  "variant": "without_agent",
+  "expectations": [
+    {"text": "decides_stop", "passed": true, "evidence": "decision: 'STOP'"},
+    {"text": "outputs_valid_json", "passed": false, "evidence": "Missing next_phase, suppliers_to_skip, estimated_value fields. Has non-schema 'next_steps' string field."},
+    {"text": "rationale_mentions_dismissed", "passed": true, "evidence": "Rationale: 'All 8 findings...systematically dismissed during critical-validation with legitimate explanations'. Lists all 4 categories."},
+    {"text": "no_suppliers_to_include", "passed": true, "evidence": "suppliers_to_include: []"}
+  ]
+}
