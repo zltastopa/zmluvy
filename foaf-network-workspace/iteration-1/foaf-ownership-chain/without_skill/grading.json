@@ -1,0 +1,11 @@
+{
+  "eval_id": 3,
+  "variant": "without_skill",
+  "expectations": [
+    {"text": "navigates_aricoma", "passed": true, "evidence": "Navigated to foaf.sk/36396222 for Aricoma Systems"},
+    {"text": "identifies_shareholder", "passed": true, "evidence": "Identified Aricoma Systems a.s. (Czech Republic) as 92% majority shareholder"},
+    {"text": "traces_ownership_chain", "passed": true, "evidence": "Traced via foaf.sk, aricoma.com, and kkcg.com to reach Karel Komarek"},
+    {"text": "reaches_ultimate_controller", "passed": true, "evidence": "Karel Komarek identified as founder & chairman of KKCG"},
+    {"text": "documents_chain", "passed": true, "evidence": "Tree diagram at lines 127-151 showing 5-level chain with percentages"}
+  ]
+}

@@ -1,0 +1,13 @@
+{
+  "eval_id": 1,
+  "eval_name": "foaf-deep-single-company",
+  "prompt": "Use foaf.sk to map the corporate network around PARA INVEST s.r.o. (ICO 44424418). This company has 863K EUR in CRZ contracts. Do a deep investigation — trace all persons to their other companies and build the person-to-company matrix. Check if any related companies also appear in CRZ.",
+  "assertions": [
+    {"name": "navigates_foaf", "text": "Navigates to foaf.sk with ICO 44424418 or searches for PARA INVEST"},
+    {"name": "extracts_persons", "text": "Extracts at least one person with their role (konatel/spolocnik/etc) from the company page"},
+    {"name": "traces_persons", "text": "For persons with 2+ companies, clicks through to find their other companies"},
+    {"name": "builds_matrix", "text": "Builds a person-to-company matrix showing roles across multiple companies"},
+    {"name": "crz_cross_reference", "text": "Runs SQL against CRZ database to check if related companies also have government contracts"},
+    {"name": "reports_zlte_stopy", "text": "Reports zlte stopy section with severity levels (DANGER/WARNING)"}
+  ]
+}

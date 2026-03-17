@@ -1,0 +1,12 @@
+{
+  "eval_id": 3,
+  "eval_name": "foaf-ownership-chain",
+  "prompt": "I found that Aricoma Systems s.r.o. (ICO 36396222) has 9.7M EUR in CRZ contracts. Use foaf.sk to investigate their ownership structure — I want to know who ultimately controls this company. Trace the ownership chain until you reach natural persons or a well-known parent company.",
+  "assertions": [
+    {"name": "navigates_aricoma", "text": "Navigates to foaf.sk with ICO 36396222 for Aricoma Systems"},
+    {"name": "identifies_shareholder", "text": "Identifies the jediny akcionar (sole shareholder) or major shareholders of Aricoma"},
+    {"name": "traces_ownership_chain", "text": "Traces the ownership chain by looking up parent companies on foaf.sk"},
+    {"name": "reaches_ultimate_controller", "text": "Reaches an ultimate controller — either natural persons or a well-known holding company"},
+    {"name": "documents_chain", "text": "Documents the full ownership chain in a tree/hierarchical format"}
+  ]
+}

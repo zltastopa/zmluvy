@@ -1,0 +1,11 @@
+{
+  "eval_id": 2,
+  "variant": "with_skill",
+  "expectations": [
+    {"text": "looks_up_all_three", "passed": true, "evidence": "Navigated to foaf.sk for all 3 ICOs: 55002072, 46268995, 36835463"},
+    {"text": "extracts_persons_each", "passed": true, "evidence": "YEMANITY: Sobol+Sutiak. AMG: Antalicz. DREVEX: Sramkova+Krizanova. All with roles and dates."},
+    {"text": "notes_connections", "passed": true, "evidence": "Prepojene osoby listed for each company including historical persons (Tomas Polka, Norbert Matysek)"},
+    {"text": "checks_overlaps", "passed": true, "evidence": "Explicitly stated 'Prekryv osob medzi firmami: ziadny' in Sumar, detailed in matrix section"},
+    {"text": "uses_output_template", "passed": true, "evidence": "Follows template: Sumar header, per-company sections with Osoby/Prepojene/Vlastnicka/Dlhy/CRZ/Zlte stopy, Person-to-company matrix, Zhrnutie"}
+  ]
+}

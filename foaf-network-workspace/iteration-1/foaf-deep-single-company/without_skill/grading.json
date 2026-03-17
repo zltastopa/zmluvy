@@ -1,0 +1,12 @@
+{
+  "eval_id": 1,
+  "variant": "without_skill",
+  "expectations": [
+    {"text": "navigates_foaf", "passed": true, "evidence": "Navigated to foaf.sk/44424418 for PARA INVEST"},
+    {"text": "extracts_persons", "passed": true, "evidence": "Extracted 4 persons including historical Mgr. Jan Buocik, plus all current officers with roles and dates"},
+    {"text": "traces_persons", "passed": true, "evidence": "Traced all 4 persons extensively. Found STRIM-SK (Milan Strelec, 70K CRZ) and CULTUS Ruzinov (Jan Buocik, 67K CRZ). Also traced Kusalik real estate cluster."},
+    {"text": "builds_matrix", "passed": true, "evidence": "Detailed per-person company tables (lines 66-123) showing all companies for each person with roles and dates"},
+    {"text": "crz_cross_reference", "passed": true, "evidence": "Found STRIM-SK (70,559 EUR with STU), CULTUS Ruzinov (67,453 EUR, 111 contracts), and Arboria entities (easements)"},
+    {"text": "reports_zlte_stopy", "passed": true, "evidence": "Key Findings section with MODERATE risk assessment. 5 findings: STRIM-SK cross-sector, signatory overlaps, hidden entities, RE cluster, Buocik network."}
+  ]
+}

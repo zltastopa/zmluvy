@@ -1,0 +1,12 @@
+{
+  "eval_id": 1,
+  "variant": "with_skill_v2",
+  "expectations": [
+    {"text": "navigates_foaf", "passed": true, "evidence": "Navigated to foaf.sk for ICO 44424418"},
+    {"text": "extracts_persons", "passed": true, "evidence": "3 current persons (Kusalikova, Kusalik, Strelec) + 2 historical (Michal Toth via historical view, plus re-registered entries)"},
+    {"text": "traces_persons", "passed": true, "evidence": "Traced all 3 current persons: Kusalikova->MILEN PLUS, Kusalik->MILEN, Strelec->CREDITS BANKS SLOVAKIA. Found wider Kusalik family cluster (Simon, Jozef, Zuzana)."},
+    {"text": "builds_matrix", "passed": true, "evidence": "Person-to-company matrix at lines 153-164 covering 4 companies"},
+    {"text": "crz_cross_reference", "passed": true, "evidence": "Ran SQL for all discovered ICOs. No related companies have CRZ contracts."},
+    {"text": "reports_zlte_stopy", "passed": true, "evidence": "2 WARNING flags: same address (3 entities at Majernikova 23), family connections in multiple roles"}
+  ]
+}

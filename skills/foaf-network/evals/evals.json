@@ -1,0 +1,45 @@
+{
+  "skill_name": "foaf-network",
+  "evals": [
+    {
+      "id": 1,
+      "prompt": "Use foaf.sk to map the corporate network around PARA INVEST s.r.o. (ICO 44424418). This company has 863K EUR in CRZ contracts. Do a deep investigation — trace all persons to their other companies and build the person-to-company matrix. Check if any related companies also appear in CRZ.",
+      "expected_output": "Full corporate network map with persons, roles, related companies, ownership chain, person-to-company matrix, CRZ cross-reference, and zlte stopy",
+      "files": [],
+      "assertions": [
+        {"name": "navigates_foaf", "text": "Navigates to foaf.sk with ICO 44424418 or searches for PARA INVEST"},
+        {"name": "extracts_persons", "text": "Extracts at least one person with their role (konatel/spolocnik/etc) from the company page"},
+        {"name": "traces_persons", "text": "For persons with 2+ companies, clicks through to find their other companies"},
+        {"name": "builds_matrix", "text": "Builds a person-to-company matrix showing roles across multiple companies"},
+        {"name": "crz_cross_reference", "text": "Runs SQL against CRZ database to check if related companies also have government contracts"},
+        {"name": "reports_zlte_stopy", "text": "Reports zlte stopy section with severity levels (DANGER/WARNING)"}
+      ]
+    },
+    {
+      "id": 2,
+      "prompt": "Do a shallow foaf.sk lookup for these 3 companies that have CRZ contracts: YEMANITY s.r.o. (ICO 55002072), AMG Security s.r.o. (ICO 46268995), and DREVEX EU, s.r.o. (ICO 36835463). Extract key company data and connected persons for each, but don't trace deep. Note any obvious overlaps.",
+      "expected_output": "Shallow company profiles for all 3 companies with persons, connected entities, and any cross-company overlaps noted",
+      "files": [],
+      "assertions": [
+        {"name": "looks_up_all_three", "text": "Navigates to foaf.sk for all 3 companies (ICOs 55002072, 46268995, 36835463)"},
+        {"name": "extracts_persons_each", "text": "Extracts persons with roles for each of the 3 companies"},
+        {"name": "notes_connections", "text": "Notes prepojene osoby/spolocnosti (connected persons/companies) for each company"},
+        {"name": "checks_overlaps", "text": "Checks whether any persons or companies appear across multiple of the 3 companies"},
+        {"name": "uses_output_template", "text": "Output follows the structured template with Sumar, per-company sections, and zlte stopy"}
+      ]
+    },
+    {
+      "id": 3,
+      "prompt": "I found that Aricoma Systems s.r.o. (ICO 36396222) has 9.7M EUR in CRZ contracts. Use foaf.sk to investigate their ownership structure — I want to know who ultimately controls this company. Trace the ownership chain until you reach natural persons or a well-known parent company.",
+      "expected_output": "Ownership chain traced from Aricoma to ultimate controller, with each level documented",
+      "files": [],
+      "assertions": [
+        {"name": "navigates_aricoma", "text": "Navigates to foaf.sk with ICO 36396222 for Aricoma Systems"},
+        {"name": "identifies_shareholder", "text": "Identifies the jediny akcionar (sole shareholder) or major shareholders of Aricoma"},
+        {"name": "traces_ownership_chain", "text": "Traces the ownership chain by looking up parent companies on foaf.sk"},
+        {"name": "reaches_ultimate_controller", "text": "Reaches an ultimate controller — either natural persons or a well-known holding company"},
+        {"name": "documents_chain", "text": "Documents the full ownership chain in a tree/hierarchical format"}
+      ]
+    }
+  ]
+}
