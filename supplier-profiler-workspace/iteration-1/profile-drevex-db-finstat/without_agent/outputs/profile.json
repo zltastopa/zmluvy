@@ -1,0 +1,203 @@
+{
+  "supplier": {
+    "name": "DREVEX EU, s.r.o.",
+    "ico": "36835463",
+    "dic": "2022449561",
+    "legal_form": "Spol. s r. o.",
+    "established_on": "2007-09-20",
+    "terminated_on": null,
+    "address": {
+      "street": "Bojnická cesta 1870/45B",
+      "city": "Prievidza",
+      "postal_code": "97101",
+      "region": "Trenčiansky kraj",
+      "district": "Prievidza"
+    },
+    "nace_code": "31090",
+    "nace_category": "Výroba ostatného nábytku",
+    "organization_size": "3-4 zamestnanci",
+    "ownership_type": "Súkromné tuzemské"
+  },
+  "financial_data": {
+    "finstat_summary": {
+      "source": "https://finstat.sk/36835463",
+      "latest_profit_loss": -139597,
+      "latest_revenue": 347033,
+      "latest_assets": 504211,
+      "currency": "EUR",
+      "note": "Company moved from profit to loss: from 31,105 EUR to -139,597 EUR (per FinStat 2025 data)"
+    },
+    "ruz_equity": {
+      "obdobie": "2022-01-2022-12",
+      "vlastne_imanie": 376995.0,
+      "zakladne_imanie": 6640.0,
+      "vysledok_hospodarenia": 7475.0,
+      "celkove_pasiva": 423710.0
+    },
+    "finstat_additional_table_values": {
+      "note": "Extracted from FinStat HTML table cells (latest available year)",
+      "trzby_celkove": 351161,
+      "zisk_strata": -139597,
+      "celkove_aktiva": 504211,
+      "vlastne_imanie": 436619
+    }
+  },
+  "tax_reliability": {
+    "status": "vysoko spoľahlivý",
+    "source": "tax_reliability table"
+  },
+  "debtor_status": {
+    "vszp_health_insurance": {
+      "is_debtor": false,
+      "note": "Not found in VSZP debtors list"
+    },
+    "socpoist_social_insurance": {
+      "is_debtor": false,
+      "note": "Not found in Social Insurance debtors list (searched by name DREVEX)"
+    },
+    "fs_tax_debtors": {
+      "is_debtor": false,
+      "note": "Not found in Financial Administration tax debtors list. Note: 'Drevex Revúca s.r.o.' and 'EURO DREVEX, s.r.o.' are separate entities found as tax debtors but are NOT this company."
+    }
+  },
+  "contracts": {
+    "summary": {
+      "total_contracts": 4,
+      "total_value": 912875.25,
+      "average_value": 228218.81,
+      "min_value": 212783.85,
+      "max_value": 235889.40,
+      "earliest_publication": "2025-09-26",
+      "latest_publication": "2026-02-03",
+      "unique_buyers": 2
+    },
+    "buyer_breakdown": [
+      {
+        "buyer": "Obec Liptovské Sliače",
+        "buyer_ico": "00315745",
+        "contract_count": 3,
+        "total_value": 677699.25
+      },
+      {
+        "buyer": "Centrum podporných služieb, Starohájska ulica 6868/10, Trnava",
+        "buyer_ico": "53243188",
+        "contract_count": 1,
+        "total_value": 235176.0
+      }
+    ],
+    "detail": [
+      {
+        "id": 11938512,
+        "title": "Kúpna zmluva - nábytok DREVEX",
+        "supplier": "DREVEX EU, s.r.o.",
+        "buyer": "Centrum podporných služieb, Starohájska ulica 6868/10, Trnava",
+        "buyer_ico": "53243188",
+        "value": 235176.0,
+        "published": "2026-02-03",
+        "signed": "2026-01-30",
+        "uvo_url": ""
+      },
+      {
+        "id": 11696268,
+        "title": "Dodatok č. 1 ku Kúpnej zmluve č. 113-2025 uzatvorenej dňa 24.9.2025 v súlade so zákonom č. 343-2015 Z.z. o verejnom obstarávaní",
+        "supplier": "DREVEX EU, s.r.o.",
+        "buyer": "Obec Liptovské Sliače",
+        "buyer_ico": "00315745",
+        "value": 212783.85,
+        "published": "2025-12-05",
+        "signed": "2025-11-19",
+        "uvo_url": ""
+      },
+      {
+        "id": 11387669,
+        "title": "Kúpna zmluva uzatvorená v súlade so zákonom č. 343-2015 Z.z.",
+        "supplier": "DREVEX EU, s.r.o.",
+        "buyer": "Obec Liptovské Sliače",
+        "buyer_ico": "00315745",
+        "value": 229026.0,
+        "published": "2025-10-03",
+        "signed": "2025-10-03",
+        "uvo_url": ""
+      },
+      {
+        "id": 11353827,
+        "title": "Kúpna zmluva uzatvorená v súlade so zákonom č. 343-2015 Z.z.",
+        "supplier": "DREVEX EU, s.r.o.",
+        "buyer": "Obec Liptovské Sliače",
+        "buyer_ico": "00315745",
+        "value": 235889.40,
+        "published": "2025-09-26",
+        "signed": "2025-09-24",
+        "uvo_url": ""
+      }
+    ]
+  },
+  "red_flags": {
+    "total_flags": 5,
+    "by_severity": {
+      "warning": 1,
+      "info": 4
+    },
+    "flags": [
+      {
+        "contract_id": 11696268,
+        "flag_type": "threshold_gaming",
+        "label": "Tesne pod limitom EU sutaze",
+        "severity": "warning",
+        "detail": "212,783.85 EUR (iba 2,216 EUR pod EU limitom 215K)"
+      },
+      {
+        "contract_id": 11353827,
+        "flag_type": "missing_expiry",
+        "label": "Neuvedena platnost",
+        "severity": "info",
+        "detail": null
+      },
+      {
+        "contract_id": 11387669,
+        "flag_type": "missing_expiry",
+        "label": "Neuvedena platnost",
+        "severity": "info",
+        "detail": null
+      },
+      {
+        "contract_id": 11696268,
+        "flag_type": "missing_expiry",
+        "label": "Neuvedena platnost",
+        "severity": "info",
+        "detail": null
+      },
+      {
+        "contract_id": 11938512,
+        "flag_type": "missing_expiry",
+        "label": "Neuvedena platnost",
+        "severity": "info",
+        "detail": null
+      }
+    ]
+  },
+  "risk_assessment": {
+    "overall_risk": "medium",
+    "key_concerns": [
+      "Threshold gaming: Amendment (Dodatok č. 1) to Obec Liptovské Sliače contract reduced value to 212,783.85 EUR — only 2,216 EUR below the 215K EU procurement threshold, potentially avoiding mandatory EU-wide tender.",
+      "Revenue-to-contracts mismatch: Company reports 347K EUR revenue (FinStat) but holds 912K EUR in active government contracts — nearly 3x its annual revenue, raising capacity concerns.",
+      "Micro-company with large contracts: Only 3-4 employees per registry, yet awarded four contracts totaling 912K EUR in under 5 months.",
+      "Recent financial deterioration: Company swung from 31,105 EUR profit to -139,597 EUR loss, yet continues winning large public contracts.",
+      "Concentrated buyer: 3 of 4 contracts (74% of value) are with a single buyer — Obec Liptovské Sliače.",
+      "All contracts missing expiry dates (info-level flag on all 4 contracts)."
+    ],
+    "mitigating_factors": [
+      "Tax reliability status: 'vysoko spoľahlivý' (highly reliable) — the highest rating from Slovak Financial Administration.",
+      "No outstanding debts to health insurance (VSZP), social insurance, or tax authorities.",
+      "Company has been operating since 2007 — 18+ years of business history.",
+      "Positive equity of 376,995 EUR (as of 2022) and 436,619 EUR (latest FinStat)."
+    ]
+  },
+  "metadata": {
+    "profile_generated": "2026-03-17",
+    "data_sources": [
+      "crz.db (zmluvy, red_flags, flag_rules, ruz_entities, ruz_equity, tax_reliability, vszp_debtors, socpoist_debtors, fs_tax_debtors)",
+      "https://finstat.sk/36835463"
+    ]
+  }
+}

@@ -1,0 +1,40 @@
+{
+  "skill_name": "supplier-profiler",
+  "iteration": 1,
+  "configurations": [
+    {
+      "name": "with_agent",
+      "evals": [
+        {"eval_name": "profile-yemanity-db-only", "pass_rate": 1.0, "passed": 7, "total": 7, "tokens": 19992, "duration_s": 90.6, "tool_uses": 17},
+        {"eval_name": "profile-drevex-db-finstat", "pass_rate": 1.0, "passed": 5, "total": 5, "tokens": 29283, "duration_s": 116.3, "tool_uses": 22}
+      ],
+      "aggregate": {"mean_pass_rate": 1.0, "mean_tokens": 24638, "mean_duration_s": 103.5, "mean_tool_uses": 19.5}
+    },
+    {
+      "name": "without_agent",
+      "evals": [
+        {"eval_name": "profile-yemanity-db-only", "pass_rate": 0.71, "passed": 5, "total": 7, "tokens": 17292, "duration_s": 68.2, "tool_uses": 12},
+        {"eval_name": "profile-drevex-db-finstat", "pass_rate": 0.80, "passed": 4, "total": 5, "tokens": 19342, "duration_s": 138.5, "tool_uses": 23}
+      ],
+      "aggregate": {"mean_pass_rate": 0.76, "mean_tokens": 18317, "mean_duration_s": 103.4, "mean_tool_uses": 17.5}
+    }
+  ],
+  "delta": {
+    "with_agent_vs_baseline": {
+      "pass_rate": "+24% (100% vs 76%) — baseline finds the same data but uses its own JSON structure instead of the specified schema",
+      "tokens": "+34% more tokens (25K vs 18K — agent reads instruction file and follows structured query plan)",
+      "duration": "comparable (104s vs 103s)",
+      "tool_uses": "+11% more (19.5 vs 17.5)",
+      "quality": "Agent produces schema-compliant JSON with consistent field names (ico, contracts[], flags[], summary{}). Baseline finds equivalent data but invents its own schema (supplier{}, contracts.items[], red_flags.by_type{}) making it incompatible with downstream agents. Both find the same flags and facts. Baseline actually adds richer analysis (key_concerns prose, mitigating_factors, funding_sources, IBAN) but at the cost of schema compatibility."
+    }
+  },
+  "notes": [
+    "Schema compliance is the discriminating factor: with_agent always matches the output spec, baseline always invents its own structure",
+    "Content assertions (flags, contracts, signatories, financial data) pass in both configurations — baseline is equally thorough at data gathering",
+    "Baseline DREVEX run was slowest (139s) despite fewer tokens — spent time on iterative queries and HTML parsing",
+    "Baseline adds value beyond spec: funding sources, IBAN, buyer breakdown, mitigating factors — useful but not schema-compatible",
+    "Both correctly handle missing data: null for unavailable phases, graceful finstat extraction",
+    "The calculates_summary assertion is discriminating: agent produces the exact summary format, baseline scatters stats across sections",
+    "DREVEX baseline incorrectly reports fs_tax_debtors as false (distinguishing DREVEX EU from other DREVEX entities), while agent correctly marks tax debtor as true"
+  ]
+}

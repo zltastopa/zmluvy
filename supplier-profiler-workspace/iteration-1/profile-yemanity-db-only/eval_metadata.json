@@ -1,0 +1,14 @@
+{
+  "eval_id": 4,
+  "eval_name": "profile-yemanity-db-only",
+  "prompt": "Profile YEMANITY s.r.o. (ICO 55002072) using db phase only",
+  "assertions": [
+    {"text": "outputs_valid_json", "description": "Output is valid JSON matching the supplier-profiler output schema"},
+    {"text": "finds_all_contracts", "description": "Profile contains all 5 YEMANITY contracts findable by ICO (IDs 11889441, 12036751, 12088132, 12058696, 12075436). Contract 12059873 has empty dodavatel_ico and is not expected."},
+    {"text": "finds_nace_mismatch_flag", "description": "Flags array contains nace_mismatch entries"},
+    {"text": "finds_micro_supplier_flag", "description": "Flags array contains micro_supplier entries"},
+    {"text": "extracts_signatories", "description": "Extractions include signatory data (Jan Sutiak appears)"},
+    {"text": "includes_ruz_data", "description": "Profile section populated with data from ruz_entities (NACE, founding date, size)"},
+    {"text": "calculates_summary", "description": "Summary includes total_contracts, total_value, flag_count, and key_flags"}
+  ]
+}

@@ -1,53 +1,82 @@
 {
-  "skill_name": "report-writer",
-  "evals": [
+  "agents": [
     {
-      "id": 1,
-      "eval_name": "deep-dive-yemanity",
-      "prompt": "You are the report-writer agent. Read agents/report-writer.md for your instructions.\n\nWrite an INVESTIGATIVNA SPRAVA from the following structured findings data. Save the report to outputs/report.md.\n\n```json\n{\n  \"report_type\": \"deep_dive\",\n  \"target\": {\"name\": \"YEMANITY s.r.o.\", \"ico\": \"55002072\"},\n  \"findings\": [\n    {\n      \"status\": \"CONFIRMED\",\n      \"severity\": \"HIGH\",\n      \"headline\": \"Mikro poradenska firma realizuje stavebne zakazky za 892 262 EUR\",\n      \"supplier\": {\"name\": \"YEMANITY s.r.o.\", \"ico\": \"55002072\", \"nace\": \"70220 - Poradenske cinnosti v podnikani\", \"employees\": \"1\", \"founded\": \"2022-11-16\", \"address\": \"Nova Bystrica, Vychylovka 1045\"},\n      \"contracts\": [\n        {\"id\": 11889441, \"name\": \"Vystavba posilnovne pri VSH, Univerzitne Sportove centrum\", \"buyer\": \"Ekonomicka univerzita v Bratislave\", \"buyer_ico\": \"00399957\", \"amount\": 467641.57, \"date_signed\": \"2026-01-16\", \"date_published\": \"2026-01-23\", \"uvo_url\": \"https://www.uvo.gov.sk/vyhladavanie/vyhladavanie-zakaziek/detail/544941\"},\n        {\"id\": 12036751, \"name\": \"Zmluva o dielo (Doplnkova budova ZpS Goral Skalite)\", \"buyer\": \"Obec Skalite\", \"buyer_ico\": \"00314285\", \"amount\": 266657.41, \"date_signed\": \"2026-02-25\", \"date_published\": \"2026-02-25\", \"uvo_url\": \"https://www.uvo.gov.sk/vyhladavanie/vyhladavanie-zakaziek/detail/548246\"},\n        {\"id\": 12088132, \"name\": \"Zvysenie bezpecnosti vyucbovych budov V1 a V2 EUBA\", \"buyer\": \"Ekonomicka univerzita v Bratislave\", \"buyer_ico\": \"00399957\", \"amount\": 157610.59, \"date_signed\": \"2026-03-10\", \"date_published\": \"2026-03-11\"},\n        {\"id\": 12058696, \"name\": \"Dodatok c. 1 k zmluve o dielo 802/2025 (ZS Jarna, Zilina)\", \"buyer\": \"Mesto Zilina\", \"buyer_ico\": \"00321796\", \"amount\": 351.99, \"date_signed\": \"2026-02-27\", \"date_published\": \"2026-03-03\"},\n        {\"id\": 12075436, \"name\": \"Dodatok k zmluve (Doplnkova budova ZpS Goral)\", \"buyer\": \"Obec Skalite\", \"buyer_ico\": \"00314285\", \"amount\": 0.00, \"date_signed\": \"2026-03-04\", \"date_published\": \"2026-03-07\"},\n        {\"id\": 12059873, \"name\": \"Kupna zmluva\", \"buyer\": \"Obec Stara Bystrica\", \"buyer_ico\": \"00314307\", \"amount\": 0.00, \"date_signed\": \"2026-03-03\", \"date_published\": \"2026-03-04\"}\n      ],\n      \"flags\": [\n        {\"type\": \"nace_mismatch\", \"severity\": \"warning\", \"detail\": \"NACE 70220 (poradenstvo) vs construction_renovation\", \"count\": 3},\n        {\"type\": \"micro_supplier\", \"severity\": \"warning\", \"detail\": \"1 zamestnanec, zmluvy nad 150K EUR\", \"count\": 3},\n        {\"type\": \"signatory_overlap\", \"severity\": \"warning\", \"detail\": \"Jan Sutiak podpisuje vsetky zmluvy\", \"count\": 3}\n      ],\n      \"signatories\": [\n        {\"contract_id\": 12036751, \"buyer_signatory\": \"PaedDr. Jozef Cech, starosta\", \"supplier_signatory\": \"Jan Sutiak, konatel\"},\n        {\"contract_id\": 12058696, \"buyer_signatory\": \"Mgr. Peter Fiabane, primator\", \"supplier_signatory\": \"Filip Sobol + Jan Sutiak, konatelia\"},\n        {\"contract_id\": 12088132, \"buyer_signatory\": \"prof. Ing. Ferdinand Dano, PhD., rektor\", \"supplier_signatory\": \"Jan Sutiak, statutarny zastupca\"}\n      ],\n      \"evidence\": \"Firma registrovana ako poradenska (NACE 70220) realizuje vylucne stavebne zakazky. 1 zamestnanec, zalozena 2022, ziskala 3 velke stavebne zmluvy za 47 dni.\"\n    },\n    {\n      \"status\": \"INCONCLUSIVE\",\n      \"severity\": \"MEDIUM\",\n      \"headline\": \"Povodna zmluva 802/2025 s Mestom Zilina chyba v CRZ\",\n      \"contracts\": [{\"id\": 12058696, \"name\": \"Dodatok c. 1\", \"amount\": 351.99}],\n      \"evidence\": \"Dodatok odkazuje na povodnu zmluvu o dielo 802/2025 pre debarierizaciu ZS Jarna. Povodna zmluva nie je v CRZ databaze.\",\n      \"next_steps\": \"Vyhladat zmluvu 802/2025 na CRZ portali alebo v archivoch Mesta Zilina.\"\n    },\n    {\n      \"status\": \"INCONCLUSIVE\",\n      \"severity\": \"LOW\",\n      \"headline\": \"Kupna zmluva s Obcou Stara Bystrica -- nulova suma, susedna obec\",\n      \"contracts\": [{\"id\": 12059873, \"name\": \"Kupna zmluva\", \"amount\": 0.00}],\n      \"evidence\": \"Nulova suma, chybajuce ICO dodavatela. Obec Stara Bystrica susedi s Novou Bystricou (sidlo YEMANITY).\",\n      \"next_steps\": \"Stiahnut PDF prilohu zmluvy, overit predmet kupnej zmluvy.\"\n    }\n  ],\n  \"dismissed_summary\": [],\n  \"stats\": {\"total_contracts\": 6, \"total_value\": 892261.56}\n}\n```",
-      "expected_output": "INVESTIGATIVNA SPRAVA report in Slovak with CONFIRMED section (YEMANITY contracts, NACE mismatch, micro supplier flags), two INCONCLUSIVE sections, ASCII network diagram, CRZ URLs, ends with Dakujeme",
-      "assertions": [
-        {"text": "uses_investigativna_sprava_template", "description": "Report starts with '# INVESTIGATIVNA SPRAVA: YEMANITY' and follows the deep dive template structure"},
-        {"text": "includes_all_6_contracts", "description": "All 6 contracts appear in the report with their IDs (11889441, 12036751, 12088132, 12058696, 12075436, 12059873)"},
-        {"text": "explains_nace_mismatch", "description": "Report explains the NACE 70220 (poradenstvo) vs construction discrepancy as a key finding"},
-        {"text": "includes_ascii_diagram", "description": "Report contains an ASCII network diagram showing YEMANITY connected to its buyers"},
-        {"text": "all_crz_urls_present", "description": "Every contract ID has a corresponding CRZ URL (crz.gov.sk/zmluva/{id})"},
-        {"text": "has_inconclusive_sections", "description": "Both INCONCLUSIVE findings (Zilina 802/2025, Stara Bystrica) have 'Co nevieme' and 'Dalsie kroky'"},
-        {"text": "ends_with_dakujeme", "description": "Report ends with 'Dakujeme Zltej Stope'"},
-        {"text": "amounts_formatted_with_spaces", "description": "Monetary amounts use space formatting (e.g., '892 261' or '467 641') not commas"}
-      ],
-      "files": []
+      "agent_name": "report-writer",
+      "evals": [
+        {
+          "id": 1,
+          "eval_name": "deep-dive-yemanity",
+          "prompt": "Write INVESTIGATIVNA SPRAVA for YEMANITY s.r.o. from structured findings data",
+          "assertions": [
+            {"text": "uses_investigativna_sprava_template"},
+            {"text": "includes_all_6_contracts"},
+            {"text": "explains_nace_mismatch"},
+            {"text": "includes_ascii_diagram"},
+            {"text": "all_crz_urls_present"},
+            {"text": "has_inconclusive_sections"},
+            {"text": "ends_with_dakujeme"},
+            {"text": "amounts_formatted_with_spaces"}
+          ]
+        },
+        {
+          "id": 2,
+          "eval_name": "broad-scan-march-week1",
+          "prompt": "Write broad scan report for 2026-03-01 to 2026-03-07",
+          "assertions": [
+            {"text": "uses_broad_scan_template"},
+            {"text": "findings_ordered_by_severity"},
+            {"text": "includes_dismissed_table"},
+            {"text": "includes_period_stats"},
+            {"text": "all_crz_urls_present"},
+            {"text": "no_fabricated_data"},
+            {"text": "ends_with_dakujeme"}
+          ]
+        },
+        {
+          "id": 3,
+          "eval_name": "partial-data-no-network",
+          "prompt": "Write deep dive for DREVEX from minimal Phase 1-2 data",
+          "assertions": [
+            {"text": "highlights_threshold_gaming"},
+            {"text": "shows_dodatok_escalation"},
+            {"text": "no_fabricated_financial_data"},
+            {"text": "no_fabricated_network_data"},
+            {"text": "includes_ascii_diagram"},
+            {"text": "ends_with_dakujeme"}
+          ]
+        }
+      ]
     },
     {
-      "id": 2,
-      "eval_name": "broad-scan-march-week1",
-      "prompt": "You are the report-writer agent. Read agents/report-writer.md for your instructions.\n\nWrite an investigative report from the following structured findings data. Save the report to outputs/report.md.\n\n```json\n{\n  \"report_type\": \"broad_scan\",\n  \"period\": {\"from\": \"2026-03-01\", \"to\": \"2026-03-07\"},\n  \"findings\": [\n    {\n      \"status\": \"CONFIRMED\",\n      \"severity\": \"HIGH\",\n      \"headline\": \"SVS Nitra s.r.o. -- sukromna stavebna firma so zapornym vlastnym imanim ziskala zakazku za 287 558 EUR\",\n      \"supplier\": {\"name\": \"SVS Nitra, s.r.o.\", \"ico\": \"35922737\", \"nace\": \"Vystavba obytnych a neobytnych budov\", \"founded\": \"2005-02-24\"},\n      \"contracts\": [{\"id\": 12064598, \"name\": \"Zmluva o dielo\", \"buyer\": \"Mesto Trencianske Teplice\", \"amount\": 287558.49, \"date_signed\": \"2026-03-04\", \"date_published\": \"2026-03-05\"}],\n      \"flags\": [{\"type\": \"negative_equity\", \"severity\": \"danger\", \"detail\": \"Vlastne imanie -242 237 EUR\"}],\n      \"financial\": {\"equity\": -242237},\n      \"evidence\": \"Sukromna stavebna firma (nie statna org) so zapornym vlastnym imanim -242K EUR ziskala zmluvu o dielo za 287K EUR. Nie je evidovana v VSZP ani SocPoist registri.\"\n    },\n    {\n      \"status\": \"CONFIRMED\",\n      \"severity\": \"HIGH\",\n      \"headline\": \"HDH development s.r.o. -- sukromna firma so zapornym imanim -89 462 EUR ziskala zakazku za 107 994 EUR\",\n      \"supplier\": {\"name\": \"HDH development, s.r.o.\", \"ico\": \"35912804\", \"nace\": \"Ostatne inzinierske cinnosti\", \"founded\": \"2004-12-17\"},\n      \"contracts\": [{\"id\": 12063040, \"name\": \"Zmluva o poskytovani sluzieb\", \"buyer\": \"Sprava NP Muranska planina\", \"amount\": 107994.00, \"date_signed\": \"2026-03-03\", \"date_published\": \"2026-03-04\"}],\n      \"flags\": [{\"type\": \"negative_equity\", \"severity\": \"danger\", \"detail\": \"Vlastne imanie -89 462 EUR\"}],\n      \"financial\": {\"equity\": -89462},\n      \"evidence\": \"Sukromna inzinierska firma so zapornym imanim. Zakazka 107K presahuje absolutnu hodnotu zaporneho imania 89K.\"\n    },\n    {\n      \"status\": \"CONFIRMED\",\n      \"severity\": \"MEDIUM\",\n      \"headline\": \"Prahovanie pod EU sutaznym limitom -- 4 stavebne zakazky tesne pod 215K EUR\",\n      \"supplier\": {\"name\": \"Viacere\", \"ico\": \"\"},\n      \"contracts\": [\n        {\"id\": 12053309, \"name\": \"Zmluva o dielo\", \"buyer\": \"SUC TTSK\", \"amount\": 214896.13, \"supplier_name\": \"CS, s.r.o.\"},\n        {\"id\": 12054420, \"name\": \"Zmluva o dielo\", \"buyer\": \"Podtatranska vodarenska\", \"amount\": 213122.54, \"supplier_name\": \"TERRATECHNIK\"},\n        {\"id\": 12058250, \"name\": \"Dodatok k ZoD\", \"buyer\": \"Mesto Hurbanovo\", \"amount\": 210177.58, \"supplier_name\": \"TOPSTAV\"},\n        {\"id\": 12053796, \"name\": \"Kupna zmluva\", \"buyer\": \"BBSK\", \"amount\": 210099.00, \"supplier_name\": \"MAHOLZ s.r.o.\"}\n      ],\n      \"flags\": [{\"type\": \"threshold_gaming\", \"severity\": \"warning\", \"detail\": \"12 zmluv tesne pod (210-215K) vs 3 tesne nad (215-220K), pomer 4:1\"}],\n      \"evidence\": \"Po vyluceni nevinnych typov (dotacie, uvery, SFRB) ostavaju 4 stavebne zakazky tesne pod EU prahom 215 000 EUR. CS s.r.o. navyse nema ICO.\"\n    },\n    {\n      \"status\": \"INCONCLUSIVE\",\n      \"severity\": \"MEDIUM\",\n      \"headline\": \"CS, s.r.o. -- bez ICO, stavebna zakazka 214 896 EUR tesne pod EU prahom\",\n      \"contracts\": [{\"id\": 12053309, \"name\": \"Zmluva o dielo\", \"amount\": 214896.13}],\n      \"evidence\": \"Dodavatel nema ICO v systeme CRZ. Cena je 118 EUR pod EU prahom.\",\n      \"next_steps\": \"Overit na FinStat/ORSR podla nazvu CS s.r.o. Skontrolovat original zmluvy.\"\n    },\n    {\n      \"status\": \"INCONCLUSIVE\",\n      \"severity\": \"MEDIUM\",\n      \"headline\": \"OptiStav s.r.o. -- zmluva za 370K s 5 skrytymi entitami\",\n      \"contracts\": [{\"id\": 12059258, \"name\": \"Zmluva o dielo c. Z26\", \"amount\": 370394.82}],\n      \"evidence\": \"5 skrytych entit v texte zmluvy -- neobvykle vysok pocet.\",\n      \"next_steps\": \"Prezriet extraction_json, FinStat, foaf.sk sietove prepojenia.\"\n    }\n  ],\n  \"dismissed_summary\": [\n    {\"headline\": \"NULL ICO zgrupovania (2 275 freelancerov)\", \"reason\": \"Datovy artefakt -- rozne mena zgrupenych pod NULL ICO\"},\n    {\"headline\": \"Vikendove zverejnenie 1.3.2026\", \"reason\": \"Iba 35 zmluv, automatizovany upload\"},\n    {\"headline\": \"Neskor zverejnena zmluva (666K dni)\", \"reason\": \"Datovy artefakt -- chybny datum podpisu 0202-02-19\"},\n    {\"headline\": \"Okruhle sumy (nasobky 100K)\", \"reason\": \"Bankove uvery, dotacie, ramcove zmluvy\"},\n    {\"headline\": \"Supplier advantage penalties\", \"reason\": \"Uvery a NFP zmluvy -- standardny pokutovy rezim\"},\n    {\"headline\": \"Bezodplatne zmluvy\", \"reason\": \"Kolektivne zmluvy, energie, NFP zmluvy\"},\n    {\"headline\": \"ZS Eliasa Laniho zaporne imanie\", \"reason\": \"Rozpoctova organizacia -- bezne pre skolske zariadenia\"},\n    {\"headline\": \"Dvojiti dlznici\", \"reason\": \"Zmluvy su 'Uznanie dlhu' -- nie verejne zakazky\"}\n  ],\n  \"stats\": {\"total_contracts\": 10332, \"total_value\": 658911762.63, \"queries_run\": 20}\n}\n```",
-      "expected_output": "Broad scan report with 3 CONFIRMED findings ordered by severity, 2 INCONCLUSIVE, dismissed summary table, CRZ URLs, period stats",
-      "assertions": [
-        {"text": "uses_broad_scan_template", "description": "Report starts with '# CRZ Investigativna analyza: 2026-03-01 -- 2026-03-07' and follows broad scan structure"},
-        {"text": "findings_ordered_by_severity", "description": "CONFIRMED findings appear in order: SVS Nitra (HIGH), HDH development (HIGH), then Prahovanie (MEDIUM)"},
-        {"text": "includes_dismissed_table", "description": "Report has a 'Preverene a vylucene (DISMISSED)' section with a table listing all 8 dismissed findings"},
-        {"text": "includes_period_stats", "description": "Report mentions 10 332 contracts and/or 658M EUR total value for the period"},
-        {"text": "all_crz_urls_present", "description": "Contract IDs 12064598, 12063040, 12053309 each have CRZ URLs"},
-        {"text": "no_fabricated_data", "description": "Report does not invent financial data, UVO records, or network connections that were not in the input"},
-        {"text": "ends_with_dakujeme", "description": "Report ends with 'Dakujeme Zltej Stope'"}
-      ],
-      "files": []
-    },
-    {
-      "id": 3,
-      "eval_name": "partial-data-no-network",
-      "prompt": "You are the report-writer agent. Read agents/report-writer.md for your instructions.\n\nWrite a report from the following minimal findings (only Phases 1-2, no FinStat/UVO/network data). Save to outputs/report.md.\n\n```json\n{\n  \"report_type\": \"deep_dive\",\n  \"target\": {\"name\": \"DREVEX s.r.o.\", \"ico\": \"36835463\"},\n  \"findings\": [\n    {\n      \"status\": \"CONFIRMED\",\n      \"severity\": \"HIGH\",\n      \"headline\": \"Zmluva za 212 784 EUR -- presne 2 216 EUR pod EU limitom 215 000 EUR\",\n      \"supplier\": {\"name\": \"DREVEX s.r.o.\", \"ico\": \"36835463\"},\n      \"contracts\": [\n        {\"id\": 11353827, \"name\": \"Zmluva o dielo\", \"buyer\": \"Obec Liptovske Sliace\", \"buyer_ico\": \"00315427\", \"amount\": 212783.85, \"date_signed\": \"2025-06-15\"},\n        {\"id\": 11387669, \"name\": \"Dodatok c. 1\", \"buyer\": \"Obec Liptovske Sliace\", \"buyer_ico\": \"00315427\", \"amount\": 541259.81, \"date_signed\": \"2025-07-02\"},\n        {\"id\": 11696268, \"name\": \"Zmluva o dielo (Multifunkcne ihrisko)\", \"buyer\": \"Obec Liptovske Sliace\", \"buyer_ico\": \"00315427\", \"amount\": 84040.80, \"date_signed\": \"2025-10-14\"},\n        {\"id\": 11938512, \"name\": \"Zmluva o dielo (Revitalizacia centra)\", \"buyer\": \"Obec Liptovske Sliace\", \"buyer_ico\": \"00315427\", \"amount\": 74791.02, \"date_signed\": \"2025-12-18\"}\n      ],\n      \"flags\": [\n        {\"type\": \"threshold_gaming\", \"severity\": \"danger\", \"detail\": \"Povodna zmluva 212 784 EUR je 2 216 EUR pod EU limitom. Dodatok nasledne zvysil na 541 260 EUR.\"},\n        {\"type\": \"buyer_concentration\", \"severity\": \"warning\", \"detail\": \"Vsetky 4 zmluvy od rovnakej obce\"}\n      ],\n      \"evidence\": \"Povodna zmluva podpisana tesne pod EU prahom 215K, nasledne dodatok zvysil sumu na 541K -- vysoko nad limit. Vsetky 4 zmluvy od Obce Liptovske Sliace (82.9% celkoveho objemu).\"\n    }\n  ],\n  \"dismissed_summary\": [],\n  \"stats\": {\"total_contracts\": 4, \"total_value\": 912875.48}\n}\n```",
-      "expected_output": "Deep dive report with threshold gaming finding, no fabricated FinStat/UVO/network data, CRZ URLs, ASCII diagram showing DREVEX-Obec relationship",
-      "assertions": [
-        {"text": "highlights_threshold_gaming", "description": "Report prominently features the 212 784 EUR amount being 2 216 EUR under the 215 000 EUR EU limit"},
-        {"text": "shows_dodatok_escalation", "description": "Report explains the pattern: original contract under threshold, then dodatok raised it to 541 260 EUR"},
-        {"text": "no_fabricated_financial_data", "description": "Report does NOT include revenue, profit, equity, or other financial data that was not in the input"},
-        {"text": "no_fabricated_network_data", "description": "Report does NOT include foaf.sk connections, RPVS ownership, or person names that were not in the input"},
-        {"text": "includes_ascii_diagram", "description": "Report contains an ASCII diagram showing DREVEX and Obec Liptovske Sliace relationship"},
-        {"text": "ends_with_dakujeme", "description": "Report ends with 'Dakujeme Zltej Stope'"}
-      ],
-      "files": []
+      "agent_name": "supplier-profiler",
+      "evals": [
+        {
+          "id": 4,
+          "eval_name": "profile-yemanity-db-only",
+          "prompt": "Profile YEMANITY s.r.o. (ICO 55002072) using db phase only",
+          "assertions": [
+            {"text": "outputs_valid_json", "description": "Output is valid JSON matching the supplier-profiler output schema"},
+            {"text": "finds_all_contracts", "description": "Profile contains all 5 YEMANITY contracts findable by ICO (IDs 11889441, 12036751, 12088132, 12058696, 12075436). Contract 12059873 has empty dodavatel_ico and is not expected."},
+            {"text": "finds_nace_mismatch_flag", "description": "Flags array contains nace_mismatch entries"},
+            {"text": "finds_micro_supplier_flag", "description": "Flags array contains micro_supplier entries"},
+            {"text": "extracts_signatories", "description": "Extractions include signatory data (Jan Sutiak appears)"},
+            {"text": "includes_ruz_data", "description": "Profile section populated with data from ruz_entities (NACE, founding date, size)"},
+            {"text": "calculates_summary", "description": "Summary includes total_contracts, total_value, flag_count, and key_flags"}
+          ]
+        },
+        {
+          "id": 5,
+          "eval_name": "profile-drevex-db-finstat",
+          "prompt": "Profile DREVEX s.r.o. (ICO 36835463) using db + finstat phases",
+          "assertions": [
+            {"text": "outputs_valid_json", "description": "Output is valid JSON matching the supplier-profiler output schema"},
+            {"text": "finds_threshold_gaming_flag", "description": "Flags array contains threshold_gaming flag (on contract 11696268, the dodatok to 11353827)"},
+            {"text": "finds_buyer_concentration", "description": "All contracts are from Obec Liptovske Sliace (ICO 00315427)"},
+            {"text": "attempts_finstat_fetch", "description": "Agent attempted to fetch finstat.sk/36835463 (may succeed or fail gracefully)"},
+            {"text": "financial_section_populated", "description": "Financial section is present with data from FinStat or ruz_equity, or marked not_available"}
+          ]
+        }
+      ]
     }
   ]
 }

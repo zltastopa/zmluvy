@@ -1,0 +1,184 @@
+{
+  "supplier": {
+    "name": "YEMANITY s.r.o.",
+    "ico": "55002072",
+    "dic": "2121846254",
+    "legal_form": "Spol. s r. o.",
+    "address": "Vychylovka 1045/1045, 023 05 Nova Bystrica",
+    "region": "Zilinsky kraj",
+    "district": "Cadca",
+    "established_on": "2022-11-16",
+    "terminated_on": null,
+    "nace_code": "70220",
+    "nace_category": "Poradenske cinnosti v podnikani",
+    "organization_size": "1 zamestnanec",
+    "ownership_type": "Sukromne tuzemske",
+    "consolidated": false
+  },
+  "tax_reliability": {
+    "status": "spolahliv\u00fd"
+  },
+  "debtor_status": {
+    "vszp_health_insurance": null,
+    "social_insurance": null,
+    "tax_debtor": null
+  },
+  "equity": null,
+  "contracts": {
+    "total_count": 5,
+    "total_value": 892261.56,
+    "items": [
+      {
+        "id": 11889441,
+        "title": "Univerzitne Sportove centrum, Majova 19 Bratislava - Vystavba posilnovne pri VSH",
+        "contract_number": "190015/004/2026",
+        "buyer": "Ekonomicka univerzita v Bratislave",
+        "buyer_ico": "00399957",
+        "amount": 467641.57,
+        "date_published": "2026-01-23",
+        "date_signed": "2026-01-16",
+        "type": "zmluva",
+        "status": "aktivna",
+        "uvo_url": "https://www.uvo.gov.sk/vyhladavanie/vyhladavanie-zakaziek/detail/544941",
+        "crz_url": "https://www.crz.gov.sk/zmluva/11889441/"
+      },
+      {
+        "id": 12036751,
+        "title": "Zmluva o dielo",
+        "contract_number": "25022026",
+        "buyer": "Obec Skalite",
+        "buyer_ico": "00314285",
+        "amount": 266657.41,
+        "date_published": "2026-02-25",
+        "date_signed": "2026-02-25",
+        "type": "zmluva",
+        "status": "aktivna",
+        "uvo_url": "https://www.uvo.gov.sk/vyhladavanie/vyhladavanie-zakaziek/detail/548246",
+        "crz_url": "https://www.crz.gov.sk/zmluva/12036751/"
+      },
+      {
+        "id": 12058696,
+        "title": "Dodatok c. 1 k zmluve o dielo 802/2025",
+        "contract_number": "242/2026",
+        "buyer": "Mesto Zilina",
+        "buyer_ico": "00321796",
+        "amount": 351.99,
+        "date_published": "2026-03-03",
+        "date_signed": "2026-02-27",
+        "type": "zmluva",
+        "status": "aktivna",
+        "uvo_url": null,
+        "crz_url": "https://www.crz.gov.sk/zmluva/12058696/"
+      },
+      {
+        "id": 12075436,
+        "title": "Dodatok k zmluve",
+        "contract_number": "04032026",
+        "buyer": "Obec Skalite",
+        "buyer_ico": "00314285",
+        "amount": null,
+        "date_published": "2026-03-07",
+        "date_signed": "2026-03-04",
+        "type": "objednavka",
+        "status": "aktivna",
+        "uvo_url": null,
+        "crz_url": "https://www.crz.gov.sk/zmluva/12075436/"
+      },
+      {
+        "id": 12088132,
+        "title": "Zvysenie bezpecnosti vyucbovych budov V1 a V2 Ekonomickej univerzity v Bratislave - stavebna cast",
+        "contract_number": "190015/013/2026",
+        "buyer": "Ekonomicka univerzita v Bratislave",
+        "buyer_ico": "00399957",
+        "amount": 157610.59,
+        "date_published": "2026-03-11",
+        "date_signed": "2026-03-10",
+        "type": "zmluva",
+        "status": "aktivna",
+        "uvo_url": null,
+        "crz_url": "https://www.crz.gov.sk/zmluva/12088132/"
+      }
+    ]
+  },
+  "red_flags": {
+    "total_count": 16,
+    "by_severity": {
+      "warning": 11,
+      "info": 5
+    },
+    "by_type": {
+      "missing_expiry": {
+        "label": "Neuvedena platnost",
+        "severity": "info",
+        "count": 5,
+        "contract_ids": [11889441, 12036751, 12058696, 12075436, 12088132]
+      },
+      "micro_supplier_large_contract": {
+        "label": "Mikro dodavatel, velka zmluva",
+        "severity": "warning",
+        "count": 3,
+        "contract_ids": [11889441, 12036751, 12088132]
+      },
+      "nace_mismatch": {
+        "label": "Nesulad odvetvia",
+        "severity": "warning",
+        "count": 4,
+        "detail": "NACE: Poradenske cinnosti v podnikani (70220), zmluva: construction_renovation",
+        "contract_ids": [12036751, 12058696, 12075436, 12088132]
+      },
+      "signatory_overlap": {
+        "label": "Zdielany podpisujuci",
+        "severity": "warning",
+        "count": 3,
+        "details": [
+          {"contract_id": 12058696, "detail": "Mgr. Peter Fiabane podpisuje za 24 roznych dodavatelov"},
+          {"contract_id": 12075436, "detail": "Paeddr. Jozef Cech podpisuje za 11 roznych dodavatelov"},
+          {"contract_id": 12088132, "detail": "Prof. Ing. Ferdinand Dano, Phd. podpisuje za 15 roznych dodavatelov"}
+        ]
+      },
+      "hidden_price": {
+        "label": "Skryta cena",
+        "severity": "warning",
+        "count": 1,
+        "contract_ids": [12075436]
+      }
+    }
+  },
+  "extractions": {
+    "service_categories": ["construction_renovation"],
+    "signatories": {
+      "supplier_side": [
+        {"name": "Jan Sutiak", "role": "konatel / statutarny zastupca"},
+        {"name": "Filip Sobol", "role": "konatel"}
+      ]
+    },
+    "funding_sources": [
+      {"type": "other_eu", "reference": "Polsko - Slovensko", "contract_id": 12036751},
+      {"type": "eu_recovery_plan", "reference": "Plan obnovy", "contract_id": 12075436},
+      {"type": "state_budget", "reference": null, "contract_id": 12088132}
+    ],
+    "penalty_asymmetry": {
+      "strong_buyer_advantage": [12036751, 12088132],
+      "none_found": [12058696, 12075436]
+    },
+    "subcontracting_mentioned": [12036751, 12088132],
+    "supplier_iban": "SK54 0900 0000 0051 9724 4190"
+  },
+  "risk_summary": {
+    "overall_risk": "medium-high",
+    "key_concerns": [
+      "Company registered with NACE 70220 (business consulting) but all contracts are construction/renovation work — systematic industry mismatch",
+      "Micro enterprise (1 employee) winning contracts worth up to 467K EUR — capacity concern",
+      "Company established 2022-11-16, already handling nearly 900K EUR in public contracts within 3.5 years",
+      "No equity data found in database — financial health unknown",
+      "One contract (12075436) has hidden price — no amount disclosed",
+      "All 5 contracts lack expiry dates"
+    ],
+    "mitigating_factors": [
+      "Tax reliability status: spolahliv\u00fd (reliable)",
+      "No debtor records found (health insurance, social insurance, tax)",
+      "Contracts reference UVO procurement procedures where applicable",
+      "EU-funded contracts suggest formal procurement oversight"
+    ]
+  }
+}

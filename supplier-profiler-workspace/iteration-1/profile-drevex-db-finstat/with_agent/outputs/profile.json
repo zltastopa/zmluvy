@@ -1,0 +1,134 @@
+{
+  "ico": "36835463",
+  "name": "DREVEX EU, s.r.o.",
+  "profile": {
+    "founded": "2007-09-20",
+    "nace": "31090",
+    "nace_label": "Vyroba ostatneho nabytku",
+    "nace_alt": "47590 Maloobchod s nabytkom, svietidlami a inymi domacimi potrebami v specializovanych predajniach",
+    "size": "3-4 zamestnanci",
+    "legal_form": "Spol. s r. o.",
+    "ownership": "Sukromne tuzemske",
+    "address": "Bojnicka cesta 1870/45B, Prievidza"
+  },
+  "contracts": [
+    {
+      "id": 11353827,
+      "name": "Kupna zmluva uzatvorena v sulade so zakonom c. 343-2015 Z.z.",
+      "buyer": "Obec Liptovske Sliace",
+      "buyer_ico": "00315745",
+      "amount": 235889.40,
+      "date_signed": "2025-09-24",
+      "date_published": "2025-09-26",
+      "uvo_url": null,
+      "service_category": null
+    },
+    {
+      "id": 11938512,
+      "name": "Kupna zmluva - nabytok DREVEX",
+      "buyer": "Centrum podpornych sluzieb, Starohajska ulica 6868/10, Trnava",
+      "buyer_ico": "53243188",
+      "amount": 235176.00,
+      "date_signed": "2026-01-30",
+      "date_published": "2026-02-03",
+      "uvo_url": null,
+      "service_category": null
+    },
+    {
+      "id": 11387669,
+      "name": "Kupna zmluva uzatvorena v sulade so zakonom c. 343-2015 Z.z.",
+      "buyer": "Obec Liptovske Sliace",
+      "buyer_ico": "00315745",
+      "amount": 229026.00,
+      "date_signed": "2025-10-03",
+      "date_published": "2025-10-03",
+      "uvo_url": null,
+      "service_category": null
+    },
+    {
+      "id": 11696268,
+      "name": "Dodatok c. 1 ku Kupnej zmluve c. 113-2025 uzatvorenej dna 24.9.2025 v sulade so zakonom c. 343-2015 Z.z. o verejnom obstaravani",
+      "buyer": "Obec Liptovske Sliace",
+      "buyer_ico": "00315745",
+      "amount": 212783.85,
+      "date_signed": "2025-11-19",
+      "date_published": "2025-12-05",
+      "uvo_url": null,
+      "service_category": null
+    }
+  ],
+  "flags": [
+    {
+      "type": "threshold_gaming",
+      "severity": "warning",
+      "detail": "212,783.85 EUR (iba 2,216 EUR pod EU limitom 215K)",
+      "contract_id": 11696268
+    },
+    {
+      "type": "missing_expiry",
+      "severity": "info",
+      "detail": null,
+      "contract_id": 11353827
+    },
+    {
+      "type": "missing_expiry",
+      "severity": "info",
+      "detail": null,
+      "contract_id": 11938512
+    },
+    {
+      "type": "missing_expiry",
+      "severity": "info",
+      "detail": null,
+      "contract_id": 11387669
+    },
+    {
+      "type": "missing_expiry",
+      "severity": "info",
+      "detail": null,
+      "contract_id": 11696268
+    }
+  ],
+  "extractions": {
+    "hidden_entities": [],
+    "signatories": {},
+    "penalty_asymmetry": {}
+  },
+  "financial": {
+    "revenue": 347033,
+    "profit": -139597,
+    "equity": 436619,
+    "assets": 504211,
+    "employees": "3-4",
+    "nace_finstat": "47590",
+    "nace_susr": "31090",
+    "tax_status": "vysoko spolahliv\u00fd",
+    "debt_ratio_pct": 13.41,
+    "gross_margin_pct": -12.42,
+    "profit_history": [39083, 7475, 160781, 31105, -139597],
+    "year": 2025,
+    "source": "finstat"
+  },
+  "debtors": {
+    "vszp": null,
+    "socpoist": null,
+    "tax": true
+  },
+  "procurement": null,
+  "rpvs": null,
+  "summary": {
+    "total_contracts": 4,
+    "total_value": 912875.25,
+    "flag_count": 5,
+    "risk_level": "MEDIUM",
+    "key_flags": ["threshold_gaming", "missing_expiry"],
+    "notes": [
+      "3 of 4 contracts with same buyer (Obec Liptovske Sliace) - strong buyer concentration",
+      "Company in loss (-139,597 EUR) in 2025 after profitable years",
+      "No extraction data available for any contracts",
+      "Found in fs_tax_debtors register (tax debtor)",
+      "All contracts lack UVO procurement URLs",
+      "RUZ equity (2022): vlastne_imanie 376,995 EUR; FinStat (2025): 436,619 EUR"
+    ]
+  }
+}
