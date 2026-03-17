@@ -1,0 +1,12 @@
+{
+  "eval_id": 3,
+  "variant": "without_agent",
+  "expectations": [
+    {"text": "highlights_threshold_gaming", "passed": true, "evidence": "'2 216 EUR pod europskym limitom 215 000 EUR'. Detailed analysis under 'Strategicke podhodnotenie' and risk factors."},
+    {"text": "shows_dodatok_escalation", "passed": true, "evidence": "'Navysenie o 328 475,96 EUR (154% oproti povodnej hodnote)'. Timeline and analysis present."},
+    {"text": "no_fabricated_financial_data", "passed": true, "evidence": "Explicitly lists missing data: 'FinStat data: Financne zdravie a majetkova struktura DREVEX'. Says 'Nemozeme posudit'."},
+    {"text": "no_fabricated_network_data", "passed": true, "evidence": "Lists 'RPVS data', 'Foaf.sk data' as missing. No fabricated person names or ownership chains."},
+    {"text": "includes_ascii_diagram", "passed": false, "evidence": "No ASCII network diagram in the report. Uses numbered sections and tables but no visual diagram."},
+    {"text": "ends_with_dakujeme", "passed": false, "evidence": "Ends with legal disclaimer note. No 'Dakujeme Zltej Stope'."}
+  ]
+}

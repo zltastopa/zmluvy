@@ -1,0 +1,41 @@
+{
+  "skill_name": "report-writer",
+  "iteration": 1,
+  "configurations": [
+    {
+      "name": "with_agent",
+      "evals": [
+        {"eval_name": "deep-dive-yemanity", "pass_rate": 1.0, "passed": 8, "total": 8, "tokens": 18029, "duration_s": 94.8, "tool_uses": 5},
+        {"eval_name": "broad-scan-march-week1", "pass_rate": 1.0, "passed": 7, "total": 7, "tokens": 13628, "duration_s": 94.0, "tool_uses": 4},
+        {"eval_name": "partial-data-no-network", "pass_rate": 1.0, "passed": 6, "total": 6, "tokens": 10449, "duration_s": 53.3, "tool_uses": 4}
+      ],
+      "aggregate": {"mean_pass_rate": 1.0, "mean_tokens": 14035, "mean_duration_s": 80.7, "mean_tool_uses": 4.3}
+    },
+    {
+      "name": "without_agent",
+      "evals": [
+        {"eval_name": "deep-dive-yemanity", "pass_rate": 0.5, "passed": 4, "total": 8, "tokens": 10171, "duration_s": 86.0, "tool_uses": 2},
+        {"eval_name": "broad-scan-march-week1", "pass_rate": 0.57, "passed": 4, "total": 7, "tokens": 18402, "duration_s": 113.4, "tool_uses": 9},
+        {"eval_name": "partial-data-no-network", "pass_rate": 0.67, "passed": 4, "total": 6, "tokens": 8038, "duration_s": 68.5, "tool_uses": 2}
+      ],
+      "aggregate": {"mean_pass_rate": 0.58, "mean_tokens": 12204, "mean_duration_s": 89.3, "mean_tool_uses": 4.3}
+    }
+  ],
+  "delta": {
+    "with_agent_vs_baseline": {
+      "pass_rate": "+42% (100% vs 58%) — baseline misses template structure, ASCII diagrams, INCONCLUSIVE sections, and Dakujeme ending",
+      "tokens": "+15% more tokens (14K vs 12K — agent reads the instruction file)",
+      "duration": "-10% faster (81s vs 89s — agent is more focused despite reading instructions)",
+      "tool_uses": "comparable (4.3 vs 4.3)",
+      "quality": "Agent follows exact Zlta Stopa template (INVESTIGATIVNA SPRAVA, CONFIRMED/INCONCLUSIVE, ASCII diagrams, no diacritics, Dakujeme ending). Baseline produces good analytical content but with its own structure, diacritics, and no standard formatting. Baseline also tends to be verbose (methodology sections, source lists). Both handle partial data correctly — neither fabricates missing information."
+    }
+  },
+  "notes": [
+    "All runs used Sonnet model — agent instructions produced 100% template compliance even on cheaper model",
+    "Baseline uses Slovak diacritics (s, z, c) while agent follows no-diacritics convention consistently",
+    "Baseline adds extra sections (Metodologia, Zdroje, Zaver) that dilute focus — agent stays lean",
+    "Baseline broad-scan used most tokens (18K) and most tool calls (9) — spent time reading AGENTS.md and CLAUDE.md for context",
+    "Template compliance assertions (template, diagram, dakujeme) always pass with agent, always fail without — these are discriminating",
+    "Content assertions (all contracts, NACE mismatch, threshold gaming) pass in both configs — baseline finds same facts"
+  ]
+}

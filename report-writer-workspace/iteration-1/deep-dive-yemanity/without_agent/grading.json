@@ -1,0 +1,14 @@
+{
+  "eval_id": 1,
+  "variant": "without_agent",
+  "expectations": [
+    {"text": "uses_investigativna_sprava_template", "passed": false, "evidence": "Starts with '# Investigativna sprava: YEMANITY s.r.o.' — uses Slovak diacritics throughout, doesn't follow the deep dive INVESTIGATIVNA SPRAVA template. Uses numbered sections (1-9) instead of CONFIRMED/INCONCLUSIVE structure."},
+    {"text": "includes_all_6_contracts", "passed": true, "evidence": "All 6 contracts appear as separate subsections (Zmluva 1-6) with IDs 11889441, 12036751, 12088132, 12058696, 12075436, 12059873."},
+    {"text": "explains_nace_mismatch", "passed": true, "evidence": "Section 3.1: 'NACE 70220 = Poradenstvo v oblasti podnikania a riadenia. Skutocna cinnost = Stavebne prace'. Explains obchádzanie."},
+    {"text": "includes_ascii_diagram", "passed": false, "evidence": "No ASCII network diagram anywhere in the report."},
+    {"text": "all_crz_urls_present", "passed": true, "evidence": "All 6 contracts have CRZ URLs embedded as markdown links."},
+    {"text": "has_inconclusive_sections", "passed": false, "evidence": "Missing contract 802/2025 and kupna zmluva are mentioned in section 3.5 as risk factors, but there are no separate INCONCLUSIVE sections with 'Co nevieme' and 'Dalsie kroky'."},
+    {"text": "ends_with_dakujeme", "passed": false, "evidence": "Ends with 'Datumvyhotovenia: 17. marec 2026' and 'Platnost dat' note. No 'Dakujeme Zltej Stope'."},
+    {"text": "amounts_formatted_with_spaces", "passed": true, "evidence": "Uses space formatting with Slovak commas: '892 261,56 EUR', '467 641,57 EUR'. Consistent."}
+  ]
+}

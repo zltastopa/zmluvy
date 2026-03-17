@@ -1,0 +1,15 @@
+{
+  "eval_id": 1,
+  "eval_name": "deep-dive-yemanity",
+  "prompt": "Write INVESTIGATIVNA SPRAVA for YEMANITY s.r.o. from structured findings data",
+  "assertions": [
+    "uses_investigativna_sprava_template",
+    "includes_all_6_contracts",
+    "explains_nace_mismatch",
+    "includes_ascii_diagram",
+    "all_crz_urls_present",
+    "has_inconclusive_sections",
+    "ends_with_dakujeme",
+    "amounts_formatted_with_spaces"
+  ]
+}

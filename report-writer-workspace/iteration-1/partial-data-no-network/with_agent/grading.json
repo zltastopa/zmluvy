@@ -1,0 +1,12 @@
+{
+  "eval_id": 3,
+  "variant": "with_agent",
+  "expectations": [
+    {"text": "highlights_threshold_gaming", "passed": true, "evidence": "Headline: '212 784 EUR — presne 2 216 EUR pod EU limitom 215 000 EUR'. Timeline shows the amount clearly."},
+    {"text": "shows_dodatok_escalation", "passed": true, "evidence": "Timeline: '2025-07-02: Dodatok c. 1  541 259.81 EUR (navysenie o 154%)'. Also: 'celkovo presahuje povodnu sumu o 328 475.96 EUR'."},
+    {"text": "no_fabricated_financial_data", "passed": true, "evidence": "No revenue, profit, equity, or FinStat data mentioned. Questions reference FinStat as next step: 'Ake boli financne parametre DREVEX s.r.o.'"},
+    {"text": "no_fabricated_network_data", "passed": true, "evidence": "No foaf.sk connections, RPVS ownership, or person names fabricated. Question 1 asks about prepojenia as future investigation."},
+    {"text": "includes_ascii_diagram", "passed": true, "evidence": "ASCII diagram: 'Obec Liptovske Sliace' at top, '100% zmlup' arrow, 'DREVEX s.r.o.' below with '912 875 EUR celkom'."},
+    {"text": "ends_with_dakujeme", "passed": true, "evidence": "Last line: '> *Dakujeme Zltej Stope*'"}
+  ]
+}

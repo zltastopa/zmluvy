@@ -1,0 +1,13 @@
+{
+  "eval_id": 2,
+  "variant": "with_agent",
+  "expectations": [
+    {"text": "uses_broad_scan_template", "passed": true, "evidence": "Starts with '# CRZ Investigativna analyza: 2026-03-01 -- 2026-03-07'. Follows broad scan structure with Zhrnutie, CONFIRMED sections, INCONCLUSIVE, DISMISSED table, Odporucania."},
+    {"text": "findings_ordered_by_severity", "passed": true, "evidence": "Order: SVS Nitra (HIGH), HDH development (HIGH), Prahovanie (MEDIUM). Correct severity ordering."},
+    {"text": "includes_dismissed_table", "passed": true, "evidence": "'Preverene a vylucene (DISMISSED)' section with markdown table listing all 8 dismissed findings with reasons."},
+    {"text": "includes_period_stats", "passed": true, "evidence": "'Analyzovali sme 10 332 zmluv za tyzden... s celkovou hodnotou 658 911 763 EUR.'"},
+    {"text": "all_crz_urls_present", "passed": true, "evidence": "12064598, 12063040, 12053309 all have full CRZ URLs in Dokazy tables. Also 12054420, 12058250, 12053796."},
+    {"text": "no_fabricated_data", "passed": true, "evidence": "Sticks to input data. FinStat URLs added from ICOs (correct derivation). No invented financial figures or network data."},
+    {"text": "ends_with_dakujeme", "passed": true, "evidence": "Last line: '> *Dakujeme Zltej Stope*'"}
+  ]
+}

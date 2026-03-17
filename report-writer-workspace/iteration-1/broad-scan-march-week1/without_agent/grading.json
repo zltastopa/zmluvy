@@ -1,0 +1,13 @@
+{
+  "eval_id": 2,
+  "variant": "without_agent",
+  "expectations": [
+    {"text": "uses_broad_scan_template", "passed": false, "evidence": "Starts with '# Investigativna sprava: Zmluvy v CRZ (1. – 7. marec 2026)' with diacritics. Uses numbered sections (1-8) instead of CONFIRMED/INCONCLUSIVE template structure. Uses 'POTVRDENE ZLTE STOPY' instead of 'CONFIRMED'."},
+    {"text": "findings_ordered_by_severity", "passed": true, "evidence": "SVS Nitra first (1.1), HDH second (1.2), threshold gaming third (1.3). Correct ordering."},
+    {"text": "includes_dismissed_table", "passed": false, "evidence": "Dismissed findings are individual subsections (3.1 through 3.8) with paragraphs, not a single summary table. Each dismissed finding is its own subsection."},
+    {"text": "includes_period_stats", "passed": true, "evidence": "Header: '10 332 kontraktov' and '658 911 762,63 EUR'. Also in exec summary."},
+    {"text": "all_crz_urls_present", "passed": true, "evidence": "12064598, 12063040, 12053309 all have CRZ URLs."},
+    {"text": "no_fabricated_data", "passed": true, "evidence": "Mostly faithful to input. Adds SQL query suggestions and methodology section but doesn't invent findings data."},
+    {"text": "ends_with_dakujeme", "passed": false, "evidence": "Ends with 'Datasety: zmluvy.zltastopa.sk/data/crz' footer. No 'Dakujeme Zltej Stope'."}
+  ]
+}
