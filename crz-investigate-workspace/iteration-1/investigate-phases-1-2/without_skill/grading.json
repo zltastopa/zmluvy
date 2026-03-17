@@ -1,0 +1,12 @@
+{
+  "eval_id": 1,
+  "variant": "without_skill",
+  "expectations": [
+    {"text": "runs_sql_analytics", "passed": true, "evidence": "Executed 27 SQL queries covering 10,251 contracts. Flag distribution, danger flags, largest contracts, fresh companies, micro suppliers, etc."},
+    {"text": "groups_by_category", "passed": true, "evidence": "Flag distribution table by severity and type shown in Phase 1 summary"},
+    {"text": "runs_validation", "passed": true, "evidence": "Each finding challenged against innocent explanations. 5 survived, 3 partially survived, 3 did not survive."},
+    {"text": "classifies_findings", "passed": true, "evidence": "Findings classified as survived/partially survived/did not survive (equivalent to CONFIRMED/INCONCLUSIVE/DISMISSED)"},
+    {"text": "applies_phase_gate", "passed": false, "evidence": "No phase gating logic applied. Report doesn't assess whether Phases 3-5 are needed based on finding count."},
+    {"text": "output_in_slovak", "passed": true, "evidence": "Report in Slovak with zlte stopy terminology. Missing 'Dakujeme Zltej Stope' ending."}
+  ]
+}

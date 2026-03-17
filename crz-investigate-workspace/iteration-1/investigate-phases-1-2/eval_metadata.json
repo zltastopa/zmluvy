@@ -1,0 +1,13 @@
+{
+  "eval_id": 1,
+  "eval_name": "investigate-phases-1-2",
+  "prompt": "Run a CRZ investigative scan for the period 2026-03-01 to 2026-03-07 (first week of March). Execute Phases 1 and 2 only (SQL analytics + critical validation). Do NOT run Phases 3-5 (no FinStat, no UVO, no RPVS/foaf). I want to see the SQL findings and which survived validation.",
+  "assertions": [
+    {"name": "runs_sql_analytics", "text": "Runs multiple SQL queries from the sql-analytics skill against the CRZ database for the date range 2026-03-01 to 2026-03-07"},
+    {"name": "groups_by_category", "text": "Groups SQL results by category (money flow, procurement manipulation, timing, phantom suppliers, etc.)"},
+    {"name": "runs_validation", "text": "Validates findings through critical-validation, challenging each against innocent explanations"},
+    {"name": "classifies_findings", "text": "Classifies each finding as CONFIRMED, DISMISSED, or INCONCLUSIVE with reasoning"},
+    {"name": "applies_phase_gate", "text": "After Phase 2, applies phase gating logic to determine whether Phases 3-5 would be needed"},
+    {"name": "output_in_slovak", "text": "Output is in Slovak with zlte stopy terminology and EUR amounts formatted with spaces"}
+  ]
+}

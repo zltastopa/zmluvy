@@ -1,0 +1,31 @@
+{
+  "skill_name": "crz-deep-investigate",
+  "evals": [
+    {
+      "id": 1,
+      "prompt": "Do a deep investigation of YEMANITY s.r.o. (ICO 55002072). This is a young company (founded 2022) with 892K EUR in CRZ contracts, registered as a business consulting firm but winning construction contracts. Run Phases 1-2 only (contract mapping + hidden entity expansion). Do NOT use browser automation (no RPVS, no foaf.sk, no UVO).",
+      "expected_output": "Complete contract mapping, red flags, extraction data, hidden entities, and framework analysis for YEMANITY",
+      "files": [],
+      "assertions": [
+        {"name": "maps_all_contracts", "text": "Queries all CRZ contracts for ICO 55002072, showing contract names, buyers, amounts, and dates"},
+        {"name": "extracts_red_flags", "text": "Queries red_flags table for YEMANITY's contracts, showing flag types and severities"},
+        {"name": "checks_hidden_entities", "text": "Queries extractions table for hidden entities in YEMANITY's contracts"},
+        {"name": "identifies_framework", "text": "Checks if contracts share naming patterns and queries related framework contracts"},
+        {"name": "structured_output", "text": "Output follows the deep investigation report template in Slovak with zlte stopy tables"}
+      ]
+    },
+    {
+      "id": 2,
+      "prompt": "Deep investigate DREVEX EU, s.r.o. (ICO 36835463) — a furniture manufacturer from Prievidza with 913K EUR in CRZ contracts. One of their contracts (212K EUR amendment) is just below the EU procurement threshold (215K). Run db-only scope (Phases 1-2 only, no browser).",
+      "expected_output": "Contract mapping with threshold gaming analysis, hidden entities, and red flags",
+      "files": [],
+      "assertions": [
+        {"name": "maps_contracts", "text": "Queries all CRZ contracts for ICO 36835463 with amounts and dates"},
+        {"name": "flags_threshold_gaming", "text": "Identifies or notes the threshold gaming pattern (212K near 215K EU limit)"},
+        {"name": "checks_extractions", "text": "Queries extraction data for hidden entities and contract details"},
+        {"name": "applies_phase_gate", "text": "After Phases 1-2, assesses whether deeper investigation is warranted based on findings"},
+        {"name": "ends_with_dakujeme", "text": "Report ends with 'Dakujeme Zltej Stope'"}
+      ]
+    }
+  ]
+}

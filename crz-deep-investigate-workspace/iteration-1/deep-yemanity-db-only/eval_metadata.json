@@ -1,0 +1,12 @@
+{
+  "eval_id": 1,
+  "eval_name": "deep-yemanity-db-only",
+  "prompt": "Do a deep investigation of YEMANITY s.r.o. (ICO 55002072). This is a young company (founded 2022) with 892K EUR in CRZ contracts, registered as a business consulting firm but winning construction contracts. Run Phases 1-2 only (contract mapping + hidden entity expansion). Do NOT use browser automation (no RPVS, no foaf.sk, no UVO).",
+  "assertions": [
+    {"name": "maps_all_contracts", "text": "Queries all CRZ contracts for ICO 55002072, showing contract names, buyers, amounts, and dates"},
+    {"name": "extracts_red_flags", "text": "Queries red_flags table for YEMANITY's contracts, showing flag types and severities"},
+    {"name": "checks_hidden_entities", "text": "Queries extractions table for hidden entities in YEMANITY's contracts"},
+    {"name": "identifies_framework", "text": "Checks if contracts share naming patterns and queries related framework contracts"},
+    {"name": "structured_output", "text": "Output follows the deep investigation report template in Slovak with zlte stopy tables"}
+  ]
+}

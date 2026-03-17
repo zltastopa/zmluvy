@@ -1,6 +1,6 @@
 ---
 name: crz-deep-investigate
-description: Deep investigative dive into a specific Slovak company or corporate network. Maps all contracts, hidden entities, RPVS beneficial ownership, foaf.sk corporate connections, and timeline patterns. Produces a comprehensive Slovak report with network diagrams. Use when asked to do a deep investigation, hlbsia investigativa, company analysis, or ownership tracing for a specific ICO or company name.
+description: Deep investigative dive into a specific Slovak company or corporate network. Maps all contracts, hidden entities, RPVS beneficial ownership, foaf.sk corporate connections, and timeline patterns. Produces a comprehensive Slovak report with network diagrams. Use this skill whenever the user asks to do a deep investigation, hlbsia investigativa, company analysis, ownership tracing, or corporate network mapping for a specific ICO, company name, or suspicious entity — even if they don't use the exact term "deep investigate". Any request to thoroughly examine a single company's CRZ footprint should trigger this skill.
 ---
 
 # CRZ Deep Investigation
@@ -11,6 +11,14 @@ or ICO) and maps the full network.
 
 For broad scanning across a time period, use **crz-investigate** instead.
 
+## Input
+
+| Field | Description | Example |
+|-------|-------------|---------|
+| `target` | Company ICO or name | 44424418, "PARA INVEST s.r.o." |
+| `context` | Why this company is being investigated | "flagged by sql-analytics", "large sole-source contract" |
+| `scope` | Which phases to run | "full" (default), "db-only" (Phases 1-2), "no-browser" (skip RPVS/foaf) |
+
 ## Data source
 
 **Primary:** Datasette at `https://zmluvy.zltastopa.sk/data/crz` — supports
@@ -20,11 +28,6 @@ https://zmluvy.zltastopa.sk/data/crz.json?sql=SELECT+...&_shape=array
 ```
 
 **Local fallback:** `crz.db` in the repo root. Full schema: **[docs/data/](docs/data/README.md)**
-
-## Input
-
-A **company name**, **ICO**, or **reference to a previously identified
-suspicious entity**. If unclear, ask for the ICO.
 
 ## Investigation pipeline
 
@@ -96,6 +99,18 @@ FROM zmluvy z
 WHERE replace(z.dodavatel_ico, ' ', '') = '{hidden_ico}'
 GROUP BY z.dodavatel_ico;
 ```
+
+### Phase gate: How deep to go?
+
+After Phases 1-2, assess what you've found:
+
+| Finding | Action |
+|---|---|
+| Few contracts (<5), no flags, no hidden entities | Report clean profile. Skip Phases 3-6 unless user explicitly requested full scope. |
+| Moderate activity, some flags | Run Phase 3 (RPVS) + Phase 4 (foaf). Skip Phase 5 (UVO) unless contracts >200K. |
+| Many contracts, multiple flags, hidden entities | Full pipeline (all 6 phases). |
+
+The user can override this with the `scope` input. "full" always runs all phases.
 
 ### Phase 3: RPVS Beneficial Ownership
 

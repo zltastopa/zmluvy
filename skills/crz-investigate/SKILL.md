@@ -1,6 +1,6 @@
 ---
 name: crz-investigate
-description: Broad investigative scan of Slovak government contracts from CRZ. Runs SQL analytics, validates findings, enriches suppliers via FinStat, and optionally traces ownership via RPVS and foaf.sk. Produces publishable findings in Slovak. Use when asked to investigate, analyze, audit, or find zlte stopy in CRZ contracts for a time period.
+description: Broad investigative scan of Slovak government contracts from CRZ. Runs SQL analytics, validates findings, enriches suppliers via FinStat, and optionally traces ownership via RPVS and foaf.sk. Produces publishable findings in Slovak. Use this skill whenever the user asks to investigate, analyze, audit, scan, or find zlte stopy in CRZ contracts for a time period, even if they don't explicitly mention "CRZ" — any request about Slovak government contract anomalies, procurement fraud, or public spending analysis should trigger this skill.
 ---
 
 # CRZ Investigative Analysis
@@ -10,6 +10,14 @@ from the Central Register of Contracts (CRZ). This is the **broad scan** —
 it sweeps a time period to surface leads.
 
 For deep investigation of a specific company, use **crz-deep-investigate** instead.
+
+## Input
+
+| Field | Description | Example |
+|-------|-------------|---------|
+| `date_from` | Start of investigation period | 2026-01-01 |
+| `date_to` | End of investigation period | 2026-01-31 |
+| `focus` | Optional: narrow to specific buyer, sector, or flag type | "Ministerstvo vnutra", "construction", "signatory_overlap" |
 
 ## Data source
 
@@ -24,7 +32,9 @@ unreachable. Full schema: **[docs/data/](docs/data/README.md)**
 
 ## Investigation pipeline
 
-Execute these phases in order. Each builds on the previous.
+Execute these phases in order. Each builds on the previous. Phases 1-2 are
+mandatory. Phases 3-5 are gated — only proceed if earlier phases surface
+findings worth pursuing.
 
 ### Phase 1: SQL Analytics
 
@@ -41,6 +51,21 @@ Use the **[critical-validation](../critical-validation/SKILL.md)** skill.
 **Every finding from Phase 1 MUST pass through validation.** Challenge each
 against data artifacts and innocent explanations. Classify as CONFIRMED,
 DISMISSED, or INCONCLUSIVE.
+
+### Phase gate: Should you continue?
+
+After Phase 2, count your CONFIRMED and INCONCLUSIVE findings. This determines
+how deep to go:
+
+| Findings | Action |
+|---|---|
+| 0 CONFIRMED, 0 INCONCLUSIVE | Stop. Report "clean period" with dismissed summary. |
+| 0 CONFIRMED, 1+ INCONCLUSIVE | Run Phase 3 only on INCONCLUSIVE suppliers. Skip Phases 4-5. |
+| 1-3 CONFIRMED | Run Phases 3-4 on CONFIRMED suppliers. Phase 5 only for the strongest lead. |
+| 4+ CONFIRMED | Run Phases 3-4 on top 5 by contract value. Phase 5 on top 2. |
+
+This gating prevents wasting time on low-yield investigations. A "clean
+period" finding is a valid and useful result.
 
 ### Phase 3: Financial Enrichment
 

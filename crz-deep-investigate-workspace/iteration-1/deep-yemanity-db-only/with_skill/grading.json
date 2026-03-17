@@ -1,0 +1,11 @@
+{
+  "eval_id": 1,
+  "variant": "with_skill",
+  "expectations": [
+    {"text": "maps_all_contracts", "passed": true, "evidence": "All 6 CRZ records mapped: 3 main contracts, 2 amendments, 1 purchase agreement. Table with IDs, names, amounts, dates, UVO links."},
+    {"text": "extracts_red_flags", "passed": true, "evidence": "16 zlte stopy total (11 warning, 5 info). NACE mismatch, micro supplier, missing expiry, signatory overlap, hidden price."},
+    {"text": "checks_hidden_entities", "passed": true, "evidence": "Queried extractions table. 'No hidden entities found' — entity expansion Phase 2 yielded no additional companies."},
+    {"text": "identifies_framework", "passed": true, "evidence": "Identified Dodatok referencing Zilina contract 802/2025 not in CRZ. Checked for framework patterns across contracts."},
+    {"text": "structured_output", "passed": true, "evidence": "INVESTIGATIVNA SPRAVA template, CONFIRMED section, zlte stopy tables, CRZ URLs, ends with 'Dakujeme Zltej Stope'."}
+  ]
+}

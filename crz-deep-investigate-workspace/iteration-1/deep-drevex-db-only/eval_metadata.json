@@ -1,0 +1,12 @@
+{
+  "eval_id": 2,
+  "eval_name": "deep-drevex-db-only",
+  "prompt": "Deep investigate DREVEX EU, s.r.o. (ICO 36835463) — a furniture manufacturer from Prievidza with 913K EUR in CRZ contracts. One of their contracts (212K EUR amendment) is just below the EU procurement threshold (215K). Run db-only scope (Phases 1-2 only, no browser).",
+  "assertions": [
+    {"name": "maps_contracts", "text": "Queries all CRZ contracts for ICO 36835463 with amounts and dates"},
+    {"name": "flags_threshold_gaming", "text": "Identifies or notes the threshold gaming pattern (212K near 215K EU limit)"},
+    {"name": "checks_extractions", "text": "Queries extraction data for hidden entities and contract details"},
+    {"name": "applies_phase_gate", "text": "After Phases 1-2, assesses whether deeper investigation is warranted based on findings"},
+    {"name": "ends_with_dakujeme", "text": "Report ends with 'Dakujeme Zltej Stope'"}
+  ]
+}

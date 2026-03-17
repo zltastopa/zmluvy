@@ -1,0 +1,31 @@
+{
+  "skill_name": "crz-deep-investigate",
+  "iteration": 1,
+  "configurations": [
+    {
+      "name": "with_skill",
+      "evals": [
+        {"eval_name": "deep-yemanity-db-only", "pass_rate": 1.0, "passed": 5, "total": 5, "tokens": 38789, "duration_s": 256.7, "tool_uses": 45},
+        {"eval_name": "deep-drevex-db-only", "pass_rate": 1.0, "passed": 5, "total": 5, "tokens": 42422, "duration_s": 255.7, "tool_uses": 46}
+      ],
+      "aggregate": {"mean_pass_rate": 1.0, "mean_tokens": 40606, "mean_duration_s": 256.2, "mean_tool_uses": 45.5}
+    },
+    {
+      "name": "without_skill",
+      "evals": [
+        {"eval_name": "deep-yemanity-db-only", "pass_rate": 0.8, "passed": 4, "total": 5, "tokens": 44267, "duration_s": 270.9, "tool_uses": 44},
+        {"eval_name": "deep-drevex-db-only", "pass_rate": 0.6, "passed": 3, "total": 5, "tokens": 35500, "duration_s": 241.2, "tool_uses": 51}
+      ],
+      "aggregate": {"mean_pass_rate": 0.7, "mean_tokens": 39884, "mean_duration_s": 256.1, "mean_tool_uses": 47.5}
+    }
+  ],
+  "delta": {
+    "with_skill_vs_baseline": {
+      "pass_rate": "+30% (100% vs 70%) — baseline misses structured output template, phase gating, and Dakujeme ending",
+      "tokens": "+2% more tokens (41K vs 40K — comparable)",
+      "duration": "0% (256s vs 256s — identical speed)",
+      "tool_uses": "-4% fewer (45.5 vs 47.5)",
+      "quality": "With_skill follows INVESTIGATIVNA SPRAVA template consistently, applies phase gating, includes CRZ URLs, ends with Dakujeme. Baseline produces equivalent analytical quality but with inconsistent formatting. Both found same key findings (NACE mismatch, threshold gaming)."
+    }
+  }
+}
