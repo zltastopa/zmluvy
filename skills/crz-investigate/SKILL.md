@@ -32,19 +32,18 @@ unreachable. Full schema: **[docs/data/](docs/data/README.md)**
 
 ## Investigation pipeline
 
-Execute these phases in order. Each builds on the previous. Phases 1-2 are
-mandatory. Phases 3-5 are gated — only proceed if earlier phases surface
-findings worth pursuing.
+This orchestrator coordinates 5 specialized agents and 2 skills. The key
+optimization: supplier profiling and network mapping run **in parallel**,
+giving a 3x speedup for multi-supplier investigations.
 
-### Phase 1: SQL Analytics
+### Phase 1: SQL Analytics (skill)
 
 Use the **[sql-analytics](../sql-analytics/SKILL.md)** skill.
 
-Run all 17 standard queries for the given date range. Group results by category:
-money flow, procurement manipulation, timing anomalies, phantom suppliers,
-extraction-based checks, and debtor cross-checks.
+Run all 20 standard queries for the given date range. The skill groups results
+into 7 categories and produces a Top 5 highlights section.
 
-### Phase 2: Critical Validation (mandatory)
+### Phase 2: Critical Validation (skill)
 
 Use the **[critical-validation](../critical-validation/SKILL.md)** skill.
 
@@ -52,50 +51,169 @@ Use the **[critical-validation](../critical-validation/SKILL.md)** skill.
 against data artifacts and innocent explanations. Classify as CONFIRMED,
 DISMISSED, or INCONCLUSIVE.
 
-### Phase gate: Should you continue?
+### Phase 3: Gate decision (agent)
 
-After Phase 2, count your CONFIRMED and INCONCLUSIVE findings. This determines
-how deep to go:
+Spawn the **phase-gater** agent (`agents/phase-gater.md`, Haiku).
 
-| Findings | Action |
-|---|---|
-| 0 CONFIRMED, 0 INCONCLUSIVE | Stop. Report "clean period" with dismissed summary. |
-| 0 CONFIRMED, 1+ INCONCLUSIVE | Run Phase 3 only on INCONCLUSIVE suppliers. Skip Phases 4-5. |
-| 1-3 CONFIRMED | Run Phases 3-4 on CONFIRMED suppliers. Phase 5 only for the strongest lead. |
-| 4+ CONFIRMED | Run Phases 3-4 on top 5 by contract value. Phase 5 on top 2. |
+Pass it the findings summary from Phase 2. It returns:
+- `GO` or `STOP` for each subsequent phase
+- Which suppliers to include (may be a subset)
+- Which phases to skip
 
-This gating prevents wasting time on low-yield investigations. A "clean
-period" finding is a valid and useful result.
+This replaces the manual lookup table — the agent applies the same rules
+but adapts to edge cases. If it says STOP, skip to Phase 7 (report) with
+only the CONFIRMED findings from Phases 1-2.
 
-### Phase 3: Financial Enrichment
+### Phase 4: Parallel profiling (agents)
 
-Use the **[finstat-enrichment](../finstat-enrichment/SKILL.md)** skill.
+**This is where the speed gain happens.** Spawn one **supplier-profiler**
+agent (`agents/supplier-profiler.md`, Sonnet) per supplier ICO — all in
+parallel.
 
-Enrich CONFIRMED and INCONCLUSIVE suppliers with FinStat financial data.
-Evaluate financial zlte stopy (revenue mismatch, negative equity, tax status).
+```
+┌─────────────────────────────────────────────────────┐
+│  Orchestrator spawns N supplier-profiler agents      │
+│                                                      │
+│  ┌──────────┐ ┌──────────┐ ┌──────────┐            │
+│  │ Profiler  │ │ Profiler  │ │ Profiler  │  ...      │
+│  │ ICO: A    │ │ ICO: B    │ │ ICO: C    │            │
+│  │ (Sonnet)  │ │ (Sonnet)  │ │ (Sonnet)  │            │
+│  └─────┬────┘ └─────┬────┘ └─────┬────┘            │
+│        │            │            │                    │
+│        ▼            ▼            ▼                    │
+│  profile_A.json profile_B.json profile_C.json        │
+└─────────────────────────────────────────────────────┘
+```
 
-### Phase 4: Procurement Verification
+Each profiler receives:
+```json
+{
+  "ico": "{supplier_ico}",
+  "name": "{supplier_name}",
+  "context": "flagged by sql-analytics: {flag_types}",
+  "phases": ["db", "finstat"],
+  "contracts_of_interest": [/* from Phase 1 */]
+}
+```
 
-Use the **[uvo-procurement](../uvo-procurement/SKILL.md)** skill.
+Include `"uvo"` in phases for contracts >50K EUR. Include `"rpvs"` if the
+phase-gater approved the RPVS phase.
 
-For CONFIRMED findings with large contracts (>50K), check whether proper
-procurement was followed:
-- Does a UVO record exist? (check `uvo_url` field first, then search UVO)
-- How many bidders competed?
-- Was it direct negotiation (priame rokovacie konanie)?
-- Does the CRZ price match the UVO winning price?
+**Wait for all profilers to complete before proceeding.**
 
-### Phase 5: Ownership & Network (for promising leads)
+### Phase 5: Network mapping (agent)
 
-For CONFIRMED findings that warrant deeper investigation:
+Spawn one **network-mapper** agent (`agents/network-mapper.md`, Sonnet).
 
-1. Use **[rpvs-lookup](../rpvs-lookup/SKILL.md)** to check beneficial ownership
-2. Use **[foaf-network](../foaf-network/SKILL.md)** to map corporate connections
+Pass it all supplier profiles from Phase 4:
+```json
+{
+  "suppliers": [
+    {"ico": "...", "name": "...", "signatories": [...], "flags": [...]}
+  ],
+  "buyer_ico": "{common_buyer_ico}",
+  "buyer_name": "{common_buyer_name}",
+  "depth": "shallow",
+  "phases": ["foaf", "rpvs"]
+}
+```
 
-Cross-reference UBOs across suppliers — same person controlling multiple
-companies receiving contracts from the same buyer is a strong signal.
+Only include the `rpvs` phase if the phase-gater approved it. Use `"deep"`
+depth only for the top lead by contract value.
 
-### Additional cross-checks
+### Phase 6: Cross-referencing (agent)
+
+Spawn the **cross-referencer** agent (`agents/cross-referencer.md`, Opus).
+
+Pass it all profiler outputs + network map:
+```json
+{
+  "profiles": [/* supplier-profiler outputs */],
+  "network": {/* network-mapper output */},
+  "context": {
+    "investigation_type": "broad_scan",
+    "period": {"from": "{date_from}", "to": "{date_to}"},
+    "buyer_focus": "{focus or null}"
+  }
+}
+```
+
+This agent finds cross-cutting patterns — coordinated timing, shared
+directors, threshold gaming clusters, combined capacity concerns. Each
+finding is classified CONFIRMED / INCONCLUSIVE / DISMISSED.
+
+### Phase 7: Report (agent)
+
+Spawn the **report-writer** agent (`agents/report-writer.md`, Opus).
+
+Pass it the cross-referencer output (or Phase 2 output if Phases 4-6 were
+skipped):
+```json
+{
+  "report_type": "broad_scan",
+  "period": {"from": "{date_from}", "to": "{date_to}"},
+  "focus": "{focus or null}",
+  "findings": [/* cross-referencer findings */],
+  "dismissed_summary": [/* dismissed patterns */],
+  "stats": {
+    "total_contracts": 0,
+    "total_value": 0,
+    "queries_run": 20
+  }
+}
+```
+
+## Parallel execution diagram
+
+```
+Time ──────────────────────────────────────────────────────►
+
+Phase 1-2 (sequential, this orchestrator):
+  ┌─────────────────┐ ┌─────────────────┐
+  │  sql-analytics   │ │ critical-valid.  │
+  │    (~2 min)      │ │   (~2 min)       │
+  └────────┬────────┘ └────────┬────────┘
+           │                   │
+Phase 3 (Haiku, fast):         │
+  ┌────────┴────┐              │
+  │ phase-gater │◄─────────────┘
+  │   (~12s)    │
+  └──────┬──────┘
+         │
+Phase 4-5 (parallel agents):
+  ┌──────┴──────────────────────────────────┐
+  │                                          │
+  │  ┌────────┐ ┌────────┐ ┌────────┐       │
+  │  │Prof. A │ │Prof. B │ │Prof. C │       │
+  │  │(Sonnet)│ │(Sonnet)│ │(Sonnet)│ ...   │
+  │  │ ~100s  │ │ ~100s  │ │ ~100s  │       │
+  │  └───┬────┘ └───┬────┘ └───┬────┘       │
+  │      │          │          │             │
+  │      └──────────┼──────────┘             │
+  │                 ▼                        │
+  │  ┌──────────────────────┐                │
+  │  │   network-mapper     │                │
+  │  │     (Sonnet)         │                │
+  │  │     ~120s            │                │
+  │  └──────────┬───────────┘                │
+  └─────────────┼────────────────────────────┘
+                │
+Phase 6-7 (sequential):
+  ┌─────────────┴──────────────┐
+  │   cross-referencer (Opus)   │
+  │        ~180s                │
+  └─────────────┬──────────────┘
+                │
+  ┌─────────────┴──────────────┐
+  │   report-writer (Opus)     │
+  │        ~120s               │
+  └────────────────────────────┘
+```
+
+**Sequential (5 suppliers):** ~25 min
+**Parallel (5 suppliers):** ~8 min (3.1x speedup)
+
+## Additional cross-checks
 
 For specific suppliers, also:
 - Cross-reference with `tax_reliability`: `JOIN tax_reliability t ON replace(z.dodavatel_ico, ' ', '') = t.ico WHERE t.status = 'menej spolahlivy'`
@@ -107,31 +225,16 @@ For specific suppliers, also:
 
 ## Output format
 
-Present findings as a structured investigative report in **Slovak**.
-Use the term **zlta stopa** (plural: **zlte stopy**), never "red flag".
-Format monetary amounts with spaces: `1 280 000 EUR`.
+The report-writer agent produces the final output. See `agents/report-writer.md`
+for the two templates (broad_scan and deep_dive).
 
-**Only include findings that passed critical validation.**
-
-### For each CONFIRMED finding:
-
-1. **Headline** — one-sentence hook
-2. **Key numbers** — contract values, percentages, counts
-3. **Why this is suspicious** — why innocent explanations don't apply
-4. **Evidence** — contract IDs, CRZ URLs, financial data
-5. **Zlte stopy** — which rules triggered and why
-6. **Context** — legal thresholds, public interest
-
-### For each INCONCLUSIVE finding:
-
-1. **Headline** — what was found
-2. **What we checked** — validation steps performed
-3. **Why it remains unclear** — what additional data is needed
-4. **Next steps** — specific enrichment or manual checks
-
-### Dismissed findings (optional):
-
-Brief "Investigated & Cleared" section for transparency.
+Key conventions:
+- **Slovak language** throughout (no diacritics — `z` not `ž`)
+- **zlta stopa** / **zlte stopy**, never "red flag"
+- Format amounts with spaces: `1 280 000 EUR`
+- Every contract has a CRZ URL: `https://www.crz.gov.sk/zmluva/{id}/`
+- Only include findings that passed critical validation
+- End with: *Dakujeme Zltej Stope*
 
 ## Data pipeline (if extraction data is missing)
 

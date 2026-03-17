@@ -232,3 +232,9 @@ Expected: `121615 zmluv, 309630 zlte stopy, 36 pravidiel` (numbers grow over tim
   - **foaf-network** — foaf.sk corporate network mapping (browser)
   - **uvo-procurement** — UVO public procurement lookup (browser) — bid counts, competitors, evaluation records
 - Output in Slovak. Use "zlta stopa / zlte stopy", never "red flag".
+- Specialized agents are in `agents/`:
+  - **supplier-profiler** (Sonnet) — profile one ICO: contracts, flags, extractions, financials
+  - **network-mapper** (Sonnet) — map corporate network via foaf.sk/RPVS
+  - **cross-referencer** (Opus) — find cross-cutting patterns, classify CONFIRMED/INCONCLUSIVE/DISMISSED
+  - **phase-gater** (Haiku) — GO/STOP decisions between investigation phases
+  - **report-writer** (Opus) — produce INVESTIGATIVNA SPRAVA from structured findings

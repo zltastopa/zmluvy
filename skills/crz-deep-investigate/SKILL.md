@@ -31,9 +31,11 @@ https://zmluvy.zltastopa.sk/data/crz.json?sql=SELECT+...&_shape=array
 
 ## Investigation pipeline
 
-Execute these phases sequentially. Each builds on previous data.
+This orchestrator coordinates agents for deep investigation. Unlike the broad
+scan, it starts with direct SQL mapping (this orchestrator runs the queries),
+then fans out to agents for enrichment and analysis.
 
-### Phase 1: Target Contract Mapping
+### Phase 1: Target Contract Mapping (this orchestrator)
 
 Map ALL contracts involving the target company:
 
@@ -76,7 +78,7 @@ WHERE z.nazov_zmluvy LIKE '%{framework_pattern}%'
 ORDER BY z.suma DESC;
 ```
 
-### Phase 2: Hidden Entity Expansion
+### Phase 2: Hidden Entity Expansion (this orchestrator)
 
 Extract all hidden entities from the target's contracts:
 
@@ -100,134 +102,164 @@ WHERE replace(z.dodavatel_ico, ' ', '') = '{hidden_ico}'
 GROUP BY z.dodavatel_ico;
 ```
 
-### Phase gate: How deep to go?
+### Phase 3: Gate decision (agent)
 
-After Phases 1-2, assess what you've found:
+Spawn the **phase-gater** agent (`agents/phase-gater.md`, Haiku).
 
-| Finding | Action |
+Pass findings from Phases 1-2:
+```json
+{
+  "current_phase": "target-mapping",
+  "next_phase": "enrichment",
+  "findings_summary": {
+    "total_findings": 0,
+    "severity_counts": {"danger": 0, "warning": 0, "info": 0},
+    "top_findings": ["..."],
+    "contract_count": 0,
+    "total_value": 0,
+    "hidden_entities_found": 0
+  }
+}
+```
+
+The user can override the gate with `scope: "full"` (always runs all phases).
+
+| Phase 1-2 findings | Default action |
 |---|---|
-| Few contracts (<5), no flags, no hidden entities | Report clean profile. Skip Phases 3-6 unless user explicitly requested full scope. |
-| Moderate activity, some flags | Run Phase 3 (RPVS) + Phase 4 (foaf). Skip Phase 5 (UVO) unless contracts >200K. |
-| Many contracts, multiple flags, hidden entities | Full pipeline (all 6 phases). |
+| Few contracts (<5), no flags, no hidden entities | Report clean profile. Skip Phases 4-6. |
+| Moderate activity, some flags | Run Phase 4 (profiling) + Phase 5 (network). Skip UVO unless contracts >200K. |
+| Many contracts, multiple flags, hidden entities | Full pipeline (all phases). |
 
-The user can override this with the `scope` input. "full" always runs all phases.
+### Phase 4: Parallel profiling (agents)
 
-### Phase 3: RPVS Beneficial Ownership
+Spawn **supplier-profiler** agents (`agents/supplier-profiler.md`, Sonnet)
+for the target AND all related companies found in Phase 2 — **in parallel**.
 
-Use the **[rpvs-lookup](../rpvs-lookup/SKILL.md)** skill.
+```
+┌────────────────────────────────────────────────┐
+│  Target: PARA INVEST (44424418)                 │
+│  Hidden entities: Company B, Company C          │
+│                                                  │
+│  ┌──────────┐ ┌──────────┐ ┌──────────┐        │
+│  │ Profiler  │ │ Profiler  │ │ Profiler  │       │
+│  │ PARA INV  │ │ Company B │ │ Company C │       │
+│  │ (Sonnet)  │ │ (Sonnet)  │ │ (Sonnet)  │       │
+│  └─────┬────┘ └─────┬────┘ └─────┬────┘        │
+│        └────────┬───┘────────────┘               │
+│                 ▼                                 │
+│         All profiles ready                       │
+└────────────────────────────────────────────────┘
+```
 
-Check the target AND all related companies found in Phases 1-2.
-**Not just the primary target** — if you discovered 3 related companies, check all 3.
+Each profiler gets `phases: ["db", "finstat", "uvo"]` by default. Add `"rpvs"`
+if the phase-gater approved it.
 
-Key things to look for:
-- Missing RPVS registration (legally required for >100K contracts)
-- UBOs that are public officials
-- Same UBO across multiple supplier companies
-- Recent ownership changes before large contracts
+### Phase 5: Network mapping (agent)
 
-### Phase 4: Corporate Network Mapping
+Spawn the **network-mapper** agent (`agents/network-mapper.md`, Sonnet).
 
-Use the **[foaf-network](../foaf-network/SKILL.md)** skill.
+For deep investigations, use `depth: "deep"` — follow all person chains,
+not just 1 hop. Pass all companies from Phase 4:
 
-This is the core of the deep investigation. For the target and all related
-companies, build the full person-to-company matrix. Trace ownership chains.
-Detect identical boards, family clusters, and coordinated appointments.
+```json
+{
+  "suppliers": [
+    {"ico": "44424418", "name": "PARA INVEST s.r.o.", "signatories": [...], "flags": [...]},
+    {"ico": "...", "name": "Company B", "signatories": [...], "flags": [...]}
+  ],
+  "buyer_ico": "{main_buyer_ico}",
+  "buyer_name": "{main_buyer_name}",
+  "depth": "deep",
+  "phases": ["foaf", "rpvs"]
+}
+```
 
-### Phase 5: Procurement Verification
+### Phase 6: Cross-referencing (agent)
 
-Use the **[uvo-procurement](../uvo-procurement/SKILL.md)** skill.
+Spawn the **cross-referencer** agent (`agents/cross-referencer.md`, Opus).
 
-For the target's contracts, verify the procurement process:
+Pass all profiler outputs + network map:
+```json
+{
+  "profiles": [/* all supplier-profiler outputs */],
+  "network": {/* network-mapper output */},
+  "context": {
+    "investigation_type": "deep_dive",
+    "period": null,
+    "target": {"ico": "44424418", "name": "PARA INVEST s.r.o."},
+    "buyer_focus": "{main_buyer_name}"
+  }
+}
+```
 
-1. Check `uvo_url` field in CRZ data — follow links to UVO/Josephine/EVO
-2. If no link exists, search UVO by buyer ICO + contract name
-3. Extract: procurement type, bid count, winning price, competitor ranking
-4. Compare CRZ contract value with UVO winning price
-
-Key questions:
-- Did this contract go through open competition?
-- How many bidders participated?
-- Was it priame rokovacie konanie (direct negotiation) — and if so, why?
-- Does the same supplier repeatedly win with no competition?
-
-### Phase 6: Timeline & Coordination Analysis
-
-Cross-reference all collected data into a timeline:
-
+The cross-referencer also performs **timeline & coordination analysis**:
 - Compare foaf.sk board appointment dates against contract signing dates
 - Flag appointments shortly before large contracts
-
-Check for coordinated patterns:
-- Same-day contract signing across multiple related entities
-- Same-minute CRZ publication times (batch upload of coordinated contracts)
+- Same-day contract signing across related entities
+- Same-minute CRZ publication times (batch upload)
 - Identical contract values across different entities
 - Hidden entities appearing as "previous_operator" (asset transfers)
 
-## Output format
+### Phase 7: Report (agent)
 
-The final report MUST follow this structure, written in **Slovak**.
-Use **zlta stopa / zlte stopy**, never "red flag".
-Format amounts with spaces: `1 280 000 EUR`.
+Spawn the **report-writer** agent (`agents/report-writer.md`, Opus).
 
-```markdown
-# INVESTIGATIVNA SPRAVA: [Target] a [network name]
+Pass the deep_dive template:
+```json
+{
+  "report_type": "deep_dive",
+  "target": {"name": "PARA INVEST s.r.o.", "ico": "44424418"},
+  "findings": [/* cross-referencer findings */],
+  "dismissed_summary": [/* dismissed patterns */],
+  "stats": {"total_contracts": 0, "total_value": 0}
+}
+```
 
-## Zhrnutie
-[2-3 sentence executive summary]
+The report-writer produces the INVESTIGATIVNA SPRAVA format with mandatory
+ASCII network diagram.
 
----
+## Execution flow
 
-## CONFIRMED: [Finding headline] ([total value])
+```
+Time ──────────────────────────────────────────────────────►
 
-### Co sme nasli
-[Facts + contract table]
-
-### Preco je to podozrive
-**1. [Zlta stopa category]**
-[Evidence with tables — board member matrix, financial comparison]
-
-### Verejne obstaravanie (UVO)
-| Zmluva | Typ postupu | Pocet ponuk | Vitazna cena | UVO link |
-|---|---|---|---|---|
-
-### Dokazy
-| Zmluva | CRZ URL | UVO URL | PDF |
-|---|---|---|---|
-
-### Zlte stopy
-| Stopa | Severity | Detail |
-|---|---|---|
-
----
-
-## INCONCLUSIVE: [Finding] ([value])
-### Co nevieme
-### Dalsie kroky
-
----
-
-## Schema: Ako to funguje
-
-[ASCII network diagram — MANDATORY]:
-    [Buyer]
-        |
-    +---+---+
-    |       |
- Company A  Company B
-    |       |
-    +---+---+
-        |
-    [Shared persons]
-
----
-
-## Klucove otazky pre dalsie vysetrovanie
-1. ...
-2. ...
-
----
-
-> *Dakujeme Zltej Stope*
+Phase 1-2 (this orchestrator, sequential):
+  ┌──────────────────┐ ┌──────────────────────┐
+  │ Target mapping    │ │ Hidden entity expand  │
+  │   (SQL queries)   │ │   (SQL queries)       │
+  └────────┬─────────┘ └──────────┬───────────┘
+           │                      │
+Phase 3:   └──────────┬───────────┘
+  ┌───────────────────┴──────────────────┐
+  │ phase-gater (Haiku, ~12s)            │
+  │ → GO/STOP + which suppliers          │
+  └───────────────────┬──────────────────┘
+                      │
+Phase 4-5 (parallel agents):
+  ┌───────────────────┴──────────────────┐
+  │ ┌──────────┐ ┌──────────┐            │
+  │ │ Profiler │ │ Profiler │  ...       │
+  │ │ target   │ │ entity B │            │
+  │ │ (Sonnet) │ │ (Sonnet) │            │
+  │ └────┬─────┘ └────┬─────┘            │
+  │      └──────┬──────┘                  │
+  │             ▼                         │
+  │ ┌───────────────────────┐             │
+  │ │ network-mapper (deep) │             │
+  │ │      (Sonnet)         │             │
+  │ └───────────┬───────────┘             │
+  └─────────────┼─────────────────────────┘
+                │
+Phase 6-7 (sequential):
+  ┌─────────────┴──────────────┐
+  │  cross-referencer (Opus)    │
+  │  + timeline analysis       │
+  └─────────────┬──────────────┘
+                │
+  ┌─────────────┴──────────────┐
+  │  report-writer (Opus)      │
+  │  INVESTIGATIVNA SPRAVA     │
+  └────────────────────────────┘
 ```
 
 ## Critical rules
@@ -236,7 +268,7 @@ Format amounts with spaces: `1 280 000 EUR`.
 2. **Build the board member matrix** — identical persons across entities is the strongest evidence.
 3. **Include exact dates** — coordinated timing is strong evidence.
 4. **CRZ URLs are mandatory** — every contract must have its link.
-5. **ASCII network diagrams** — always include a visual representation.
+5. **ASCII network diagrams** — always include in the final report.
 6. **Slovak language throughout** — headers, narrative in Slovak.
 7. **Quantify everything** — totals, ratios, counts.
 8. **Never report unverified claims** — classify as CONFIRMED, INCONCLUSIVE, or DISMISSED.
