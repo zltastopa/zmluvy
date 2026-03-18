@@ -24,3 +24,7 @@ Located in `skills/` directory. Two orchestrators compose the reusable building 
 - **uvo-procurement** — UVO public procurement lookup (bid counts, competitors, evaluation)
 - **rpvs-lookup** — RPVS beneficial ownership lookup via Playwright
 - **foaf-network** — foaf.sk corporate network mapping via Playwright
+
+## Things 3 Integration
+
+Project: **zltastopa** (Area: AI)

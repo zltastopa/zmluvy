@@ -9,4 +9,10 @@ dependencies = [
     "python-dotenv>=1.1.1",
     "sqlite-utils>=3.39",
     "tqdm>=4.67.3",
+    "deltalake>=0.24.0",
+    "duckdb>=1.2.0",
+    "fastapi>=0.115.0",
+    "uvicorn>=0.34.0",
+    "pyarrow>=18.0.0",
+    "pytest>=8.0.0",
 ]
