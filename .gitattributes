@@ -1,1 +1,2 @@
 crz.db filter=lfs diff=lfs merge=lfs -text
+delta_store/tables/**/*.parquet filter=lfs diff=lfs merge=lfs -text
