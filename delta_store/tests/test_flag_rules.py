@@ -364,3 +364,52 @@ class TestWeekendSigning:
         db.execute("INSERT INTO zmluvy VALUES (1,'zmluva','Firma','44556677','Obec','00111222',100000,NULL,'2026-03-09',NULL,NULL,NULL,NULL,NULL,NULL)")
         result = run_sql_flag(db, WEEKEND_SIGNING_CONDITION)
         assert 1 not in result
+
+
+# =========================================================================
+# nace_mismatch — expanded compatible NACE sectors
+# =========================================================================
+
+# Import the same mapping used in production
+import sys
+sys.path.insert(0, str(__import__('pathlib').Path(__file__).resolve().parent.parent))
+
+from ingest import _NACE_COMPATIBLE
+
+
+class TestNaceMismatch:
+    def test_school_property_lease_not_flagged(self):
+        """School (NACE 85) doing property_lease should NOT be a mismatch."""
+        assert 85 in _NACE_COMPATIBLE['property_lease']
+
+    def test_sports_club_property_lease_not_flagged(self):
+        """Sports club (NACE 93) doing property_lease should NOT be a mismatch."""
+        assert 93 in _NACE_COMPATIBLE['property_lease']
+
+    def test_culture_property_lease_not_flagged(self):
+        """Cultural org (NACE 90) doing property_lease should NOT be a mismatch."""
+        assert 90 in _NACE_COMPATIBLE['property_lease']
+
+    def test_public_admin_property_lease_not_flagged(self):
+        """Public admin (NACE 84) doing property_lease should NOT be a mismatch."""
+        assert 84 in _NACE_COMPATIBLE['property_lease']
+
+    def test_telecom_utilities_not_flagged(self):
+        """Telecom (NACE 61) providing utilities should NOT be a mismatch."""
+        assert 61 in _NACE_COMPATIBLE['utilities']
+
+    def test_forestry_property_lease_not_flagged(self):
+        """Forestry (NACE 02) doing property_lease should NOT be a mismatch."""
+        assert 2 in _NACE_COMPATIBLE['property_lease']
+
+    def test_veterinary_consulting_not_flagged(self):
+        """Veterinary (NACE 75) doing professional_consulting should NOT be a mismatch."""
+        assert 75 in _NACE_COMPATIBLE['professional_consulting']
+
+    def test_real_mismatch_still_caught(self):
+        """Restaurant (NACE 56) doing software_it should still be a mismatch."""
+        assert 56 not in _NACE_COMPATIBLE['software_it']
+
+    def test_real_mismatch_construction_insurance(self):
+        """Construction (NACE 41) doing insurance should still be a mismatch."""
+        assert 41 not in _NACE_COMPATIBLE['insurance']
