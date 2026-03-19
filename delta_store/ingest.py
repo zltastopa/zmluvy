@@ -28,6 +28,7 @@ import os
 import subprocess
 import sys
 import zipfile
+from collections import defaultdict
 from concurrent.futures import ProcessPoolExecutor, ThreadPoolExecutor, as_completed
 from datetime import date, datetime, timedelta
 from pathlib import Path
@@ -112,7 +113,7 @@ def delta_upsert(table_name: str, rows: list[dict], pk: str):
 # Step 1: Download daily XML export
 # ---------------------------------------------------------------------------
 
-def step_download(dates: list[date], data_dir: Path) -> list[Path]:
+def step_download(dates: list[date], data_dir: Path, force: bool = False) -> list[Path]:
     """Download CRZ daily ZIP exports, return list of XML paths."""
     xml_dir = data_dir / "xml"
     xml_dir.mkdir(parents=True, exist_ok=True)
@@ -120,8 +121,8 @@ def step_download(dates: list[date], data_dir: Path) -> list[Path]:
     xml_paths = []
     for d in dates:
         xml_path = xml_dir / f"{d}.xml"
-        if xml_path.exists() and xml_path.stat().st_size > 0:
-            print(f"  {d}: already downloaded")
+        if not force and xml_path.exists() and xml_path.stat().st_size > 0:
+            print(f"  {d}: reusing local XML ({xml_path.stat().st_size:,} bytes)")
             xml_paths.append(xml_path)
             continue
 
@@ -579,6 +580,591 @@ def step_extract(
 # Step 6: Flag contracts (red_flags)
 # ---------------------------------------------------------------------------
 
+ALL_DELTA_TABLES = [
+    "zmluvy", "extractions", "prilohy", "flag_rules", "red_flags",
+    "tax_reliability", "vszp_debtors", "socpoist_debtors",
+    "fs_tax_debtors", "fs_vat_deregistered", "fs_vat_dereg_reasons",
+    "ruz_entities", "ruz_equity", "fs_corporate_tax", "rezorty",
+]
+
+# DuckDB rewrites for SQL conditions that use SQLite syntax
+_DUCKDB_SQL_REWRITES = {
+    # strftime needs explicit DATE cast
+    "strftime('%w', z.datum_podpisu)": "strftime(TRY_CAST(z.datum_podpisu AS DATE), '%w')",
+    # group_concat → string_agg
+    "group_concat(": "string_agg(",
+}
+
+
+def _rewrite_sql_for_duckdb(sql: str) -> str:
+    """Apply DuckDB-specific syntax rewrites to flag rule SQL conditions."""
+    for old, new in _DUCKDB_SQL_REWRITES.items():
+        sql = sql.replace(old, new)
+    return sql
+
+
+def _load_all_tables(conn) -> None:
+    """Load all Delta tables into DuckDB as materialized tables."""
+    for name in ALL_DELTA_TABLES:
+        tpath = TABLES_DIR / name
+        if (tpath / "_delta_log").exists():
+            conn.execute(f"CREATE TABLE {name} AS SELECT * FROM delta_scan('{tpath}')")
+        else:
+            # Create empty stub with minimal schema so SQL references don't fail
+            if name == "ruz_entities":
+                conn.execute("""CREATE TABLE ruz_entities (
+                    cin VARCHAR, name VARCHAR, established_on VARCHAR,
+                    terminated_on VARCHAR, nace_code VARCHAR, nace_category VARCHAR,
+                    organization_size_id INTEGER, legal_form_id INTEGER,
+                    region VARCHAR)""")
+            elif name == "tax_reliability":
+                conn.execute("CREATE TABLE tax_reliability (ico VARCHAR, status VARCHAR)")
+            elif name == "vszp_debtors":
+                conn.execute("CREATE TABLE vszp_debtors (cin VARCHAR, name VARCHAR, amount DOUBLE)")
+            elif name == "socpoist_debtors":
+                conn.execute("CREATE TABLE socpoist_debtors (name_normalized VARCHAR, name VARCHAR, amount DOUBLE)")
+            elif name == "fs_tax_debtors":
+                conn.execute("CREATE TABLE fs_tax_debtors (nazov_normalized VARCHAR, nazov VARCHAR, suma DOUBLE)")
+            elif name == "fs_vat_deregistered":
+                conn.execute("CREATE TABLE fs_vat_deregistered (ico VARCHAR, nazov VARCHAR, rok_porusenia VARCHAR, dat_vymazu VARCHAR)")
+            elif name == "fs_vat_dereg_reasons":
+                conn.execute("CREATE TABLE fs_vat_dereg_reasons (ico VARCHAR, nazov VARCHAR, rok_porusenia VARCHAR, dat_zverejnenia VARCHAR)")
+            elif name == "ruz_equity":
+                conn.execute("CREATE TABLE ruz_equity (ico VARCHAR, nazov VARCHAR, vlastne_imanie DOUBLE, obdobie VARCHAR)")
+            else:
+                conn.execute(f"CREATE TABLE {name} (id INTEGER)")
+
+
+def _eval_custom_rules(conn, date_from: str, date_to: str) -> list[dict]:
+    """Evaluate __custom__ flag rules using DuckDB-compatible Python logic.
+
+    Ports the custom evaluators from pipeline/flag_contracts.py to work
+    with DuckDB (materialized tables already loaded in conn).
+    """
+    now = datetime.now().isoformat()
+    flags = []
+
+    def _add_flags(rule_id, zmluva_ids, details=None):
+        for zid in zmluva_ids:
+            flags.append({
+                "id": None,
+                "zmluva_id": zid,
+                "flag_type": rule_id,
+                "detail": (details or {}).get(zid),
+                "created_at": now,
+            })
+
+    # --- tax_unreliable_entity ---
+    try:
+        unreliable = set(
+            r[0] for r in conn.execute(
+                "SELECT ico FROM tax_reliability WHERE status = 'menej spoľahlivý'"
+            ).fetchall()
+        )
+        if unreliable:
+            he_rows = conn.execute("""
+                SELECT e.zmluva_id, e.extraction_json
+                FROM extractions e JOIN zmluvy z ON z.id = e.zmluva_id
+                WHERE e.hidden_entity_count > 0 AND e.extraction_json IS NOT NULL
+                  AND z.datum_zverejnenia >= $1 AND z.datum_zverejnenia <= $2
+            """, [date_from, date_to]).fetchall()
+            matching, details = set(), {}
+            for zid, ej_str in he_rows:
+                for he in (json.loads(ej_str).get("hidden_entities") or []):
+                    ico = (he.get("ico") or "").strip()
+                    if ico and ico in unreliable:
+                        matching.add(zid)
+                        details[zid] = f"{he.get('name', ico)} (ICO: {ico})"
+            _add_flags("tax_unreliable_entity", matching, details)
+    except Exception as e:
+        print(f"  Rule tax_unreliable_entity failed: {e}")
+
+    # --- socpoist_debtor ---
+    try:
+        sp_rows = conn.execute(
+            "SELECT name_normalized, name, amount FROM socpoist_debtors WHERE name_normalized IS NOT NULL"
+        ).fetchall()
+        sp_map = {}
+        for norm, name, amount in sp_rows:
+            if norm not in sp_map or (amount or 0) > (sp_map[norm][1] or 0):
+                sp_map[norm] = (name, amount)
+        if sp_map:
+            contracts = conn.execute("""
+                SELECT id, dodavatel FROM zmluvy
+                WHERE dodavatel IS NOT NULL AND dodavatel != ''
+                  AND datum_zverejnenia >= $1 AND datum_zverejnenia <= $2
+            """, [date_from, date_to]).fetchall()
+            matching, details = set(), {}
+            for cid, dodavatel in contracts:
+                norm = normalize_company_name(dodavatel)
+                if norm in sp_map:
+                    matching.add(cid)
+                    orig, amt = sp_map[norm]
+                    details[cid] = f"{orig} (dlh: {amt:,.2f} EUR)" if amt else orig
+            _add_flags("socpoist_debtor", matching, details)
+    except Exception as e:
+        print(f"  Rule socpoist_debtor failed: {e}")
+
+    # --- vszp_debtor_entity ---
+    try:
+        vszp_rows = conn.execute(
+            "SELECT cin, name, amount FROM vszp_debtors WHERE cin IS NOT NULL"
+        ).fetchall()
+        vszp_map = {}
+        for cin, name, amount in vszp_rows:
+            cin = cin.strip()
+            if cin and (cin not in vszp_map or (amount or 0) > (vszp_map[cin][1] or 0)):
+                vszp_map[cin] = (name, amount)
+        if vszp_map:
+            he_rows = conn.execute("""
+                SELECT e.zmluva_id, e.extraction_json
+                FROM extractions e JOIN zmluvy z ON z.id = e.zmluva_id
+                WHERE e.hidden_entity_count > 0 AND e.extraction_json IS NOT NULL
+                  AND z.datum_zverejnenia >= $1 AND z.datum_zverejnenia <= $2
+            """, [date_from, date_to]).fetchall()
+            matching, details = set(), {}
+            for zid, ej_str in he_rows:
+                for he in (json.loads(ej_str).get("hidden_entities") or []):
+                    ico = (he.get("ico") or "").strip()
+                    if ico and ico in vszp_map:
+                        matching.add(zid)
+                        vname, amt = vszp_map[ico]
+                        details[zid] = f"{he.get('name', vname)} (ICO: {ico}, dlh VSZP: {amt:,.2f} EUR)" if amt else ico
+            _add_flags("vszp_debtor_entity", matching, details)
+    except Exception as e:
+        print(f"  Rule vszp_debtor_entity failed: {e}")
+
+    # --- fresh_company ---
+    try:
+        ruz_rows = conn.execute("""
+            SELECT cin, established_on, name FROM ruz_entities
+            WHERE cin IS NOT NULL AND established_on IS NOT NULL AND terminated_on IS NULL
+        """).fetchall()
+        ruz_map = {}
+        for cin, est_on, name in ruz_rows:
+            est = _parse_date_str(est_on)
+            if est and (cin not in ruz_map or est < ruz_map[cin][0]):
+                ruz_map[cin] = (est, name)
+        contracts = conn.execute("""
+            SELECT id, dodavatel_ico, datum_podpisu, datum_zverejnenia FROM zmluvy
+            WHERE dodavatel_ico IS NOT NULL AND dodavatel_ico != '' AND length(dodavatel_ico) = 8
+              AND datum_zverejnenia >= $1 AND datum_zverejnenia <= $2
+        """, [date_from, date_to]).fetchall()
+        matching, details = set(), {}
+        for cid, ico, d_podpis, d_zverej in contracts:
+            if ico not in ruz_map:
+                continue
+            est_date, company_name = ruz_map[ico]
+            contract_date = _parse_date_str(d_podpis or d_zverej)
+            if not contract_date:
+                continue
+            days_diff = (contract_date - est_date).days
+            if 0 <= days_diff < 365:
+                matching.add(cid)
+                details[cid] = f"{company_name} (zalozena {est_date.strftime('%d.%m.%Y')}, {days_diff // 30} mes. pred zmluvou)"
+        _add_flags("fresh_company", matching, details)
+    except Exception as e:
+        print(f"  Rule fresh_company failed: {e}")
+
+    # --- contract_splitting ---
+    try:
+        rows = conn.execute("""
+            SELECT id, dodavatel_ico, objednavatel_ico, suma, datum_podpisu, datum_zverejnenia
+            FROM zmluvy
+            WHERE dodavatel_ico IS NOT NULL AND dodavatel_ico != ''
+              AND objednavatel_ico IS NOT NULL AND objednavatel_ico != ''
+              AND suma IS NOT NULL AND suma > 0 AND suma < 15000 AND typ = 'zmluva'
+              AND datum_zverejnenia >= $1 AND datum_zverejnenia <= $2
+        """, [date_from, date_to]).fetchall()
+        groups = defaultdict(list)
+        for cid, dod, obj, suma, d_pod, d_zver in rows:
+            year = (d_pod or d_zver or "0000")[:4]
+            groups[(dod, obj, year)].append((cid, suma))
+        matching, details = set(), {}
+        for (dod, obj, year), contracts in groups.items():
+            if len(contracts) >= 5:
+                total = sum(c[1] for c in contracts)
+                if total > 15000:
+                    for cid, _ in contracts:
+                        matching.add(cid)
+                        details[cid] = f"{len(contracts)} zmluv za {total:,.0f} EUR v {year}"
+        _add_flags("contract_splitting", matching, details)
+    except Exception as e:
+        print(f"  Rule contract_splitting failed: {e}")
+
+    # --- supplier_monopoly ---
+    try:
+        rows = conn.execute("""
+            SELECT dodavatel_ico, objednavatel_ico, count(*) as cnt,
+                   string_agg(CAST(id AS VARCHAR), ',') as ids
+            FROM zmluvy
+            WHERE dodavatel_ico IS NOT NULL AND dodavatel_ico != ''
+              AND objednavatel_ico IS NOT NULL AND objednavatel_ico != ''
+            GROUP BY dodavatel_ico, objednavatel_ico
+            HAVING count(*) >= 10
+        """).fetchall()
+        matching, details = set(), {}
+        for dod, obj, cnt, ids_str in rows:
+            for cid_str in ids_str.split(","):
+                cid = int(cid_str)
+                # Only flag if contract is in date range
+                matching.add(cid)
+                details[cid] = f"{cnt} zmluv medzi ICO {dod} a {obj}"
+        # Filter to date range
+        if matching:
+            in_range = set(r[0] for r in conn.execute(f"""
+                SELECT id FROM zmluvy
+                WHERE id IN ({','.join(str(i) for i in matching)})
+                  AND datum_zverejnenia >= $1 AND datum_zverejnenia <= $2
+            """, [date_from, date_to]).fetchall())
+            matching = matching & in_range
+        _add_flags("supplier_monopoly", matching, details)
+    except Exception as e:
+        print(f"  Rule supplier_monopoly failed: {e}")
+
+    # --- rapid_succession ---
+    try:
+        rows = conn.execute("""
+            SELECT id, dodavatel_ico, objednavatel_ico, datum_podpisu, datum_zverejnenia
+            FROM zmluvy
+            WHERE dodavatel_ico IS NOT NULL AND dodavatel_ico != ''
+              AND objednavatel_ico IS NOT NULL AND objednavatel_ico != ''
+            ORDER BY dodavatel_ico, objednavatel_ico, datum_podpisu
+        """).fetchall()
+        groups = defaultdict(list)
+        for cid, dod, obj, d_pod, d_zver in rows:
+            dt = _parse_date_str(d_pod or d_zver)
+            if dt:
+                groups[(dod, obj)].append((cid, dt))
+        date_lo = _parse_date_str(date_from)
+        date_hi = _parse_date_str(date_to[:10])
+        matching, details = set(), {}
+        for (dod, obj), contracts in groups.items():
+            contracts.sort(key=lambda x: x[1])
+            for i in range(len(contracts)):
+                cluster = [contracts[i]]
+                for j in range(i + 1, len(contracts)):
+                    if (contracts[j][1] - contracts[i][1]).days <= 14:
+                        cluster.append(contracts[j])
+                    else:
+                        break
+                if len(cluster) >= 3:
+                    for cid, dt in cluster:
+                        if date_lo and date_hi and date_lo <= dt <= date_hi:
+                            matching.add(cid)
+                            details[cid] = f"{len(cluster)} zmluv za 14 dni (ICO dod: {dod}, obj: {obj})"
+        _add_flags("rapid_succession", matching, details)
+    except Exception as e:
+        print(f"  Rule rapid_succession failed: {e}")
+
+    # --- nace_mismatch ---
+    try:
+        rows = conn.execute("""
+            SELECT z.id, z.dodavatel_ico, e.service_category, r.nace_code, r.nace_category
+            FROM zmluvy z
+            JOIN extractions e ON e.zmluva_id = z.id
+            JOIN ruz_entities r ON r.cin = z.dodavatel_ico
+            WHERE e.service_category IS NOT NULL AND e.service_category != 'other'
+              AND r.nace_code IS NOT NULL AND r.nace_code != ''
+              AND z.dodavatel_ico IS NOT NULL AND z.dodavatel_ico != ''
+              AND z.datum_zverejnenia >= $1 AND z.datum_zverejnenia <= $2
+        """, [date_from, date_to]).fetchall()
+        matching, details = set(), {}
+        for cid, ico, cat, nace_code, nace_cat in rows:
+            if cat not in _NACE_COMPATIBLE:
+                continue
+            try:
+                nace_sector = int(nace_code[:2])
+            except (ValueError, TypeError):
+                continue
+            if nace_sector not in _NACE_COMPATIBLE[cat]:
+                matching.add(cid)
+                details[cid] = f"NACE: {nace_cat} ({nace_code}), zmluva: {cat}"
+        _add_flags("nace_mismatch", matching, details)
+    except Exception as e:
+        print(f"  Rule nace_mismatch failed: {e}")
+
+    # --- signatory_overlap ---
+    try:
+        rows = conn.execute("""
+            SELECT e.zmluva_id, e.extraction_json, z.dodavatel_ico
+            FROM extractions e JOIN zmluvy z ON z.id = e.zmluva_id
+            WHERE e.extraction_json IS NOT NULL
+              AND z.dodavatel_ico IS NOT NULL AND z.dodavatel_ico != ''
+        """).fetchall()
+        sig_map = defaultdict(set)
+        sig_contracts = defaultdict(set)
+        for zid, ej_str, dod_ico in rows:
+            try:
+                ej = json.loads(ej_str)
+            except Exception:
+                continue
+            for sig in (ej.get("signatories") or []):
+                name = (sig.get("name") or "").strip().lower()
+                if name and len(name) > 5:
+                    sig_map[name].add(dod_ico)
+                    sig_contracts[name].add(zid)
+        # Filter to contracts in date range
+        in_range = set(r[0] for r in conn.execute("""
+            SELECT id FROM zmluvy
+            WHERE datum_zverejnenia >= $1 AND datum_zverejnenia <= $2
+        """, [date_from, date_to]).fetchall())
+        matching, details = set(), {}
+        for name, icos in sig_map.items():
+            if len(icos) >= 3:
+                for zid in sig_contracts[name]:
+                    if zid in in_range:
+                        matching.add(zid)
+                        details[zid] = f"{name.title()} podpisuje za {len(icos)} roznych dodavatelov"
+        _add_flags("signatory_overlap", matching, details)
+    except Exception as e:
+        print(f"  Rule signatory_overlap failed: {e}")
+
+    # --- hidden_entity_is_supplier ---
+    try:
+        all_dod = set(r[0] for r in conn.execute(
+            "SELECT DISTINCT dodavatel_ico FROM zmluvy WHERE dodavatel_ico IS NOT NULL AND dodavatel_ico != ''"
+        ).fetchall())
+        he_rows = conn.execute("""
+            SELECT e.zmluva_id, e.extraction_json
+            FROM extractions e JOIN zmluvy z ON z.id = e.zmluva_id
+            WHERE e.hidden_entity_count > 0 AND e.extraction_json IS NOT NULL
+              AND z.datum_zverejnenia >= $1 AND z.datum_zverejnenia <= $2
+        """, [date_from, date_to]).fetchall()
+        matching, details = set(), {}
+        for zid, ej_str in he_rows:
+            for he in (json.loads(ej_str).get("hidden_entities") or []):
+                ico = (he.get("ico") or "").strip()
+                if ico and ico in all_dod:
+                    matching.add(zid)
+                    details[zid] = f"{he.get('name', ico)} (ICO: {ico}) je tiez dodavatel"
+        _add_flags("hidden_entity_is_supplier", matching, details)
+    except Exception as e:
+        print(f"  Rule hidden_entity_is_supplier failed: {e}")
+
+    # --- amount_outlier ---
+    try:
+        import math as _math
+        stats = conn.execute("""
+            SELECT e.service_category, avg(z.suma) as mean, avg(z.suma * z.suma) as mean_sq, count(*) as cnt
+            FROM zmluvy z JOIN extractions e ON e.zmluva_id = z.id
+            WHERE z.suma IS NOT NULL AND z.suma > 0 AND e.service_category IS NOT NULL
+            GROUP BY e.service_category HAVING count(*) >= 10
+        """).fetchall()
+        thresholds = {}
+        for cat, mean, mean_sq, cnt in stats:
+            variance = mean_sq - mean * mean
+            stddev = _math.sqrt(max(variance, 0))
+            threshold = mean + 3 * stddev
+            if threshold > 0:
+                thresholds[cat] = (threshold, mean, stddev)
+        rows = conn.execute("""
+            SELECT z.id, z.suma, e.service_category FROM zmluvy z
+            JOIN extractions e ON e.zmluva_id = z.id
+            WHERE z.suma IS NOT NULL AND z.suma > 0 AND e.service_category IS NOT NULL
+              AND z.datum_zverejnenia >= $1 AND z.datum_zverejnenia <= $2
+        """, [date_from, date_to]).fetchall()
+        matching, details = set(), {}
+        for cid, suma, cat in rows:
+            if cat in thresholds and suma > thresholds[cat][0]:
+                matching.add(cid)
+                mean, stddev = thresholds[cat][1], thresholds[cat][2]
+                n_sigma = (suma - mean) / stddev if stddev > 0 else 0
+                details[cid] = f"{suma:,.0f} EUR ({n_sigma:.1f}x stddev pre {cat})"
+        _add_flags("amount_outlier", matching, details)
+    except Exception as e:
+        print(f"  Rule amount_outlier failed: {e}")
+
+    # --- dormant_then_active ---
+    try:
+        all_contracts = conn.execute("""
+            SELECT dodavatel_ico, datum_podpisu, datum_zverejnenia
+            FROM zmluvy WHERE dodavatel_ico IS NOT NULL AND dodavatel_ico != ''
+            ORDER BY dodavatel_ico, datum_zverejnenia
+        """).fetchall()
+        ico_dates = defaultdict(list)
+        for dod, d_pod, d_zver in all_contracts:
+            dt = _parse_date_str(d_pod or d_zver)
+            if dt:
+                ico_dates[dod].append(dt)
+        for ico in ico_dates:
+            ico_dates[ico].sort()
+        rows = conn.execute("""
+            SELECT id, dodavatel_ico, datum_podpisu, datum_zverejnenia, suma
+            FROM zmluvy
+            WHERE dodavatel_ico IS NOT NULL AND dodavatel_ico != ''
+              AND suma IS NOT NULL AND suma > 50000
+              AND datum_zverejnenia >= $1 AND datum_zverejnenia <= $2
+        """, [date_from, date_to]).fetchall()
+        matching, details = set(), {}
+        for cid, ico, d_pod, d_zver, suma in rows:
+            dt = _parse_date_str(d_pod or d_zver)
+            if not dt or ico not in ico_dates:
+                continue
+            dates = ico_dates[ico]
+            idx = None
+            for i, d in enumerate(dates):
+                if d == dt:
+                    idx = i
+                    break
+            if idx is None or idx == 0:
+                continue
+            gap_days = (dt - dates[idx - 1]).days
+            if gap_days >= 730:
+                matching.add(cid)
+                years = gap_days / 365.25
+                details[cid] = f"{suma:,.0f} EUR po {years:.1f} rokoch bez zmluv (ICO: {ico})"
+        _add_flags("dormant_then_active", matching, details)
+    except Exception as e:
+        print(f"  Rule dormant_then_active failed: {e}")
+
+    # --- threshold_gaming ---
+    try:
+        BAND_LO, BAND_HI = 210000, 215000
+        grant_keywords = {'dotáci', 'dotaci', 'príspev', 'prispev', 'grant', 'úver', 'uver', 'záložn', 'zalozn'}
+        rows = conn.execute("""
+            SELECT id, objednavatel_ico, suma, nazov_zmluvy
+            FROM zmluvy
+            WHERE suma >= $1 AND suma < $2
+              AND objednavatel_ico IS NOT NULL AND objednavatel_ico != ''
+              AND datum_zverejnenia >= $3 AND datum_zverejnenia <= $4
+        """, [BAND_LO, BAND_HI, date_from, date_to]).fetchall()
+        buyer_contracts = defaultdict(list)
+        for cid, obj_ico, suma, nazov in rows:
+            buyer_contracts[obj_ico].append((cid, suma, nazov))
+        matching, details = set(), {}
+        for obj_ico, contracts in buyer_contracts.items():
+            for cid, suma, nazov in contracts:
+                title_lower = (nazov or "").lower()
+                if any(kw in title_lower for kw in grant_keywords):
+                    continue
+                diff = BAND_HI - suma
+                matching.add(cid)
+                details[cid] = f"{suma:,.2f} EUR (iba {diff:,.0f} EUR pod EU limitom 215K)"
+        _add_flags("threshold_gaming", matching, details)
+    except Exception as e:
+        print(f"  Rule threshold_gaming failed: {e}")
+
+    # --- fs_tax_debtor ---
+    try:
+        debtor_rows = conn.execute("""
+            SELECT nazov_normalized, nazov, max(suma) as max_sum FROM fs_tax_debtors
+            WHERE nazov_normalized IS NOT NULL AND nazov_normalized != ''
+            GROUP BY nazov_normalized, nazov
+        """).fetchall()
+        debtor_map = {r[0]: (r[1], r[2]) for r in debtor_rows}
+        if debtor_map:
+            contracts = conn.execute("""
+                SELECT id, dodavatel FROM zmluvy
+                WHERE dodavatel IS NOT NULL AND dodavatel != ''
+                  AND datum_zverejnenia >= $1 AND datum_zverejnenia <= $2
+            """, [date_from, date_to]).fetchall()
+            matching, details = set(), {}
+            for cid, dodavatel in contracts:
+                norm = normalize_company_name(dodavatel)
+                if norm in debtor_map:
+                    matching.add(cid)
+                    orig, amt = debtor_map[norm]
+                    details[cid] = f"{orig} (dlh: {amt:,.2f} EUR)" if amt else orig
+            _add_flags("fs_tax_debtor", matching, details)
+    except Exception as e:
+        print(f"  Rule fs_tax_debtor failed: {e}")
+
+    # --- fs_vat_deregistered ---
+    try:
+        rows = conn.execute("""
+            SELECT z.id, v.nazov, v.rok_porusenia, v.dat_vymazu
+            FROM zmluvy z
+            JOIN fs_vat_deregistered v ON v.ico = replace(z.dodavatel_ico, ' ', '')
+            WHERE v.ico IS NOT NULL
+              AND z.datum_zverejnenia >= $1 AND z.datum_zverejnenia <= $2
+        """, [date_from, date_to]).fetchall()
+        matching, details = set(), {}
+        for cid, nazov, rok, dat in rows:
+            matching.add(cid)
+            parts = [nazov or ""]
+            if rok:
+                parts.append(f"rok porusenia: {rok}")
+            if dat:
+                parts.append(f"vymazany: {dat}")
+            details[cid] = ", ".join(parts)
+        _add_flags("fs_vat_deregistered", matching, details)
+    except Exception as e:
+        print(f"  Rule fs_vat_deregistered failed: {e}")
+
+    # --- fs_vat_dereg_risk ---
+    try:
+        rows = conn.execute("""
+            SELECT z.id, v.nazov, v.rok_porusenia, v.dat_zverejnenia
+            FROM zmluvy z
+            JOIN fs_vat_dereg_reasons v ON v.ico = replace(z.dodavatel_ico, ' ', '')
+            WHERE v.ico IS NOT NULL
+              AND z.datum_zverejnenia >= $1 AND z.datum_zverejnenia <= $2
+        """, [date_from, date_to]).fetchall()
+        matching, details = set(), {}
+        for cid, nazov, rok, dat in rows:
+            matching.add(cid)
+            parts = [nazov or ""]
+            if rok:
+                parts.append(f"rok porusenia: {rok}")
+            if dat:
+                parts.append(f"zverejnene: {dat}")
+            details[cid] = ", ".join(parts)
+        _add_flags("fs_vat_dereg_risk", matching, details)
+    except Exception as e:
+        print(f"  Rule fs_vat_dereg_risk failed: {e}")
+
+    # --- negative_equity ---
+    try:
+        rows = conn.execute("""
+            SELECT z.id, e.nazov, e.vlastne_imanie, e.obdobie
+            FROM zmluvy z
+            JOIN ruz_equity e ON e.ico = replace(z.dodavatel_ico, ' ', '')
+            WHERE e.vlastne_imanie < 0
+              AND z.datum_zverejnenia >= $1 AND z.datum_zverejnenia <= $2
+        """, [date_from, date_to]).fetchall()
+        matching, details = set(), {}
+        for cid, nazov, vi, obdobie in rows:
+            matching.add(cid)
+            details[cid] = f"{nazov}: vlastne imanie {vi:,.0f} EUR (obdobie {obdobie})"
+        _add_flags("negative_equity", matching, details)
+    except Exception as e:
+        print(f"  Rule negative_equity failed: {e}")
+
+    return flags
+
+
+# NACE sector -> compatible service categories (ported from flag_contracts.py)
+_NACE_COMPATIBLE = {
+    'software_it': {58, 59, 60, 61, 62, 63, 70, 71, 72, 74},
+    'construction_renovation': {41, 42, 43, 71},
+    'legal_services': {69},
+    'media_marketing': {58, 59, 60, 63, 70, 73, 74, 90},
+    'insurance': {65, 66},
+    'transport': {49, 50, 51, 52, 53},
+    'transportation': {49, 50, 51, 52, 53},
+    'cleaning_facility': {81, 82},
+    'pharmaceutical_clinical': {21, 46, 72, 86},
+    'property_lease': {68, 77},
+    'professional_consulting': {69, 70, 71, 72, 73, 74, 78, 82},
+    'waste_management': {38, 39},
+    'utilities': {35, 36},
+    'hr_payroll_outsourcing': {69, 70, 78, 82},
+    'accommodation': {55, 56},
+    'vehicle_use': {45, 49, 77},
+}
+
+
+def _parse_date_str(s):
+    """Parse a date string, return datetime or None."""
+    if not s:
+        return None
+    try:
+        return datetime.strptime(str(s)[:10], "%Y-%m-%d")
+    except (ValueError, TypeError):
+        return None
+
+
 def step_flag(dates: list[date]) -> int:
     """Run flag rules against new contracts and upsert red_flags into Delta."""
     import duckdb
@@ -586,13 +1172,8 @@ def step_flag(dates: list[date]) -> int:
     conn = duckdb.connect()
     conn.execute("INSTALL delta; LOAD delta;")
 
-    # Load all needed tables
-    for name in ["zmluvy", "extractions", "prilohy", "flag_rules", "red_flags"]:
-        tpath = TABLES_DIR / name
-        if (tpath / "_delta_log").exists():
-            conn.execute(f"CREATE TABLE {name} AS SELECT * FROM delta_scan('{tpath}')")
-        else:
-            conn.execute(f"CREATE TABLE {name} (id INTEGER)")  # empty stub
+    # Load ALL Delta tables (flag rules reference many of them)
+    _load_all_tables(conn)
 
     date_from = min(dates).isoformat()
     date_to = max(dates).isoformat() + " 23:59:59"
@@ -608,9 +1189,18 @@ def step_flag(dates: list[date]) -> int:
 
     new_flags = []
     now = datetime.now().isoformat()
+    sql_ok, sql_skip, sql_fail = 0, 0, 0
 
     for rule_id, sql_condition, needs_extraction in rules:
+        # Skip __custom__ rules — handled separately below
+        if sql_condition == "__custom__":
+            sql_skip += 1
+            continue
+
         try:
+            # Apply DuckDB syntax rewrites
+            condition = _rewrite_sql_for_duckdb(sql_condition)
+
             query = f"""
                 SELECT z.id as zmluva_id
                 FROM zmluvy z
@@ -621,21 +1211,30 @@ def step_flag(dates: list[date]) -> int:
                 ) p ON z.id = p.zmluva_id
                 WHERE z.datum_zverejnenia >= $1
                   AND z.datum_zverejnenia <= $2
-                  AND ({sql_condition})
+                  AND ({condition})
             """
             flagged = conn.execute(query, [date_from, date_to]).fetchall()
 
             for (zmluva_id,) in flagged:
                 new_flags.append({
-                    "id": None,  # will be auto-assigned
+                    "id": None,
                     "zmluva_id": zmluva_id,
                     "flag_type": rule_id,
                     "detail": None,
                     "created_at": now,
                 })
+            sql_ok += 1
 
         except Exception as e:
+            sql_fail += 1
             print(f"  Rule {rule_id} failed: {e}")
+
+    # Evaluate __custom__ rules via Python logic
+    custom_flags = _eval_custom_rules(conn, date_from, date_to)
+    new_flags.extend(custom_flags)
+
+    print(f"  SQL rules: {sql_ok} ok, {sql_skip} custom, {sql_fail} failed")
+    print(f"  Custom rules: {len(custom_flags)} flags generated")
 
     if not new_flags:
         print("  No new flags")
@@ -736,7 +1335,7 @@ def main():
 
     if "download" in steps:
         print("Step 1/6: Download daily XML exports")
-        xml_paths = step_download(dates, DATA_DIR)
+        xml_paths = step_download(dates, DATA_DIR, force=args.force)
         print(f"  → {len(xml_paths)} XML files\n")
     else:
         # Discover existing XMLs for subsequent steps
