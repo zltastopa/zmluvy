@@ -48,7 +48,7 @@ uv run python delta_store/serve.py
 ```
 ┌─────────────────┐     ┌────────────────────┐     ┌──────────────────┐
 │  CRZ Open Data  │────▶│  ingest.py         │────▶│  delta_store/    │
-│  (daily XMLs)   │     │  (7-step pipeline) │     │  tables/         │
+│  (daily XMLs)   │     │  (8-step pipeline) │     │  tables/         │
 └─────────────────┘     └────────────────────┘     │  ├── zmluvy      │
                               │                     │  ├── extractions │
                               │ OCR (ProcessPool)   │  ├── prilohy     │
@@ -57,7 +57,7 @@ uv run python delta_store/serve.py
                               ▼                     │  ├── flag_rules  │
 ┌─────────────────┐     ┌────────────────────┐     │  └── ...15 total │
 │  Browser        │◀───▶│  serve.py          │◀────└──────────────────┘
-│  (dashboard)    │     │  (FastAPI + DuckDB) │        430 MB Parquet
+│  (dashboard)    │     │  (FastAPI + DuckDB) │        ~130 MB Parquet
 └─────────────────┘     └────────────────────┘
          │
          │  /api/*
@@ -68,7 +68,7 @@ uv run python delta_store/serve.py
 └─────────────────┘
 ```
 
-**Storage**: Delta Lake (Parquet files + `_delta_log/` transaction log) — 430 MB vs 981 MB SQLite.
+**Storage**: Delta Lake (Parquet files + `_delta_log/` transaction log) — ~130 MB after compaction (vs 981 MB SQLite).
 **Query engine**: DuckDB in-memory — materializes Delta tables on startup (~2-3 seconds), then serves from RAM. RUZ entities are optimized: only ~31k CRZ-connected rows materialized (vs 1.8M full), saving ~550 MB.
 **Concurrency**: Threading lock on DuckDB connection handles parallel dashboard requests safely.
 **Memory**: ~650 MB DuckDB / ~900 MB process RSS — runs comfortably on a 2 GB VPS.
@@ -79,7 +79,7 @@ uv run python delta_store/serve.py
 
 ```
 ├── delta_store/           Delta Lake backend
-│   ├── ingest.py          End-to-end pipeline (download → parse → PDF → text → extract → ruz → flag)
+│   ├── ingest.py          End-to-end pipeline (download → parse → PDF → text → extract → ruz → flag → compact)
 │   ├── serve.py           FastAPI + DuckDB server (port 8002)
 │   ├── migrate_from_sqlite.py  One-time SQLite → Delta migration
 │   ├── tables/            Delta Lake tables (Parquet + _delta_log/)
@@ -178,6 +178,9 @@ uv run python delta_store/ingest.py --date 2026-03-19 --step extract --limit 100
 - **ProcessPoolExecutor for OCR** — 3.1x faster than ThreadPool since Tesseract is CPU-bound (bypasses GIL).
 - **Parallel** — PDF download, text conversion, LLM extraction, and RUZ refresh run with `--workers N` (default: 8).
 - **RUZ optimization** — only ~31k CRZ-connected entities materialized in RAM (vs 1.8M full table), with a `delta_scan()` view for detail page queries.
+- **XML sanitization** — strips invalid control characters (0x00-0x08, 0x0B, 0x0C, 0x0E-0x1F) from CRZ exports before parsing.
+- **LLM JSON repair** — `_clean_llm_json()` fixes markdown fences, trailing commas, and truncated output; retry loop (2 attempts) on bad JSON.
+- **Compact step** — `optimize.compact()` merges fragmented parquet files, `vacuum(retention_hours=0)` removes stale versions after merge operations.
 
 ### CLI options
 
@@ -292,7 +295,7 @@ uv run python delta_store/ingest.py --from 2022-01 --to 2026-03
 # 4. Start server
 uv run python delta_store/serve.py --host 0.0.0.0 --port 8002
 
-# 5. Set up daily cron (runs all 7 steps: download, parse, pdf, text, extract, ruz, flag)
+# 5. Set up daily cron (runs all 8 steps: download, parse, pdf, text, extract, ruz, flag, compact)
 crontab -e
 # 0 6 * * * cd /opt/crz-experiments && uv run python delta_store/ingest.py --date $(date +\%Y-\%m-\%d) >> /var/log/crz-ingest.log 2>&1
 ```
@@ -322,7 +325,7 @@ docker compose up -d --build
 
 The app listens on port 8002 inside the container, published as `127.0.0.1:8321` on the host. Put nginx in front for TLS.
 
-The Compose setup mounts `delta_store/tables/` from the host, keeping deploys fast even with ~430 MB of data.
+The Compose setup mounts `delta_store/tables/` from the host, keeping deploys fast even with ~130 MB of data.
 
 ### No external database needed
 
