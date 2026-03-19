@@ -1,0 +1,1 @@
+{"commitInfo":{"timestamp":1773942998931,"operation":"VACUUM END","operationParameters":{"status":"COMPLETED"},"engineInfo":"delta-rs:py-1.5.0","clientVersion":"delta-rs.py-1.5.0","operationMetrics":{"numDeletedFiles":42,"numVacuumedDirectories":0}}}
