@@ -1,9 +1,0 @@
-{
-  "eval_id": 3,
-  "variant": "without_skill",
-  "expectations": [
-    {"text": "correct_pipeline_command", "passed": true, "evidence": "Ran: pipeline/enrich_suppliers.py --from 2026-01 --to 2026-03 --limit 30"},
-    {"text": "queries_results_after", "passed": true, "evidence": "Queried supplier_red_flags + supplier_financials, also did manual register cross-checks"},
-    {"text": "identifies_top_risks", "passed": true, "evidence": "Identified same top 5: PERSET (110x), WAY INDUSTRIES (11x), INVEST 9 (11.8x), zares (6.8x), ARRIVA (4.5x)"}
-  ]
-}
