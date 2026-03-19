@@ -134,7 +134,7 @@ DEFAULT_RULES = [
         "label": "Dodavatel nie je v RUZ",
         "description": "Dodavatel s ICO nie je evidovany v registri uctovnych zavierok",
         "severity": "info",
-        "sql_condition": "z.dodavatel_ico IS NOT NULL AND z.dodavatel_ico != '' AND length(z.dodavatel_ico) = 8 AND z.dodavatel_ico NOT IN (SELECT cin FROM ruz_entities WHERE cin IS NOT NULL)",
+        "sql_condition": "z.dodavatel_ico IS NOT NULL AND z.dodavatel_ico != '' AND length(z.dodavatel_ico) = 8 AND z.dodavatel_ico NOT LIKE '00%' AND z.dodavatel_ico NOT IN (SELECT cin FROM ruz_entities WHERE cin IS NOT NULL)",
         "needs_extraction": 0,
     },
     {
