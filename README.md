@@ -48,11 +48,12 @@ uv run python delta_store/serve.py
 ```
 ┌─────────────────┐     ┌────────────────────┐     ┌──────────────────┐
 │  CRZ Open Data  │────▶│  ingest.py         │────▶│  delta_store/    │
-│  (daily XMLs)   │     │  (6-step pipeline) │     │  tables/         │
+│  (daily XMLs)   │     │  (7-step pipeline) │     │  tables/         │
 └─────────────────┘     └────────────────────┘     │  ├── zmluvy      │
                               │                     │  ├── extractions │
                               │ OCR (ProcessPool)   │  ├── prilohy     │
-                              │ LLM (OpenRouter)    │  ├── red_flags   │
+                              │ LLM (OpenRouter)    │  ├── ruz_entities│
+                              │ RUZ API refresh     │  ├── red_flags   │
                               ▼                     │  ├── flag_rules  │
 ┌─────────────────┐     ┌────────────────────┐     │  └── ...15 total │
 │  Browser        │◀───▶│  serve.py          │◀────└──────────────────┘
@@ -68,8 +69,9 @@ uv run python delta_store/serve.py
 ```
 
 **Storage**: Delta Lake (Parquet files + `_delta_log/` transaction log) — 430 MB vs 981 MB SQLite.
-**Query engine**: DuckDB in-memory — materializes Delta tables on startup (~2-3 seconds), then serves from RAM.
+**Query engine**: DuckDB in-memory — materializes Delta tables on startup (~2-3 seconds), then serves from RAM. RUZ entities are optimized: only ~31k CRZ-connected rows materialized (vs 1.8M full), saving ~550 MB.
 **Concurrency**: Threading lock on DuckDB connection handles parallel dashboard requests safely.
+**Memory**: ~650 MB DuckDB / ~900 MB process RSS — runs comfortably on a 2 GB VPS.
 
 ---
 
@@ -77,11 +79,11 @@ uv run python delta_store/serve.py
 
 ```
 ├── delta_store/           Delta Lake backend
-│   ├── ingest.py          End-to-end pipeline (download → parse → PDF → text → extract → flag)
+│   ├── ingest.py          End-to-end pipeline (download → parse → PDF → text → extract → ruz → flag)
 │   ├── serve.py           FastAPI + DuckDB server (port 8002)
 │   ├── migrate_from_sqlite.py  One-time SQLite → Delta migration
 │   ├── tables/            Delta Lake tables (Parquet + _delta_log/)
-│   └── tests/             Parity tests, flag rule tests, SQL validation tests
+│   └── tests/             Flag rule, SQL validation, RUZ optimization, and parity tests
 ├── frontend/              Dashboard and detail page (HTML/JS/Chart.js)
 │   ├── dashboard.html     Main dashboard with search, charts, anomalies
 │   └── detail.html        Contract detail page with flags and extractions
@@ -171,9 +173,10 @@ uv run python delta_store/ingest.py --date 2026-03-19 --step extract --limit 100
 ### Key design decisions
 
 - **Idempotent** — every step skips already-processed items. Safe to re-run or resume after Ctrl+C.
-- **Delta Lake merge** — steps 2, 5, and 6 use merge (match → update, no match → insert) instead of append-only writes.
+- **Delta Lake merge** — steps 2, 5, and 7 use merge (match → update, no match → insert) instead of append-only writes.
 - **ProcessPoolExecutor for OCR** — 3.1x faster than ThreadPool since Tesseract is CPU-bound (bypasses GIL).
-- **Parallel** — PDF download, text conversion, and LLM extraction run with `--workers N` (default: 8).
+- **Parallel** — PDF download, text conversion, LLM extraction, and RUZ refresh run with `--workers N` (default: 8).
+- **RUZ optimization** — only ~31k CRZ-connected entities materialized in RAM (vs 1.8M full table), with a `delta_scan()` view for detail page queries.
 
 ### CLI options
 
@@ -288,7 +291,7 @@ uv run python delta_store/ingest.py --from 2022-01 --to 2026-03
 # 4. Start server
 uv run python delta_store/serve.py --host 0.0.0.0 --port 8002
 
-# 5. Set up daily cron
+# 5. Set up daily cron (runs all 7 steps: download, parse, pdf, text, extract, ruz, flag)
 crontab -e
 # 0 6 * * * cd /opt/crz-experiments && uv run python delta_store/ingest.py --date $(date +\%Y-\%m-\%d) >> /var/log/crz-ingest.log 2>&1
 ```
@@ -370,7 +373,7 @@ Environment is loaded from `.env` by all entrypoints. CLI flags override `.env` 
 | **[Tax reliability](https://report.financnasprava.sk/)** | `ds_iz_ran.xml` — Finančná správa SR, updated daily | CC0 |
 | **[VšZP debtors](https://www.vszp.sk/)** | Health insurance debtor list | Public |
 | **[Sociálna poisťovňa](https://www.socpoist.sk/)** | Social insurance debtor list | Public |
-| **[RÚZ](https://registeruz.sk/)** | Register of financial statements (company data, NACE, equity) | Public |
+| **[RÚZ](https://registeruz.sk/)** | Register of financial statements (company data, NACE, equity), refreshed via API | Public |
 | **[FinStat](https://finstat.sk/)** | Financial data enrichment (via supplier-profiler agent) | Commercial |
 | **[UVO](https://www.uvo.gov.sk/)** | Public procurement journal | Public |
 | **[RPVS](https://rpvs.gov.sk/)** | Register of public sector partners (beneficial ownership) | Public |
@@ -381,11 +384,17 @@ Environment is loaded from `.env` by all entrypoints. CLI flags override `.env` 
 ## Testing
 
 ```bash
+# All unit tests (110 tests)
+uv run pytest delta_store/tests/test_flag_rules.py delta_store/tests/test_sql_validation.py delta_store/tests/test_ruz_optimization.py -v
+
 # Flag rule accuracy tests (42 tests)
 uv run pytest delta_store/tests/test_flag_rules.py -v
 
-# SQL injection / sandbox tests
+# SQL injection / sandbox tests (53 tests)
 uv run pytest delta_store/tests/test_sql_validation.py -v
+
+# RUZ optimization tests (15 tests — requires Delta tables)
+uv run pytest delta_store/tests/test_ruz_optimization.py -v
 
 # Delta ↔ SQLite parity tests (requires both servers running)
 uv run pytest delta_store/tests/test_parity.py -v
