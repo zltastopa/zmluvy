@@ -14,6 +14,7 @@ import csv
 import io
 import json
 import re
+import threading
 from pathlib import Path
 
 import duckdb
@@ -43,6 +44,7 @@ if ASSETS_DIR.exists():
 # ---------------------------------------------------------------------------
 
 _conn = None
+_db_lock = threading.Lock()
 
 
 def get_db() -> duckdb.DuckDBPyConnection:
@@ -77,13 +79,14 @@ def get_db() -> duckdb.DuckDBPyConnection:
 
 def q(sql: str, params=None) -> list[dict]:
     """Execute SQL and return list of dicts."""
-    db = get_db()
-    if params:
-        result = db.execute(sql, params)
-    else:
-        result = db.execute(sql)
-    cols = [desc[0] for desc in result.description]
-    return [dict(zip(cols, row)) for row in result.fetchall()]
+    with _db_lock:
+        db = get_db()
+        if params:
+            result = db.execute(sql, params)
+        else:
+            result = db.execute(sql)
+        cols = [desc[0] for desc in result.description]
+        return [dict(zip(cols, row)) for row in result.fetchall()]
 
 
 def q1(sql: str, params=None) -> dict | None:
@@ -94,13 +97,14 @@ def q1(sql: str, params=None) -> dict | None:
 
 def qval(sql: str, params=None):
     """Execute SQL and return single scalar value."""
-    db = get_db()
-    if params:
-        result = db.execute(sql, params)
-    else:
-        result = db.execute(sql)
-    row = result.fetchone()
-    return row[0] if row else None
+    with _db_lock:
+        db = get_db()
+        if params:
+            result = db.execute(sql, params)
+        else:
+            result = db.execute(sql)
+        row = result.fetchone()
+        return row[0] if row else None
 
 
 # ---------------------------------------------------------------------------
@@ -1082,7 +1086,8 @@ def api_search(request: Request):
             ) sub WHERE score IS NOT NULL
         """
         # Test if FTS works
-        get_db().execute(f"SELECT fts_main_zmluvy.match_bm25(1, $1)", [query])
+        with _db_lock:
+            get_db().execute(f"SELECT fts_main_zmluvy.match_bm25(1, $1)", [query])
         use_fts = True
     except Exception:
         use_fts = False
