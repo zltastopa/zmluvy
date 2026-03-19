@@ -4,18 +4,20 @@ services:
       context: .
     container_name: crz-explorer
     restart: unless-stopped
-    environment:
-      CRZ_DB_PATH: /data/crz.db
+    env_file: .env
     ports:
-      - "127.0.0.1:8321:8001"
+      - "127.0.0.1:8321:8002"
     volumes:
-      - ./crz.db:/data/crz.db
+      - ./delta_store/tables:/app/delta_store/tables
+      - ./data:/app/data
+      - ./frontend:/app/frontend
+      - ./assets:/app/assets
     healthcheck:
       test:
         [
           "CMD",
           "/app/.venv/bin/python", "-c",
-          "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8001/api/summary', timeout=5)"
+          "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8002/api/summary', timeout=5)"
         ]
       interval: 30s
       timeout: 5s
