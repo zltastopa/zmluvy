@@ -103,7 +103,7 @@ WHERE he IS NOT NULL;
 For each hidden entity ICO, check if it also has CRZ contracts:
 
 ```sql
-SELECT z.dodavatel, z.dodavatel_ico, count(*) as pocet,
+SELECT any_value(z.dodavatel) as dodavatel, z.dodavatel_ico, count(*) as pocet,
        printf('%.2f', sum(z.suma)) as celkom
 FROM zmluvy z
 WHERE replace(z.dodavatel_ico, ' ', '') = '{hidden_ico}'

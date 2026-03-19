@@ -104,12 +104,12 @@ Then cross-check against CRZ:
 
 ```sql
 -- Check if related companies also have CRZ contracts
-SELECT z.dodavatel, replace(z.dodavatel_ico,' ','') as ico,
+SELECT any_value(z.dodavatel) as dodavatel, replace(z.dodavatel_ico,' ','') as ico,
        z.objednavatel, printf('%.2f', SUM(z.suma)) as total,
        COUNT(*) as contracts
 FROM zmluvy z
 WHERE replace(z.dodavatel_ico,' ','') IN ('{ico1}', '{ico2}', '{ico3}')
-GROUP BY ico, z.objednavatel
+GROUP BY replace(z.dodavatel_ico,' ',''), z.objednavatel
 ORDER BY SUM(z.suma) DESC;
 ```
 

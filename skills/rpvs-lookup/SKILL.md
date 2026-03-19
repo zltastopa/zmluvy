@@ -25,13 +25,13 @@ out state entities by checking ICO patterns in CRZ:
 
 ```sql
 -- Find the supplier's contracts and check if it's a state entity
-SELECT z.dodavatel, replace(z.dodavatel_ico, ' ', '') as ico,
-       z.rezort, z.objednavatel,
+SELECT any_value(z.dodavatel) as dodavatel, replace(z.dodavatel_ico, ' ', '') as ico,
+       any_value(z.rezort) as rezort, any_value(z.objednavatel) as objednavatel,
        printf('%.2f', SUM(z.suma)) as total_suma,
        COUNT(*) as contracts
 FROM zmluvy z
 WHERE replace(z.dodavatel_ico, ' ', '') IN ('{ico1}', '{ico2}')
-GROUP BY ico;
+GROUP BY replace(z.dodavatel_ico, ' ', '');
 ```
 
 Skip RPVS lookup for entities that are clearly state institutions:
@@ -145,7 +145,8 @@ After collecting UBO names from multiple companies, cross-check:
 
 ```sql
 -- Find contracts from same buyer to check for coordinated network
-SELECT z.objednavatel, z.dodavatel, replace(z.dodavatel_ico,' ','') as ico,
+SELECT any_value(z.objednavatel) as objednavatel, any_value(z.dodavatel) as dodavatel,
+       replace(z.dodavatel_ico,' ','') as ico,
        printf('%.2f', SUM(z.suma)) as total, COUNT(*) as contracts
 FROM zmluvy z
 WHERE z.objednavatel IN (
@@ -153,7 +154,7 @@ WHERE z.objednavatel IN (
   WHERE replace(z2.dodavatel_ico,' ','') IN ('{ico1}', '{ico2}')
 )
 AND replace(z.dodavatel_ico,' ','') IN ('{ico1}', '{ico2}')
-GROUP BY z.objednavatel, ico
+GROUP BY z.objednavatel, replace(z.dodavatel_ico,' ','')
 ORDER BY total DESC;
 ```
 

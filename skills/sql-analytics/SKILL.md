@@ -44,6 +44,7 @@ https://zmluvy.zltastopa.sk/data/crz.json?sql=SELECT+...&_shape=array
 - `DATE_DIFF('day', start, end)` instead of `julianday(a) - julianday(b)`
 - `string_agg(col, ',')` instead of `group_concat(col)`
 - `TRY_CAST(x AS DATE) - INTERVAL N DAY` instead of `date(x, '-N days')`
+- `any_value(col)` required for non-aggregated columns not in GROUP BY
 
 Full schema: **[docs/data/](docs/data/README.md)**
 
@@ -67,7 +68,7 @@ Group results by category in the output.
 
 **1. Top suppliers by total value** — who gets the most money?
 ```sql
-SELECT dodavatel, dodavatel_ico, count(*) as pocet,
+SELECT any_value(dodavatel) as dodavatel, dodavatel_ico, count(*) as pocet,
        printf('%.2f', sum(suma)) as celkom
 FROM zmluvy WHERE datum_zverejnenia >= '{date_from}' AND datum_zverejnenia < '{date_to}'
 GROUP BY dodavatel_ico ORDER BY sum(suma) DESC LIMIT 30
@@ -75,8 +76,8 @@ GROUP BY dodavatel_ico ORDER BY sum(suma) DESC LIMIT 30
 
 **2. Buyer-supplier concentration** — is any buyer captured by a single supplier?
 ```sql
-SELECT objednavatel, dodavatel, count(*) as pocet,
-       printf('%.2f', sum(suma)) as celkom
+SELECT any_value(objednavatel) as objednavatel, any_value(dodavatel) as dodavatel,
+       count(*) as pocet, printf('%.2f', sum(suma)) as celkom
 FROM zmluvy WHERE datum_zverejnenia >= '{date_from}' AND datum_zverejnenia < '{date_to}'
 GROUP BY objednavatel_ico, dodavatel_ico
 HAVING sum(suma) > 1000000 ORDER BY sum(suma) DESC
@@ -96,7 +97,8 @@ GROUP BY e.service_category ORDER BY sum(z.suma) DESC
 **4. Contract splitting** — same pair, many small contracts below thresholds
 ```sql
 -- IMPORTANT: GROUP BY dodavatel name+ico to avoid merging NULL-ICO suppliers
-SELECT dodavatel, dodavatel_ico, objednavatel, objednavatel_ico,
+SELECT any_value(dodavatel) as dodavatel, any_value(dodavatel_ico) as dodavatel_ico,
+       any_value(objednavatel) as objednavatel, objednavatel_ico,
        count(*) as pocet, printf('%.2f', max(suma)) as max_suma,
        printf('%.2f', sum(suma)) as celkom
 FROM zmluvy WHERE datum_zverejnenia >= '{date_from}' AND datum_zverejnenia < '{date_to}'
@@ -212,23 +214,23 @@ ORDER BY e.hidden_entity_count DESC
 
 **15. VSZP debtors with government contracts**
 ```sql
-SELECT z.dodavatel, replace(z.dodavatel_ico, ' ', '') as ico,
+SELECT any_value(z.dodavatel) as dodavatel, replace(z.dodavatel_ico, ' ', '') as ico,
        count(*) as pocet_zmluv,
        printf('%.2f', sum(z.suma)) as celkom_zmluvy,
-       printf('%.2f', v.amount) as dlh_vszp
+       printf('%.2f', any_value(v.amount)) as dlh_vszp
 FROM zmluvy z
 JOIN vszp_debtors v ON v.cin = replace(z.dodavatel_ico, ' ', '')
 WHERE z.suma > 0
   AND z.datum_zverejnenia >= '{date_from}' AND z.datum_zverejnenia < '{date_to}'
-GROUP BY z.dodavatel_ico ORDER BY v.amount DESC LIMIT 30
+GROUP BY z.dodavatel_ico ORDER BY any_value(v.amount) DESC LIMIT 30
 ```
 
 **16. Socialna poistovna debtors with government contracts**
 ```sql
-SELECT z.dodavatel, z.dodavatel_ico,
+SELECT any_value(z.dodavatel) as dodavatel, z.dodavatel_ico,
        count(*) as pocet_zmluv,
        printf('%.2f', sum(z.suma)) as celkom_zmluvy,
-       rf.detail as dlh_socpoist
+       any_value(rf.detail) as dlh_socpoist
 FROM zmluvy z
 JOIN red_flags rf ON rf.zmluva_id = z.id AND rf.flag_type = 'socpoist_debtor'
 WHERE z.suma > 0
@@ -238,14 +240,14 @@ GROUP BY z.dodavatel_ico ORDER BY sum(z.suma) DESC LIMIT 30
 
 **17. Double debtors** — owe BOTH health and social insurance
 ```sql
-SELECT z.dodavatel, replace(z.dodavatel_ico, ' ', '') as ico,
+SELECT any_value(z.dodavatel) as dodavatel, replace(z.dodavatel_ico, ' ', '') as ico,
        printf('%.2f', sum(z.suma)) as celkom_zmluvy,
-       printf('%.2f', v.amount) as dlh_vszp
+       printf('%.2f', any_value(v.amount)) as dlh_vszp
 FROM zmluvy z
 JOIN vszp_debtors v ON v.cin = replace(z.dodavatel_ico, ' ', '')
 WHERE z.id IN (SELECT zmluva_id FROM red_flags WHERE flag_type = 'socpoist_debtor')
   AND z.datum_zverejnenia >= '{date_from}' AND z.datum_zverejnenia < '{date_to}'
-GROUP BY z.dodavatel_ico ORDER BY v.amount DESC
+GROUP BY z.dodavatel_ico ORDER BY any_value(v.amount) DESC
 ```
 
 ### Category 7: Bonus cross-checks
@@ -255,10 +257,10 @@ discovered — they catch findings the core 17 queries miss.
 
 **18. Negative equity suppliers** — companies in technical bankruptcy receiving contracts
 ```sql
-SELECT z.dodavatel, replace(z.dodavatel_ico, ' ', '') as ico,
+SELECT any_value(z.dodavatel) as dodavatel, replace(z.dodavatel_ico, ' ', '') as ico,
        count(*) as pocet_zmluv,
        printf('%.2f', sum(z.suma)) as celkom_zmluvy,
-       printf('%.2f', re.vlastne_imanie) as vlastne_imanie
+       printf('%.2f', any_value(re.vlastne_imanie)) as vlastne_imanie
 FROM zmluvy z
 JOIN ruz_equity re ON re.ico = replace(z.dodavatel_ico, ' ', '')
 WHERE re.vlastne_imanie < 0
@@ -280,9 +282,9 @@ FROM zmluvy z
 WHERE z.datum_zverejnenia >= '{date_from}' AND z.datum_zverejnenia < '{date_to}'
   AND z.suma > 50000
   AND replace(z.dodavatel_ico, ' ', '') != ''
-  AND (SELECT max(z2.datum_zverejnenia) FROM zmluvy z2
+  AND TRY_CAST((SELECT max(z2.datum_zverejnenia) FROM zmluvy z2
        WHERE replace(z2.dodavatel_ico, ' ', '') = replace(z.dodavatel_ico, ' ', '')
-         AND z2.datum_zverejnenia < '{date_from}')
+         AND z2.datum_zverejnenia < '{date_from}') AS DATE)
       < TRY_CAST('{date_from}' AS DATE) - INTERVAL 730 DAY
 ORDER BY z.suma DESC LIMIT 15
 ```
