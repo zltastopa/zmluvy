@@ -165,7 +165,8 @@ uv run python delta_store/ingest.py --date 2026-03-19 --step extract --limit 100
 | 3 | `pdf` | Download PDF attachments for new contracts | Network |
 | 4 | `text` | PDF → text via pdftotext + OCR fallback (ProcessPool) | CPU-heavy |
 | 5 | `extract` | LLM extraction of structured fields via OpenRouter | LLM API |
-| 6 | `flag` | Evaluate 36 flag rules → red_flags table | CPU (fast) |
+| 6 | `ruz` | Refresh RUZ entity data from RegisterUZ API (CRZ-connected only) | Network |
+| 7 | `flag` | Evaluate 36 flag rules → red_flags table | CPU (fast) |
 
 ### Key design decisions
 

@@ -16,6 +16,7 @@ Usage:
     uv run python delta_store/ingest.py --date 2026-03-18 --step pdf
     uv run python delta_store/ingest.py --date 2026-03-18 --step text
     uv run python delta_store/ingest.py --date 2026-03-18 --step extract
+    uv run python delta_store/ingest.py --step ruz --limit 100
     uv run python delta_store/ingest.py --date 2026-03-18 --step flag
 """
 
@@ -63,7 +64,7 @@ CRZ_EXPORT_URL = "https://www.crz.gov.sk/export/{date}.zip"
 # Reuse schemas from migrate script
 from delta_store.migrate_from_sqlite import SCHEMAS
 
-ALL_STEPS = ["download", "parse", "pdf", "text", "extract", "flag"]
+ALL_STEPS = ["download", "parse", "pdf", "text", "extract", "ruz", "flag"]
 
 
 # ---------------------------------------------------------------------------
@@ -608,7 +609,258 @@ def step_extract(
 
 
 # ---------------------------------------------------------------------------
-# Step 6: Flag contracts (red_flags)
+# Step 6: Refresh RUZ entities from RegisterUZ API
+# ---------------------------------------------------------------------------
+
+RUZ_API_BASE = "https://www.registeruz.sk/cruz-public/api"
+
+# Lookup maps for denormalizing coded API responses
+_RUZ_LEGAL_FORMS = {
+    101: "Živnostník", 102: "Živnostník v OR", 103: "SHR roľník",
+    104: "SHR roľník v OR", 105: "FO-slob.povolanie", 106: "FO-slob.povolanie v OR",
+    107: "Živ. a SHR roľník", 108: "Živ. a SHR roľník v OR",
+    109: "Živ.a sl.povolanie", 110: "Živ.a sl.povolanie v OR",
+    111: "Ver. obch. spol.", 112: "Spol. s r. o.", 113: "Kom. spol.",
+    115: "Spoločný podnik", 117: "Nadácia", 118: "Neinvestičný fond",
+    119: "Nezisková organizácia", 120: "Nezisk.org.poskyt.všeob.prosp.služby",
+    121: "Akc. spol.", 122: "Európ.zoskup.hosp.záujm.", 123: "Európska spoločnosť",
+    124: "Európske družstvo", 125: "Jednoduchá spol. na akcie",
+    131: "Svojpomoc.poľn.družstvo", 141: "Poľovnícka organizácia",
+    205: "Družstvo", 231: "Družstvo výrobné", 233: "Družstvo bytové",
+    234: "Družstvo iné", 271: "Spoločenstvo vlastníkov bytov",
+    272: "Pozemkové spoločenstvo", 273: "Združ. účast. pozemkových úprav",
+    301: "Štátny podnik", 311: "NBS", 312: "Banka-štát.peňaž.ústav",
+    321: "Rozpočtová organizácia", 331: "Príspevková organizácia",
+    333: "Ver. výskum. inšt.", 343: "Obecný podnik", 381: "Fondy",
+    382: "Verejnopráv.inštitúcia", 383: "Iná org.verejnej správy",
+    421: "Zahranič.osoba,právnická", 422: "Zahranič.osoba,fyzická",
+    434: "Doplnková dôchod.poisť.", 445: "Komoditná burza",
+    501: "Odštepný závod v OR", 521: "Samost. prevádzkareň OÚ",
+    701: "Združenie (zväz,spolok)", 705: "Podnik alebo hosp.zar.",
+    711: "Politická strana,hnutie", 715: "Podnik alebo hosp.zar.",
+    721: "Cirkevná organizácia", 741: "Profesná komora",
+    745: "Komora okrem profesných", 751: "Záujm. združ. práv.osôb",
+    801: "Obec, mesto (o.,m.úrad)", 803: "Samosprávny kraj",
+    804: "Európ.zoskup.územ.spol.", 901: "Zastup.org.iných štátov",
+    911: "Zahr.kul.,inf.strediská", 921: "Medzinár. org. a združ.",
+    931: "Zastúp.zahr.práv.osoby", 995: "Nešpecifikovaná forma",
+}
+
+_RUZ_ORG_SIZES = {
+    "00": (0, "nezistený"), "01": (1, "0 zamestnancov"), "02": (2, "1 zamestnanec"),
+    "03": (3, "2 zamestnanci"), "04": (4, "3-4 zamestnanci"),
+    "05": (5, "5-9 zamestnancov"), "06": (6, "10-19 zamestnancov"),
+    "07": (7, "20-24 zamestnancov"), "11": (11, "25-49 zamestnancov"),
+    "12": (12, "50-99 zamestnancov"), "21": (21, "100-149 zamestnancov"),
+    "22": (22, "150-199 zamestnancov"), "23": (23, "200-249 zamestnancov"),
+    "24": (24, "250-499 zamestnancov"), "25": (25, "500-999 zamestnancov"),
+    "31": (31, "1000-1999 zamestnancov"), "32": (32, "2000-2999 zamestnancov"),
+    "33": (33, "3000-3999 zamestnancov"), "34": (34, "4000-4999 zamestnancov"),
+    "35": (35, "5000-9999 zamestnancov"), "36": (36, "10000-19999 zamestnancov"),
+    "38": (38, "30000+ zamestnancov"),
+}
+
+_RUZ_REGIONS = {
+    "SK010": "Bratislavský kraj", "SK021": "Trnavský kraj",
+    "SK022": "Trenčiansky kraj", "SK023": "Nitriansky kraj",
+    "SK031": "Žilinský kraj", "SK032": "Banskobystrický kraj",
+    "SK041": "Prešovský kraj", "SK042": "Košický kraj",
+    "SK0": "Zahraničie",
+}
+
+_RUZ_OWNERSHIP = {
+    "1": "Štátne", "2": "Vlast.územnej samosprávy", "3": "Súkromné tuzemské",
+    "4": "Združ.,p.strany,cirkvi", "5": "Družstevné", "6": "Zmiešané",
+    "7": "Zahraničné", "8": "Medzinárodné - verejné", "9": "Medzinárodné - súkromné",
+}
+
+
+def _ruz_fetch_entity(ruz_id: int) -> dict | None:
+    """Fetch a single entity from the RegisterUZ API by ID."""
+    import json as _json
+    import urllib.request
+    import urllib.error
+
+    url = f"{RUZ_API_BASE}/uctovna-jednotka?id={ruz_id}"
+    try:
+        req = urllib.request.Request(url, headers={
+            "Accept": "application/json",
+            "User-Agent": "Mozilla/5.0",
+        })
+        resp = urllib.request.urlopen(req, timeout=15)
+        data = _json.loads(resp.read())
+    except Exception:
+        return None
+
+    # Skip non-public entities (no ICO)
+    ico = data.get("ico")
+    if not ico:
+        return None
+
+    # Denormalize coded fields
+    lf_code = data.get("pravnaForma")
+    lf_id = int(lf_code) if lf_code else None
+
+    os_code = data.get("velkostOrganizacie")
+    os_id, os_name = _RUZ_ORG_SIZES.get(os_code, (None, None)) if os_code else (None, None)
+
+    region_code = data.get("kraj", "")
+    region = _RUZ_REGIONS.get(region_code) or _RUZ_REGIONS.get(region_code[:4])
+
+    ow_code = data.get("druhVlastnictva")
+
+    nace_code = data.get("skNace")
+
+    return {
+        "id": data["id"],
+        "cin": str(int(ico)),
+        "tin": None,
+        "name": data.get("nazovUJ"),
+        "city": data.get("mesto"),
+        "street": data.get("ulica"),
+        "postal_code": data.get("psc"),
+        "region": region,
+        "district": None,  # API doesn't return district name
+        "established_on": data.get("datumZalozenia"),
+        "terminated_on": data.get("datumZrusenia"),
+        "legal_form": _RUZ_LEGAL_FORMS.get(lf_id),
+        "legal_form_id": lf_id,
+        "nace_category": None,  # API only returns code, not category name
+        "nace_code": nace_code,
+        "organization_size": os_name,
+        "organization_size_id": os_id,
+        "ownership_type": _RUZ_OWNERSHIP.get(ow_code),
+        "consolidated": 1 if data.get("konsolidovana") else 0,
+        "deleted": 0,
+        "data_source": data.get("zdrojDat"),
+    }
+
+
+def step_ruz(workers: int = 4, limit: int = 0, force: bool = False) -> int:
+    """Refresh RUZ entity data for CRZ-connected suppliers from the RegisterUZ API.
+
+    Fetches updated entity info (termination dates, org size, etc.) for all
+    supplier/buyer ICOs that appear in CRZ contracts and have known RUZ IDs.
+    """
+    import duckdb
+    import time
+
+    ruz_path = TABLES_DIR / "ruz_entities"
+    zmluvy_path = TABLES_DIR / "zmluvy"
+
+    if not (zmluvy_path / "_delta_log").exists():
+        print("  No zmluvy table — skipping RUZ refresh")
+        return 0
+
+    conn = duckdb.connect()
+    conn.execute("INSTALL delta; LOAD delta;")
+    conn.execute(f"CREATE TABLE zmluvy AS SELECT * FROM delta_scan('{zmluvy_path}')")
+
+    # Get all CRZ-connected ICOs
+    crz_icos = set(r[0] for r in conn.execute("""
+        SELECT DISTINCT dodavatel_ico FROM zmluvy WHERE dodavatel_ico IS NOT NULL
+        UNION
+        SELECT DISTINCT objednavatel_ico FROM zmluvy WHERE objednavatel_ico IS NOT NULL
+    """).fetchall())
+
+    # Load existing RUZ data to get known entity IDs
+    existing_by_cin = {}  # cin → {id, ...}
+    if (ruz_path / "_delta_log").exists():
+        conn.execute(f"CREATE TABLE ruz_old AS SELECT * FROM delta_scan('{ruz_path}')")
+        rows = conn.execute("SELECT id, cin FROM ruz_old WHERE cin IS NOT NULL AND id IS NOT NULL").fetchall()
+        for ruz_id, cin in rows:
+            if cin in crz_icos:
+                # Keep the first (lowest) ID per CIN — primary entity
+                if cin not in existing_by_cin:
+                    existing_by_cin[cin] = ruz_id
+
+    to_fetch = list(existing_by_cin.items())  # [(cin, ruz_id), ...]
+
+    if limit > 0:
+        to_fetch = to_fetch[:limit]
+
+    if not to_fetch:
+        print("  No RUZ entities to refresh")
+        return 0
+
+    print(f"  Refreshing {len(to_fetch)} CRZ-connected entities from RegisterUZ API...")
+
+    updated_rows = []
+    errors = 0
+
+    def _worker(item):
+        cin, ruz_id = item
+        time.sleep(0.05)
+        return _ruz_fetch_entity(ruz_id)
+
+    with ThreadPoolExecutor(max_workers=workers) as executor:
+        futures = {executor.submit(_worker, item): item for item in to_fetch}
+        pbar = tqdm(total=len(to_fetch), desc="  RUZ refresh", unit="entities")
+        for future in as_completed(futures):
+            result = future.result()
+            if result:
+                updated_rows.append(result)
+            else:
+                errors += 1
+            pbar.update(1)
+        pbar.close()
+
+    if not updated_rows:
+        print(f"  No entities fetched ({errors} errors)")
+        return 0
+
+    # Preserve nace_category from old data where API doesn't provide it
+    if (ruz_path / "_delta_log").exists():
+        old_nace = {}
+        rows = conn.execute(
+            "SELECT cin, nace_category FROM ruz_old WHERE cin IS NOT NULL AND nace_category IS NOT NULL"
+        ).fetchall()
+        for cin, nace_cat in rows:
+            old_nace[cin] = nace_cat
+        for row in updated_rows:
+            if not row.get("nace_category") and row["cin"] in old_nace:
+                row["nace_category"] = old_nace[row["cin"]]
+
+    # Also preserve rows we didn't fetch (entities not in CRZ, or with errors)
+    # Strategy: overwrite the full table with refreshed + unchanged rows
+    schema = SCHEMAS["ruz_entities"]
+    columns = {f.name: [] for f in schema}
+    seen_ids = {r["id"] for r in updated_rows}
+
+    # Add refreshed rows
+    for row in updated_rows:
+        for field in schema:
+            val = row.get(field.name)
+            if field.type == pa.utf8() and val is not None and not isinstance(val, str):
+                val = str(val)
+            columns[field.name].append(val)
+
+    # Add unchanged rows from old table
+    if (ruz_path / "_delta_log").exists():
+        old_rows = conn.execute("SELECT * FROM ruz_old").fetchall()
+        old_cols = [d[0] for d in conn.execute("DESCRIBE ruz_old").fetchall()]
+        for old_row in old_rows:
+            row_dict = dict(zip(old_cols, old_row))
+            if row_dict.get("id") not in seen_ids:
+                for field in schema:
+                    val = row_dict.get(field.name)
+                    if field.type == pa.utf8() and val is not None and not isinstance(val, str):
+                        val = str(val)
+                    columns[field.name].append(val)
+
+    arrays = [pa.array(columns[f.name], type=f.type) for f in schema]
+    table = pa.table({f.name: arr for f, arr in zip(schema, arrays)}, schema=schema)
+    write_deltalake(str(ruz_path), table, mode="overwrite")
+
+    conn.close()
+
+    new_terminated = sum(1 for r in updated_rows if r.get("terminated_on"))
+    print(f"  Refreshed {len(updated_rows)} entities ({new_terminated} terminated, {errors} errors)")
+    return len(updated_rows)
+
+
+# ---------------------------------------------------------------------------
+# Step 7: Flag contracts (red_flags)
 # ---------------------------------------------------------------------------
 
 ALL_DELTA_TABLES = [
@@ -1366,7 +1618,7 @@ def main():
     print()
 
     if "download" in steps:
-        print("Step 1/6: Download daily XML exports")
+        print("Step 1/7: Download daily XML exports")
         xml_paths = step_download(dates, DATA_DIR, force=args.force)
         print(f"  → {len(xml_paths)} XML files\n")
     else:
@@ -1375,7 +1627,7 @@ def main():
         xml_paths = [xml_dir / f"{d}.xml" for d in dates if (xml_dir / f"{d}.xml").exists()]
 
     if "parse" in steps:
-        print("Step 2/6: Parse XML → Delta tables")
+        print("Step 2/7: Parse XML → Delta tables")
         if not xml_paths:
             print("  No XML files to parse\n")
         else:
@@ -1383,17 +1635,17 @@ def main():
             print(f"  → {n_c} contracts, {n_a} attachments upserted\n")
 
     if "pdf" in steps:
-        print("Step 3/6: Download PDFs")
+        print("Step 3/7: Download PDFs")
         n = step_pdf(dates, workers=args.workers, limit=args.limit)
         print(f"  → {n} PDFs downloaded\n")
 
     if "text" in steps:
-        print("Step 4/6: Convert PDFs to text")
+        print("Step 4/7: Convert PDFs to text")
         n = step_text(dates, workers=args.workers, force=args.force)
         print(f"  → {n} texts converted\n")
 
     if "extract" in steps:
-        print("Step 5/6: LLM extraction")
+        print("Step 5/7: LLM extraction")
         n = step_extract(
             dates,
             workers=args.workers,
@@ -1403,8 +1655,13 @@ def main():
         )
         print(f"  → {n} contracts extracted\n")
 
+    if "ruz" in steps:
+        print("Step 6/7: Refresh RUZ entities")
+        n = step_ruz(workers=args.workers, limit=args.limit, force=args.force)
+        print(f"  → {n} entities refreshed\n")
+
     if "flag" in steps:
-        print("Step 6/6: Flag contracts")
+        print("Step 7/7: Flag contracts")
         n = step_flag(dates)
         print(f"  → {n} new flags\n")
 
