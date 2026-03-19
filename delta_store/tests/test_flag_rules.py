@@ -413,3 +413,31 @@ class TestNaceMismatch:
     def test_real_mismatch_construction_insurance(self):
         """Construction (NACE 41) doing insurance should still be a mismatch."""
         assert 41 not in _NACE_COMPATIBLE['insurance']
+
+
+# =========================================================================
+# hidden_price — severity should be 'info' not 'warning'
+# =========================================================================
+
+class TestHiddenPrice:
+    def test_severity_is_info(self):
+        """hidden_price severity should be 'info' — 45% of contracts lack amount."""
+        from deltalake import DeltaTable
+        dt = DeltaTable('delta_store/tables/flag_rules')
+        table = dt.to_pyarrow_table()
+        ids = table.column('id').to_pylist()
+        severities = table.column('severity').to_pylist()
+        idx = ids.index('hidden_price')
+        assert severities[idx] == 'info'
+
+    def test_flags_null_suma(self, db):
+        """Contract with NULL suma should be flagged."""
+        db.execute("INSERT INTO zmluvy VALUES (1,'zmluva','Firma','44556677','Obec','00111222',NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL)")
+        result = run_sql_flag(db, "z.suma IS NULL")
+        assert 1 in result
+
+    def test_skips_nonzero_suma(self, db):
+        """Contract with suma should NOT be flagged."""
+        db.execute("INSERT INTO zmluvy VALUES (1,'zmluva','Firma','44556677','Obec','00111222',100,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL)")
+        result = run_sql_flag(db, "z.suma IS NULL")
+        assert 1 not in result

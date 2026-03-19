@@ -45,7 +45,7 @@ DEFAULT_RULES = [
         "id": "hidden_price",
         "label": "Skryta cena",
         "description": "Zmluva nema uvedenu sumu (suma je NULL)",
-        "severity": "warning",
+        "severity": "info",
         "sql_condition": "z.suma IS NULL",
         "needs_extraction": 0,
     },
