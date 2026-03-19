@@ -622,6 +622,7 @@ ALL_DELTA_TABLES = [
 _DUCKDB_SQL_REWRITES = {
     # strftime needs explicit DATE cast
     "strftime('%w', z.datum_podpisu)": "strftime(TRY_CAST(z.datum_podpisu AS DATE), '%w')",
+    "strftime('%d', z.datum_podpisu)": "strftime(TRY_CAST(z.datum_podpisu AS DATE), '%d')",
     # group_concat → string_agg
     "group_concat(": "string_agg(",
 }

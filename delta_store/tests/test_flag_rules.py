@@ -314,3 +314,53 @@ class TestTerminatedCompany:
         db.execute("INSERT INTO zmluvy VALUES (1,'zmluva','Unknown s.r.o.','44556677','Obec','00111222',100,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL)")
         result = run_sql_flag(db, TERMINATED_COMPANY_CONDITION)
         assert 1 not in result
+
+
+# =========================================================================
+# weekend_signing — exclude 1st/last of month, require high value
+# =========================================================================
+
+# DuckDB-compatible version (strftime takes date first)
+WEEKEND_SIGNING_CONDITION = (
+    "z.datum_podpisu IS NOT NULL AND z.datum_podpisu != '' "
+    "AND cast(strftime(TRY_CAST(z.datum_podpisu AS DATE), '%w') as integer) IN (0, 6) "
+    "AND z.suma > 50000 "
+    "AND cast(strftime(TRY_CAST(z.datum_podpisu AS DATE), '%d') as integer) NOT IN (1, 28, 29, 30, 31)"
+)
+
+
+class TestWeekendSigning:
+    def test_flags_high_value_weekend_mid_month(self, db):
+        """High-value contract signed on Saturday mid-month should be flagged."""
+        # 2026-03-07 is a Saturday
+        db.execute("INSERT INTO zmluvy VALUES (1,'zmluva','Firma','44556677','Obec','00111222',100000,NULL,'2026-03-07',NULL,NULL,NULL,NULL,NULL,NULL)")
+        result = run_sql_flag(db, WEEKEND_SIGNING_CONDITION)
+        assert 1 in result
+
+    def test_skips_first_of_month_weekend(self, db):
+        """Contract signed on 1st of month (Sunday) should NOT be flagged (admin date)."""
+        # 2026-02-01 is a Sunday
+        db.execute("INSERT INTO zmluvy VALUES (1,'zmluva','Firma','44556677','Obec','00111222',100000,NULL,'2026-02-01',NULL,NULL,NULL,NULL,NULL,NULL)")
+        result = run_sql_flag(db, WEEKEND_SIGNING_CONDITION)
+        assert 1 not in result
+
+    def test_skips_last_of_month_weekend(self, db):
+        """Contract signed on 31st (Saturday) should NOT be flagged."""
+        # 2026-01-31 is a Saturday
+        db.execute("INSERT INTO zmluvy VALUES (1,'zmluva','Firma','44556677','Obec','00111222',100000,NULL,'2026-01-31',NULL,NULL,NULL,NULL,NULL,NULL)")
+        result = run_sql_flag(db, WEEKEND_SIGNING_CONDITION)
+        assert 1 not in result
+
+    def test_skips_low_value_weekend(self, db):
+        """Low-value weekend contract should NOT be flagged."""
+        # 2026-03-07 is Saturday
+        db.execute("INSERT INTO zmluvy VALUES (1,'zmluva','Firma','44556677','Obec','00111222',5000,NULL,'2026-03-07',NULL,NULL,NULL,NULL,NULL,NULL)")
+        result = run_sql_flag(db, WEEKEND_SIGNING_CONDITION)
+        assert 1 not in result
+
+    def test_skips_weekday(self, db):
+        """Weekday contract should NOT be flagged."""
+        # 2026-03-09 is Monday
+        db.execute("INSERT INTO zmluvy VALUES (1,'zmluva','Firma','44556677','Obec','00111222',100000,NULL,'2026-03-09',NULL,NULL,NULL,NULL,NULL,NULL)")
+        result = run_sql_flag(db, WEEKEND_SIGNING_CONDITION)
+        assert 1 not in result

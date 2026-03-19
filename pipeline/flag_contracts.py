@@ -157,9 +157,9 @@ DEFAULT_RULES = [
     {
         "id": "weekend_signing",
         "label": "Podpis cez vikend",
-        "description": "Zmluva bola podpisana v sobotu alebo nedelu",
+        "description": "Zmluva nad 50 000 EUR bola podpisana v sobotu alebo nedelu (vynimka 1. a posledny den mesiaca)",
         "severity": "info",
-        "sql_condition": "z.datum_podpisu IS NOT NULL AND z.datum_podpisu != '' AND cast(strftime('%w', z.datum_podpisu) as integer) IN (0, 6)",
+        "sql_condition": "z.datum_podpisu IS NOT NULL AND z.datum_podpisu != '' AND cast(strftime('%w', z.datum_podpisu) as integer) IN (0, 6) AND z.suma > 50000 AND cast(strftime('%d', z.datum_podpisu) as integer) NOT IN (1, 28, 29, 30, 31)",
         "needs_extraction": 0,
     },
     {
