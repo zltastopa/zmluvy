@@ -34,13 +34,18 @@ If they say "Q1 2026", use `2026-01-01` to `2026-04-01`.
 
 ## Data source
 
-**Primary:** Datasette at `https://zmluvy.zltastopa.sk/data/crz` — query via:
+**Primary:** FastAPI + DuckDB at `https://zmluvy.zltastopa.sk` — query via:
 ```
 https://zmluvy.zltastopa.sk/data/crz.json?sql=SELECT+...&_shape=array
 ```
 
-**Local fallback:** `sqlite3 -header -column crz.db "..."` when Datasette is
-unreachable. Full schema: **[docs/data/](docs/data/README.md)**
+**Important:** The backend uses DuckDB, not SQLite. Key syntax differences:
+- `strftime(TRY_CAST(col AS DATE), '%w')` — date first, format second
+- `DATE_DIFF('day', start, end)` instead of `julianday(a) - julianday(b)`
+- `string_agg(col, ',')` instead of `group_concat(col)`
+- `TRY_CAST(x AS DATE) - INTERVAL N DAY` instead of `date(x, '-N days')`
+
+Full schema: **[docs/data/](docs/data/README.md)**
 
 ## Execution strategy
 
@@ -125,9 +130,10 @@ ORDER BY suma DESC
 **7. Weekend publishing** — contracts buried on Saturdays/Sundays
 ```sql
 SELECT id, nazov_zmluvy, dodavatel, printf('%.2f', suma) as suma,
-       datum_zverejnenia, strftime('%w', datum_zverejnenia) as day_of_week
+       datum_zverejnenia,
+       strftime(TRY_CAST(datum_zverejnenia AS DATE), '%w') as day_of_week
 FROM zmluvy WHERE datum_zverejnenia >= '{date_from}' AND datum_zverejnenia < '{date_to}'
-  AND cast(strftime('%w', datum_zverejnenia) as int) IN (0, 6)
+  AND CAST(strftime(TRY_CAST(datum_zverejnenia AS DATE), '%w') AS INTEGER) IN (0, 6)
   AND suma > 100000
 ORDER BY suma DESC
 ```
@@ -136,9 +142,9 @@ ORDER BY suma DESC
 ```sql
 SELECT id, nazov_zmluvy, dodavatel, printf('%.2f', suma) as suma,
        datum_podpisu, datum_zverejnenia,
-       cast(julianday(datum_zverejnenia) - julianday(datum_podpisu) as int) as days_late
+       DATE_DIFF('day', TRY_CAST(datum_podpisu AS DATE), TRY_CAST(datum_zverejnenia AS DATE)) as days_late
 FROM zmluvy WHERE datum_zverejnenia >= '{date_from}' AND datum_zverejnenia < '{date_to}'
-  AND julianday(datum_zverejnenia) - julianday(datum_podpisu) > 90
+  AND DATE_DIFF('day', TRY_CAST(datum_podpisu AS DATE), TRY_CAST(datum_zverejnenia AS DATE)) > 90
   AND suma > 100000
 ORDER BY days_late DESC
 ```
@@ -277,7 +283,7 @@ WHERE z.datum_zverejnenia >= '{date_from}' AND z.datum_zverejnenia < '{date_to}'
   AND (SELECT max(z2.datum_zverejnenia) FROM zmluvy z2
        WHERE replace(z2.dodavatel_ico, ' ', '') = replace(z.dodavatel_ico, ' ', '')
          AND z2.datum_zverejnenia < '{date_from}')
-      < date('{date_from}', '-730 days')
+      < TRY_CAST('{date_from}' AS DATE) - INTERVAL 730 DAY
 ORDER BY z.suma DESC LIMIT 15
 ```
 
@@ -285,7 +291,7 @@ ORDER BY z.suma DESC LIMIT 15
 ```sql
 SELECT datum_zverejnenia as den, count(*) as pocet,
        printf('%.2f', sum(suma)) as celkom,
-       strftime('%w', datum_zverejnenia) as day_of_week
+       strftime(TRY_CAST(datum_zverejnenia AS DATE), '%w') as day_of_week
 FROM zmluvy
 WHERE datum_zverejnenia >= '{date_from}' AND datum_zverejnenia < '{date_to}'
 GROUP BY datum_zverejnenia
@@ -389,7 +395,7 @@ skill critical-validation.
 - `date_from` = `2026-01-01`
 - `date_to` = `2026-02-01`
 
-**Agent runs:** All 20 queries via Datasette JSON API in 4 batches, e.g.:
+**Agent runs:** All 20 queries via the SQL API in 4 batches, e.g.:
 ```
 https://zmluvy.zltastopa.sk/data/crz.json?sql=SELECT+dodavatel,+dodavatel_ico,+count(*)+as+pocet,+printf('%.2f',+sum(suma))+as+celkom+FROM+zmluvy+WHERE+datum_zverejnenia+>=+'2026-01-01'+AND+datum_zverejnenia+<+'2026-02-01'+GROUP+BY+dodavatel_ico+ORDER+BY+sum(suma)+DESC+LIMIT+30&_shape=array
 ```

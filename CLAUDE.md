@@ -5,8 +5,9 @@ investigation queries, and output conventions.
 
 ## Claude Code specifics
 
-- **Default data source:** Datasette at `https://zmluvy.zltastopa.sk/data/crz` — supports arbitrary SQL.
-  Query via `curl` or `WebFetch` with `.json?sql=...&_shape=array`. Use local `crz.db` only as fallback.
+- **Default data source:** FastAPI + DuckDB at `https://zmluvy.zltastopa.sk` — supports arbitrary SQL.
+  Query via `curl` or `WebFetch` with `/data/crz.json?sql=...&_shape=array`.
+  **DuckDB syntax** — use `strftime(TRY_CAST(col AS DATE), fmt)`, `DATE_DIFF`, `string_agg`, `TRY_CAST`.
 - Use `Read` tool for files, `Bash` for SQL and git commands.
 
 ## Project skills
@@ -18,7 +19,7 @@ Located in `skills/` directory. Two orchestrators compose the reusable building 
 - **crz-deep-investigate** — deep dive into one company/ICO: target mapping → hidden entities → rpvs-lookup → foaf-network → uvo-procurement → timeline
 
 ### Building blocks
-- **sql-analytics** — 17 standard investigative SQL queries
+- **sql-analytics** — 20 standard investigative SQL queries (DuckDB syntax)
 - **critical-validation** — validate findings against data artifacts and innocent explanations
 - **finstat-enrichment** — enrich suppliers with FinStat financial data
 - **uvo-procurement** — UVO public procurement lookup (bid counts, competitors, evaluation)

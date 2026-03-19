@@ -4,7 +4,7 @@
     {
       "id": 1,
       "name": "validate-january-findings",
-      "prompt": "Validuj tieto najdy z analyzy zmluv za januar 2026:\n\n1. Vikendove zverejnenie 31.1.2026 (sobota) — Slovak Telekom 22.7M, Alanata 14.8M EUR\n2. Ejoin s.r.o. (ICO 51900921) — dvojity dlznik VSZP+SocPoist, zmluva 97K EUR\n3. Sulc Matej — 659 zmluv so STVR za 747K EUR, potencialne delenie zakazky\n4. Fond na podporu sportu — 60 000 000 EUR okruhla suma\n5. UK Bratislava — 206.5M EUR dotacia od Ministerstva skolstva\n6. SMART CORPORATION s.r.o. — 9.25M EUR bez ICO na nahradne diely\n7. Operacne stredisko ZZS SR — 30.8M EUR, zaporne vlastne imanie -2.65M EUR\n\nPouzij Datasette na validacne dopyty.",
+      "prompt": "Validuj tieto najdy z analyzy zmluv za januar 2026:\n\n1. Vikendove zverejnenie 31.1.2026 (sobota) — Slovak Telekom 22.7M, Alanata 14.8M EUR\n2. Ejoin s.r.o. (ICO 51900921) — dvojity dlznik VSZP+SocPoist, zmluva 97K EUR\n3. Sulc Matej — 659 zmluv so STVR za 747K EUR, potencialne delenie zakazky\n4. Fond na podporu sportu — 60 000 000 EUR okruhla suma\n5. UK Bratislava — 206.5M EUR dotacia od Ministerstva skolstva\n6. SMART CORPORATION s.r.o. — 9.25M EUR bez ICO na nahradne diely\n7. Operacne stredisko ZZS SR — 30.8M EUR, zaporne vlastne imanie -2.65M EUR\n\nPouzij SQL API na validacne dopyty.",
       "expected_output": "Structured validation report classifying each finding as CONFIRMED, DISMISSED, or INCONCLUSIVE with evidence.",
       "assertions": [
         {
@@ -45,7 +45,7 @@
         {
           "name": "runs_validation_queries",
           "type": "semantic",
-          "check": "At least 3 validation SQL queries are actually executed against Datasette or local DB to verify findings"
+          "check": "At least 3 validation SQL queries are actually executed against the SQL API to verify findings"
         }
       ],
       "files": []

@@ -21,13 +21,14 @@ For broad scanning across a time period, use **crz-investigate** instead.
 
 ## Data source
 
-**Primary:** Datasette at `https://zmluvy.zltastopa.sk/data/crz` — supports
+**Primary:** FastAPI + DuckDB at `https://zmluvy.zltastopa.sk` — supports
 arbitrary SQL. Query via JSON API:
 ```
 https://zmluvy.zltastopa.sk/data/crz.json?sql=SELECT+...&_shape=array
 ```
 
-**Local fallback:** `crz.db` in the repo root. Full schema: **[docs/data/](docs/data/README.md)**
+**Note:** Backend uses DuckDB syntax (see sql-analytics skill for key differences).
+Full schema: **[docs/data/](docs/data/README.md)**
 
 ## Investigation pipeline
 
@@ -59,9 +60,9 @@ WHERE replace(z.dodavatel_ico, ' ', '') = '{ico}';
 
 -- Extraction data — hidden entities, signatories, penalty asymmetry
 SELECT e.zmluva_id, z.nazov_zmluvy,
-       json_extract(e.extraction_json, '$.hidden_entities') as hidden_entities,
-       json_extract(e.extraction_json, '$.signatories') as signatories,
-       json_extract(e.extraction_json, '$.actual_subject') as actual_subject,
+       e.extraction_json->>'$.hidden_entities' as hidden_entities,
+       e.extraction_json->>'$.signatories' as signatories,
+       e.extraction_json->>'$.actual_subject' as actual_subject,
        e.penalty_asymmetry, e.service_category, e.bezodplatne
 FROM extractions e JOIN zmluvy z ON e.zmluva_id = z.id
 WHERE replace(z.dodavatel_ico, ' ', '') = '{ico}';
@@ -83,13 +84,20 @@ ORDER BY z.suma DESC;
 Extract all hidden entities from the target's contracts:
 
 ```sql
-SELECT DISTINCT json_extract(value, '$.ico') as entity_ico,
-       json_extract(value, '$.name') as entity_name,
-       json_extract(value, '$.role') as entity_role
-FROM extractions e, json_each(json_extract(e.extraction_json, '$.hidden_entities'))
-WHERE e.zmluva_id IN (
-  SELECT id FROM zmluvy WHERE replace(dodavatel_ico, ' ', '') = '{ico}'
-);
+SELECT DISTINCT
+       json_extract_string(he, '$.ico') as entity_ico,
+       json_extract_string(he, '$.name') as entity_name,
+       json_extract_string(he, '$.role') as entity_role
+FROM (
+  SELECT unnest(from_json(
+    json_extract(e.extraction_json, '$.hidden_entities'), '["JSON"]'
+  )) as he
+  FROM extractions e
+  WHERE e.zmluva_id IN (
+    SELECT id FROM zmluvy WHERE replace(dodavatel_ico, ' ', '') = '{ico}'
+  )
+) sub
+WHERE he IS NOT NULL;
 ```
 
 For each hidden entity ICO, check if it also has CRZ contracts:

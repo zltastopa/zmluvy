@@ -21,14 +21,14 @@ For deep investigation of a specific company, use **crz-deep-investigate** inste
 
 ## Data source
 
-**Primary:** Datasette at `https://zmluvy.zltastopa.sk/data/crz` — supports
+**Primary:** FastAPI + DuckDB at `https://zmluvy.zltastopa.sk` — supports
 arbitrary SQL. Query via JSON API:
 ```
 https://zmluvy.zltastopa.sk/data/crz.json?sql=SELECT+...&_shape=array
 ```
 
-**Local fallback:** `crz.db` in the repo root. Use only when Datasette is
-unreachable. Full schema: **[docs/data/](docs/data/README.md)**
+**Note:** Backend uses DuckDB syntax (see sql-analytics skill for key differences).
+Full schema: **[docs/data/](docs/data/README.md)**
 
 ## Investigation pipeline
 
@@ -239,9 +239,7 @@ Key conventions:
 ## Data pipeline (if extraction data is missing)
 
 ```bash
-uv run python pipeline/download_sample_pdfs.py --from 2026-01-01 --to 2026-01-31 --all
-uv run python pipeline/pdf_to_text.py
-uv run python pipeline/extract_contracts.py
+uv run python delta_store/ingest.py --from 2026-01-01 --to 2026-01-31
 ```
 
 ---

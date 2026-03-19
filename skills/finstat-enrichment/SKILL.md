@@ -82,7 +82,7 @@ Query results after pipeline run:
 -- Top flagged suppliers
 SELECT sf.ico, sf.nazov, sf.trzby, sf.zisk, sf.vlastny_kapital,
        count(DISTINCT srf.flag_type) as flag_types,
-       group_concat(DISTINCT srf.flag_type) as flags
+       string_agg(DISTINCT srf.flag_type, ',') as flags
 FROM supplier_red_flags srf
 JOIN supplier_financials sf ON srf.ico = sf.ico
 GROUP BY srf.ico

@@ -21,10 +21,13 @@ If the input is a sql-analytics report, use the Zhrnutie najdov table.
 
 ## Data source
 
-**Primary:** Datasette at `https://zmluvy.zltastopa.sk/data/crz` — use for
-follow-up validation queries.
+**Primary:** FastAPI + DuckDB at `https://zmluvy.zltastopa.sk` — use for
+follow-up validation queries:
+```
+https://zmluvy.zltastopa.sk/data/crz.json?sql=SELECT+...&_shape=array
+```
 
-**Local fallback:** `sqlite3 crz.db "..."` when Datasette is unreachable.
+**Note:** Backend uses DuckDB syntax (see sql-analytics skill for key differences).
 
 ## Execution strategy: Two-pass validation
 

@@ -15,7 +15,7 @@
         {"name": "has_summary_table", "type": "semantic", "check": "Output ends with 'Zhrnutie najdov' table listing all findings"},
         {"name": "has_sumar_section", "type": "semantic", "check": "Output starts with Sumar section with contract count and total amount"},
         {"name": "no_premature_conclusions", "type": "semantic", "check": "Output notes findings need validation via critical-validation"},
-        {"name": "uses_datasette_api", "type": "semantic", "check": "Queries are executed against zmluvy.zltastopa.sk Datasette API"},
+        {"name": "uses_sql_api", "type": "semantic", "check": "Queries are executed against zmluvy.zltastopa.sk SQL API using DuckDB-compatible syntax"},
         {"name": "has_bonus_queries", "type": "semantic", "check": "Output includes results from bonus queries: negative equity, dormant firms, or daily volume distribution"}
       ],
       "files": []
