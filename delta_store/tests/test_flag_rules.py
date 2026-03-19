@@ -124,3 +124,89 @@ class TestNotInRuz:
         db.execute("INSERT INTO zmluvy VALUES (1,'test','Foreign Ltd','12345','Obec','00111222',100,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL)")
         result = run_sql_flag(db, NOT_IN_RUZ_CONDITION)
         assert 1 not in result
+
+
+# =========================================================================
+# signatory_overlap — threshold raised from 3 to 10
+# =========================================================================
+
+def _build_extraction_json(signatories: list[str]) -> str:
+    """Build minimal extraction_json with signatory names."""
+    import json
+    return json.dumps({"signatories": [{"name": n} for n in signatories]})
+
+
+def _eval_signatory_overlap(db) -> tuple[set, dict]:
+    """Reproduce the signatory_overlap logic with threshold=10."""
+    import json
+    from collections import defaultdict
+
+    rows = db.execute("""
+        SELECT e.zmluva_id, e.extraction_json, z.dodavatel_ico
+        FROM extractions e JOIN zmluvy z ON z.id = e.zmluva_id
+        WHERE e.extraction_json IS NOT NULL
+          AND z.dodavatel_ico IS NOT NULL AND z.dodavatel_ico != ''
+    """).fetchall()
+
+    sig_map = defaultdict(set)
+    sig_contracts = defaultdict(set)
+    for zid, ej_str, dod_ico in rows:
+        try:
+            ej = json.loads(ej_str)
+        except Exception:
+            continue
+        for sig in (ej.get("signatories") or []):
+            name = (sig.get("name") or "").strip().lower()
+            if name and len(name) > 5:
+                sig_map[name].add(dod_ico)
+                sig_contracts[name].add(zid)
+
+    matching, details = set(), {}
+    for name, icos in sig_map.items():
+        if len(icos) >= 10:
+            for zid in sig_contracts[name]:
+                matching.add(zid)
+                details[zid] = f"{name.title()} podpisuje za {len(icos)} roznych dodavatelov"
+    return matching, details
+
+
+class TestSignatoryOverlap:
+    def test_flags_signatory_with_10_plus_suppliers(self, db):
+        """Person signing for 10+ different suppliers should be flagged."""
+        for i in range(1, 12):
+            ico = f"4400{i:04d}"
+            db.execute(f"INSERT INTO zmluvy VALUES ({i},'zmluva','Firma {i}','{ico}','Obec','00111222',100,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL)")
+            ej = _build_extraction_json(["Ing. Podozrivy Človek"])
+            db.execute("INSERT INTO extractions VALUES (?,NULL,NULL,NULL,NULL,NULL,NULL,NULL,?,NULL,NULL)", [i, ej])
+        matching, _ = _eval_signatory_overlap(db)
+        assert len(matching) == 11
+
+    def test_skips_signatory_with_3_suppliers(self, db):
+        """Person signing for only 3 suppliers should NOT be flagged (old threshold)."""
+        for i in range(1, 4):
+            ico = f"4400{i:04d}"
+            db.execute(f"INSERT INTO zmluvy VALUES ({i},'zmluva','Firma {i}','{ico}','Obec','00111222',100,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL)")
+            ej = _build_extraction_json(["JUDr. Bežný Právnik"])
+            db.execute("INSERT INTO extractions VALUES (?,NULL,NULL,NULL,NULL,NULL,NULL,NULL,?,NULL,NULL)", [i, ej])
+        matching, _ = _eval_signatory_overlap(db)
+        assert len(matching) == 0
+
+    def test_skips_signatory_with_9_suppliers(self, db):
+        """Person signing for 9 suppliers should NOT be flagged (just under threshold)."""
+        for i in range(1, 10):
+            ico = f"4400{i:04d}"
+            db.execute(f"INSERT INTO zmluvy VALUES ({i},'zmluva','Firma {i}','{ico}','Obec','00111222',100,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL)")
+            ej = _build_extraction_json(["Mgr. Normálny Notár"])
+            db.execute("INSERT INTO extractions VALUES (?,NULL,NULL,NULL,NULL,NULL,NULL,NULL,?,NULL,NULL)", [i, ej])
+        matching, _ = _eval_signatory_overlap(db)
+        assert len(matching) == 0
+
+    def test_skips_short_names(self, db):
+        """Names shorter than 6 chars should be ignored."""
+        for i in range(1, 12):
+            ico = f"4400{i:04d}"
+            db.execute(f"INSERT INTO zmluvy VALUES ({i},'zmluva','Firma {i}','{ico}','Obec','00111222',100,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL)")
+            ej = _build_extraction_json(["J.Nov"])  # 5 chars
+            db.execute("INSERT INTO extractions VALUES (?,NULL,NULL,NULL,NULL,NULL,NULL,NULL,?,NULL,NULL)", [i, ej])
+        matching, _ = _eval_signatory_overlap(db)
+        assert len(matching) == 0

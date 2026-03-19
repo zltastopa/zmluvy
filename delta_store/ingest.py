@@ -942,7 +942,7 @@ def _eval_custom_rules(conn, date_from: str, date_to: str) -> list[dict]:
         """, [date_from, date_to]).fetchall())
         matching, details = set(), {}
         for name, icos in sig_map.items():
-            if len(icos) >= 3:
+            if len(icos) >= 10:
                 for zid in sig_contracts[name]:
                     if zid in in_range:
                         matching.add(zid)

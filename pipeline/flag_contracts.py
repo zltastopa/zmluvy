@@ -231,7 +231,7 @@ DEFAULT_RULES = [
     {
         "id": "signatory_overlap",
         "label": "Zdielany podpisujuci",
-        "description": "Osoba podpisujuca zmluvu za dodavatela sa nachadza aj v zmluvach inych dodavatelov (3+ firmy)",
+        "description": "Osoba podpisujuca zmluvu za dodavatela sa nachadza aj v zmluvach inych dodavatelov (10+ firmy)",
         "severity": "warning",
         "sql_condition": "__custom__",
         "needs_extraction": 1,
@@ -735,7 +735,7 @@ def _eval_nace_mismatch(db):
 
 @_custom("signatory_overlap")
 def _eval_signatory_overlap(db):
-    """Flag contracts where a signatory signs for 3+ different supplier ICOs."""
+    """Flag contracts where a signatory signs for 10+ different supplier ICOs."""
     rows = db.execute("""
         SELECT e.zmluva_id, e.extraction_json, z.dodavatel_ico
         FROM extractions e
@@ -758,8 +758,8 @@ def _eval_signatory_overlap(db):
                 sig_map[name].add(r["dodavatel_ico"])
                 sig_contracts[name].add(r["zmluva_id"])
 
-    # Find signatories appearing with 3+ different supplier ICOs
-    suspicious_sigs = {name: icos for name, icos in sig_map.items() if len(icos) >= 3}
+    # Find signatories appearing with 10+ different supplier ICOs
+    suspicious_sigs = {name: icos for name, icos in sig_map.items() if len(icos) >= 10}
 
     matching_ids = set()
     details = {}
