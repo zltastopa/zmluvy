@@ -441,3 +441,44 @@ class TestHiddenPrice:
         db.execute("INSERT INTO zmluvy VALUES (1,'zmluva','Firma','44556677','Obec','00111222',100,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL)")
         result = run_sql_flag(db, "z.suma IS NULL")
         assert 1 not in result
+
+
+# =========================================================================
+# bezodplatne — only flag private entities
+# =========================================================================
+
+BEZODPLATNE_CONDITION = (
+    "e.bezodplatne = 1 "
+    "AND z.dodavatel_ico IS NOT NULL AND z.dodavatel_ico != '' "
+    "AND z.dodavatel_ico NOT LIKE '00%'"
+)
+
+
+class TestBezodplatne:
+    def test_flags_private_gratis(self, db):
+        """Private company with gratis contract should be flagged."""
+        db.execute("INSERT INTO zmluvy VALUES (1,'zmluva','Firma s.r.o.','44556677','Obec','00111222',0,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL)")
+        db.execute("INSERT INTO extractions VALUES (1,NULL,NULL,0,NULL,0,1,NULL,NULL,NULL,NULL)")
+        result = run_sql_flag(db, BEZODPLATNE_CONDITION)
+        assert 1 in result
+
+    def test_skips_public_entity_gratis(self, db):
+        """Public entity (ICO 00xxxx) gratis contract should NOT be flagged."""
+        db.execute("INSERT INTO zmluvy VALUES (1,'zmluva','Obec Malá','00309541','Mesto','00111222',0,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL)")
+        db.execute("INSERT INTO extractions VALUES (1,NULL,NULL,0,NULL,0,1,NULL,NULL,NULL,NULL)")
+        result = run_sql_flag(db, BEZODPLATNE_CONDITION)
+        assert 1 not in result
+
+    def test_skips_non_gratis(self, db):
+        """Non-gratis contract should NOT be flagged."""
+        db.execute("INSERT INTO zmluvy VALUES (1,'zmluva','Firma s.r.o.','44556677','Obec','00111222',100,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL)")
+        db.execute("INSERT INTO extractions VALUES (1,NULL,NULL,0,NULL,0,0,NULL,NULL,NULL,NULL)")
+        result = run_sql_flag(db, BEZODPLATNE_CONDITION)
+        assert 1 not in result
+
+    def test_skips_no_ico(self, db):
+        """Gratis contract without ICO should NOT be flagged."""
+        db.execute("INSERT INTO zmluvy VALUES (1,'zmluva','Ján Novák','','Obec','00111222',0,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL)")
+        db.execute("INSERT INTO extractions VALUES (1,NULL,NULL,0,NULL,0,1,NULL,NULL,NULL,NULL)")
+        result = run_sql_flag(db, BEZODPLATNE_CONDITION)
+        assert 1 not in result

@@ -60,9 +60,9 @@ DEFAULT_RULES = [
     {
         "id": "bezodplatne",
         "label": "Bezodplatna zmluva",
-        "description": "Zmluva je bezodplatna (bez financnej odplaty)",
+        "description": "Zmluva je bezodplatna (bez financnej odplaty) s privatnym dodavatelom",
         "severity": "warning",
-        "sql_condition": "e.bezodplatne = 1",
+        "sql_condition": "e.bezodplatne = 1 AND z.dodavatel_ico IS NOT NULL AND z.dodavatel_ico != '' AND z.dodavatel_ico NOT LIKE '00%'",
         "needs_extraction": 1,
     },
     {
