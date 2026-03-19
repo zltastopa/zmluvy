@@ -59,9 +59,34 @@ def get_db() -> duckdb.DuckDBPyConnection:
         for table_path in sorted(tables_dir.iterdir()):
             if table_path.is_dir() and (table_path / "_delta_log").exists():
                 name = table_path.name
+                if name == "ruz_entities":
+                    continue  # handled separately below
                 _conn.execute(
                     f"CREATE OR REPLACE TABLE {name} AS SELECT * FROM delta_scan('{table_path}')"
                 )
+        # RUZ optimization: materialize only CRZ-connected entities (slim columns)
+        # Full table has ~1.8M rows but only ~31k appear in CRZ contracts.
+        ruz_path = tables_dir / "ruz_entities"
+        if ruz_path.is_dir() and (ruz_path / "_delta_log").exists():
+            _conn.execute(f"""
+                CREATE OR REPLACE TABLE ruz_entities AS
+                SELECT cin, name, terminated_on, established_on,
+                       organization_size_id, organization_size,
+                       legal_form_id, legal_form,
+                       region, nace_code, nace_category
+                FROM delta_scan('{ruz_path}')
+                WHERE cin IN (
+                    SELECT DISTINCT dodavatel_ico FROM zmluvy
+                    WHERE dodavatel_ico IS NOT NULL
+                    UNION
+                    SELECT DISTINCT objednavatel_ico FROM zmluvy
+                    WHERE objednavatel_ico IS NOT NULL
+                )
+            """)
+            # Full view for detail page and SQL API (reads Parquet on demand)
+            _conn.execute(
+                f"CREATE OR REPLACE VIEW ruz_entities_full AS SELECT * FROM delta_scan('{ruz_path}')"
+            )
         # Create FTS index on zmluvy
         try:
             _conn.execute("INSTALL fts; LOAD fts;")
@@ -383,7 +408,7 @@ def api_detail(request: Request):
             ruz = q1(
                 """SELECT name, city, street, region, district, established_on, terminated_on,
                     legal_form, nace_category, nace_code, organization_size, ownership_type
-                FROM ruz_entities WHERE cin = $1 LIMIT 1""", [ico_val])
+                FROM ruz_entities_full WHERE cin = $1 LIMIT 1""", [ico_val])
             contract["dodavatel_ruz"] = ruz
         else:
             contract["dodavatel_ruz"] = None
@@ -1225,7 +1250,7 @@ _FORBIDDEN_SQL_PATTERNS = re.compile(
 # Tables that agents are allowed to query
 _ALLOWED_TABLES = {
     "zmluvy", "extractions", "red_flags", "flag_rules", "prilohy",
-    "tax_reliability", "ruz_entities", "ruz_equity",
+    "tax_reliability", "ruz_entities", "ruz_entities_full", "ruz_equity",
     "vszp_debtors", "socpoist_debtors", "fs_tax_debtors",
     "fs_vat_deregistered", "fs_vat_dereg_reasons", "fs_corporate_tax",
     "rezorty",
