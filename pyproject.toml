@@ -15,4 +15,5 @@ dependencies = [
     "uvicorn>=0.34.0",
     "pyarrow>=18.0.0",
     "pytest>=8.0.0",
+    "ocrmypdf>=17.3.0",
 ]

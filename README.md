@@ -40,9 +40,13 @@ CRZ.gov.sk only searches contract titles. But the actual service type is often b
 ## Repository structure
 
 ```
+├── delta_store/       Delta Lake backend: ingestion, FastAPI server, tests
+│   ├── ingest.py      End-to-end pipeline (download → parse → PDF → text → extract → flag)
+│   ├── serve.py       FastAPI + DuckDB server (port 8002)
+│   └── tables/        Delta Lake tables (Parquet + _delta_log/)
 ├── frontend/          Dashboard and detail page HTML/JS
-├── server/            Web server (serve.py) and CLI runner (run.py)
-├── pipeline/          Data loading, LLM extraction, enrichment, and flagging scripts
+├── server/            SQLite web server (serve.py) and CLI runner (run.py)
+├── pipeline/          Legacy SQLite-based pipeline scripts
 ├── docs/              Reference documentation and investigation notes
 ├── settings.py        Shared configuration (env vars, path resolution)
 ├── Dockerfile         Container build
@@ -123,40 +127,65 @@ Environment is loaded from `.env` by all entrypoints. CLI flags override `.env` 
 
 ---
 
-## Update with more data
+## Ingestion pipeline (Delta Lake)
+
+A single script handles the full ingestion workflow — from downloading CRZ daily exports to flagging contracts. Data is stored as Delta Lake tables (Parquet + transaction log) in `delta_store/tables/`.
 
 ```bash
-# Download a range of daily exports
-for i in $(seq 0 30); do
-  date=$(date -v-${i}d +%Y-%m-%d)
-  curl -s -o "data/${date}.zip" "https://www.crz.gov.sk/export/${date}.zip"
-done
+# Full pipeline for a single day
+uv run python delta_store/ingest.py --date 2026-03-18
 
-# Unzip and load all
-for f in data/*.zip; do unzip -o "$f" -d data/; done
-uv run python pipeline/load_crz.py data/*.xml
+# Full pipeline for a date range
+uv run python delta_store/ingest.py --from 2026-03-01 --to 2026-03-18
+
+# Run a single step
+uv run python delta_store/ingest.py --date 2026-03-18 --step extract --limit 100
 ```
 
----
+### Pipeline steps
 
-## LLM extraction pipeline
+| Step | Name | What it does | Source → Target |
+|------|------|-------------|-----------------|
+| 1 | `download` | Fetches daily ZIP exports, extracts XML | `crz.gov.sk/export/YYYY-MM-DD.zip` → `data/xml/` |
+| 2 | `parse` | Parses XML, upserts contracts and attachments | XML → Delta `zmluvy`, `prilohy`, `rezorty` |
+| 3 | `pdf` | Downloads PDF attachments for new contracts | `crz.gov.sk/data/att/` → `data/pdfs/` |
+| 4 | `text` | Converts PDFs to plain text via `pdftotext` | `data/pdfs/` → `data/texts/` |
+| 5 | `extract` | Sends text/PDF to LLM, extracts structured fields | OpenRouter API → Delta `extractions` + `data/extractions/` |
+| 6 | `flag` | Evaluates flag rules against new contracts | Delta tables → Delta `red_flags` |
 
-Extract structured data from contract PDFs using an LLM (default: Gemini 2.5 Flash Lite via OpenRouter).
+### How it works
+
+- **Idempotent** — every step skips already-processed items. Safe to re-run or resume after Ctrl+C.
+- **Delta Lake merge** — steps 2, 5, and 6 use Delta Lake's merge API (match → update, no match → insert) instead of append-only writes.
+- **DuckDB queries** — steps 3–6 query Delta tables via `delta_scan()` to discover which PDFs to download, which contracts need extraction, etc.
+- **Parallel** — PDF download, text conversion, and LLM extraction run with `--workers N` (default: 8). All steps show a tqdm progress bar.
+
+### CLI options
+
+| Flag | Purpose | Default |
+|------|---------|---------|
+| `--date YYYY-MM-DD` | Single date | today |
+| `--from / --to` | Date range (YYYY-MM-DD or YYYY-MM) | — |
+| `--step NAME` | Run only one step | all steps |
+| `--workers N` | Parallel workers | 8 |
+| `--limit N` | Max items per step | 0 (unlimited) |
+| `--model MODEL` | LLM model for extraction | `google/gemini-2.5-flash-lite` |
+| `--force` | Re-process existing outputs | false |
+
+### Extracted fields
+
+Service category, actual subject, hidden entities (with subcontractor percentages), penalties, penalty asymmetry, signatories, duration, funding source, bank accounts, and more. Results go into `data/extractions/` as JSON sidecars and the Delta `extractions` table.
+
+### Legacy pipeline (SQLite)
+
+The original per-step scripts in `pipeline/` still work for the SQLite-based workflow:
 
 ```bash
-# 1. Download PDFs for a month
-uv run python pipeline/download_sample_pdfs.py --month 2026-02 --all
-
-# 2. Convert PDFs to text
-uv run python pipeline/pdf_to_text.py
-
-# 3. Extract structured fields via LLM
-uv run python pipeline/extract_contracts.py
+uv run python pipeline/load_crz.py data/*.xml           # parse XML → SQLite
+uv run python pipeline/download_sample_pdfs.py --all     # download PDFs
+uv run python pipeline/pdf_to_text.py                    # PDF → text
+uv run python pipeline/extract_contracts.py              # LLM extraction → SQLite
 ```
-
-All three scripts support `--workers` for parallel execution and show a tqdm progress bar. They skip already-processed files, so you can Ctrl+C and resume anytime.
-
-Extracted fields include: service category, actual subject, hidden entities (with subcontractor percentages), penalties, penalty asymmetry, signatories, duration, funding source, bank accounts, and more. Results go into `data/extractions/` as JSON and the `extractions` table in SQLite. Use `--force` to re-extract.
 
 ---
 
