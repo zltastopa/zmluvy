@@ -271,3 +271,46 @@ class TestMissingExpiry:
         db.execute("INSERT INTO zmluvy VALUES (1,'zmluva','Firma','44556677','Obec','00111222',50000,NULL,NULL,'2027-12-31',NULL,NULL,NULL,NULL,NULL)")
         result = run_sql_flag(db, MISSING_EXPIRY_CONDITION)
         assert 1 not in result
+
+
+# =========================================================================
+# terminated_company — only flag if NO active RÚZ entry for the ICO
+# =========================================================================
+
+TERMINATED_COMPANY_CONDITION = (
+    "z.dodavatel_ico IS NOT NULL AND z.dodavatel_ico != '' "
+    "AND z.dodavatel_ico IN (SELECT cin FROM ruz_entities WHERE terminated_on IS NOT NULL AND cin IS NOT NULL) "
+    "AND z.dodavatel_ico NOT IN (SELECT cin FROM ruz_entities WHERE terminated_on IS NULL AND cin IS NOT NULL)"
+)
+
+
+class TestTerminatedCompany:
+    def test_flags_fully_terminated(self, db):
+        """Company where ALL RÚZ entries are terminated should be flagged."""
+        db.execute("INSERT INTO zmluvy VALUES (1,'zmluva','Dead s.r.o.','44556677','Obec','00111222',100,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL)")
+        db.execute("INSERT INTO ruz_entities VALUES ('44556677','Dead s.r.o.',NULL,'2020-01-01',NULL,NULL,NULL,NULL,NULL)")
+        result = run_sql_flag(db, TERMINATED_COMPANY_CONDITION)
+        assert 1 in result
+
+    def test_skips_ico_with_active_entry(self, db):
+        """ICO that has both terminated AND active entries should NOT be flagged (restructured)."""
+        db.execute("INSERT INTO zmluvy VALUES (1,'zmluva','Generali Poisťovňa','35709332','Obec','00111222',100,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL)")
+        # Old entity terminated
+        db.execute("INSERT INTO ruz_entities VALUES ('35709332','GSK Financial',NULL,'2022-11-24',NULL,NULL,NULL,NULL,NULL)")
+        # New entity active (same ICO)
+        db.execute("INSERT INTO ruz_entities VALUES ('35709332','Generali Poisťovňa',NULL,NULL,NULL,NULL,NULL,NULL,NULL)")
+        result = run_sql_flag(db, TERMINATED_COMPANY_CONDITION)
+        assert 1 not in result
+
+    def test_skips_active_company(self, db):
+        """Company with only active entries should NOT be flagged."""
+        db.execute("INSERT INTO zmluvy VALUES (1,'zmluva','Active s.r.o.','44556677','Obec','00111222',100,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL)")
+        db.execute("INSERT INTO ruz_entities VALUES ('44556677','Active s.r.o.',NULL,NULL,NULL,NULL,NULL,NULL,NULL)")
+        result = run_sql_flag(db, TERMINATED_COMPANY_CONDITION)
+        assert 1 not in result
+
+    def test_skips_no_ruz_entry(self, db):
+        """Company not in RÚZ at all should NOT be flagged."""
+        db.execute("INSERT INTO zmluvy VALUES (1,'zmluva','Unknown s.r.o.','44556677','Obec','00111222',100,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL)")
+        result = run_sql_flag(db, TERMINATED_COMPANY_CONDITION)
+        assert 1 not in result

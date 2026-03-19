@@ -126,7 +126,7 @@ DEFAULT_RULES = [
         "label": "Zrusena firma",
         "description": "Dodavatel je zruseny/zaniknuty podla registra uctovnych zavierok (RUZ)",
         "severity": "danger",
-        "sql_condition": "z.dodavatel_ico IS NOT NULL AND z.dodavatel_ico != '' AND z.dodavatel_ico IN (SELECT cin FROM ruz_entities WHERE terminated_on IS NOT NULL AND cin IS NOT NULL)",
+        "sql_condition": "z.dodavatel_ico IS NOT NULL AND z.dodavatel_ico != '' AND z.dodavatel_ico IN (SELECT cin FROM ruz_entities WHERE terminated_on IS NOT NULL AND cin IS NOT NULL) AND z.dodavatel_ico NOT IN (SELECT cin FROM ruz_entities WHERE terminated_on IS NULL AND cin IS NOT NULL)",
         "needs_extraction": 0,
     },
     {
