@@ -18,6 +18,7 @@ Usage:
     uv run python delta_store/ingest.py --date 2026-03-18 --step extract
     uv run python delta_store/ingest.py --step ruz --limit 100
     uv run python delta_store/ingest.py --date 2026-03-18 --step flag
+    uv run python delta_store/ingest.py --step compact
 """
 
 from __future__ import annotations
@@ -64,7 +65,7 @@ CRZ_EXPORT_URL = "https://www.crz.gov.sk/export/{date}.zip"
 # Reuse schemas from migrate script
 from delta_store.migrate_from_sqlite import SCHEMAS
 
-ALL_STEPS = ["download", "parse", "pdf", "text", "extract", "ruz", "flag"]
+ALL_STEPS = ["download", "parse", "pdf", "text", "extract", "ruz", "flag", "compact"]
 
 
 # ---------------------------------------------------------------------------
@@ -1591,6 +1592,35 @@ def parse_dates(args) -> list[date]:
     return [date.today()]
 
 
+def step_compact() -> int:
+    """Optimize and vacuum all Delta tables to reclaim space."""
+    total_reclaimed = 0
+    for table_path in sorted(TABLES_DIR.iterdir()):
+        if not table_path.is_dir() or not (table_path / "_delta_log").exists():
+            continue
+        name = table_path.name
+        try:
+            dt = DeltaTable(str(table_path))
+            before_files = [f for f in os.listdir(table_path) if f.endswith(".parquet")]
+            before_mb = sum(os.path.getsize(table_path / f) for f in before_files) / 1024 / 1024
+
+            # Compact fragmented parquet files
+            if len(dt.file_uris()) > 1:
+                dt.optimize.compact()
+
+            # Remove stale parquet versions
+            dt.vacuum(retention_hours=0, enforce_retention_duration=False, dry_run=False)
+
+            after_files = [f for f in os.listdir(table_path) if f.endswith(".parquet")]
+            after_mb = sum(os.path.getsize(table_path / f) for f in after_files) / 1024 / 1024
+            freed = before_mb - after_mb
+            total_reclaimed += freed
+            print(f"  {name:25s}  {len(before_files):3d} → {len(after_files):2d} files  {before_mb:7.1f} → {after_mb:6.1f} MB  (freed {freed:6.1f} MB)")
+        except Exception as e:
+            print(f"  {name:25s}  ERROR: {e}")
+    return int(total_reclaimed)
+
+
 def main():
     parser = argparse.ArgumentParser(description="CRZ Delta Lake ingestion pipeline")
     parser.add_argument("--date", type=str, help="Single date (YYYY-MM-DD)")
@@ -1618,7 +1648,7 @@ def main():
     print()
 
     if "download" in steps:
-        print("Step 1/7: Download daily XML exports")
+        print("Step 1/8: Download daily XML exports")
         xml_paths = step_download(dates, DATA_DIR, force=args.force)
         print(f"  → {len(xml_paths)} XML files\n")
     else:
@@ -1627,7 +1657,7 @@ def main():
         xml_paths = [xml_dir / f"{d}.xml" for d in dates if (xml_dir / f"{d}.xml").exists()]
 
     if "parse" in steps:
-        print("Step 2/7: Parse XML → Delta tables")
+        print("Step 2/8: Parse XML → Delta tables")
         if not xml_paths:
             print("  No XML files to parse\n")
         else:
@@ -1635,17 +1665,17 @@ def main():
             print(f"  → {n_c} contracts, {n_a} attachments upserted\n")
 
     if "pdf" in steps:
-        print("Step 3/7: Download PDFs")
+        print("Step 3/8: Download PDFs")
         n = step_pdf(dates, workers=args.workers, limit=args.limit)
         print(f"  → {n} PDFs downloaded\n")
 
     if "text" in steps:
-        print("Step 4/7: Convert PDFs to text")
+        print("Step 4/8: Convert PDFs to text")
         n = step_text(dates, workers=args.workers, force=args.force)
         print(f"  → {n} texts converted\n")
 
     if "extract" in steps:
-        print("Step 5/7: LLM extraction")
+        print("Step 5/8: LLM extraction")
         n = step_extract(
             dates,
             workers=args.workers,
@@ -1656,14 +1686,19 @@ def main():
         print(f"  → {n} contracts extracted\n")
 
     if "ruz" in steps:
-        print("Step 6/7: Refresh RUZ entities")
+        print("Step 6/8: Refresh RUZ entities")
         n = step_ruz(workers=args.workers, limit=args.limit, force=args.force)
         print(f"  → {n} entities refreshed\n")
 
     if "flag" in steps:
-        print("Step 7/7: Flag contracts")
+        print("Step 7/8: Flag contracts")
         n = step_flag(dates)
         print(f"  → {n} new flags\n")
+
+    if "compact" in steps:
+        print("Step 8/8: Compact Delta tables")
+        n = step_compact()
+        print(f"  → {n} MB reclaimed\n")
 
     print("Done!")
 

@@ -169,6 +169,7 @@ uv run python delta_store/ingest.py --date 2026-03-19 --step extract --limit 100
 | 5 | `extract` | LLM extraction of structured fields via OpenRouter | LLM API |
 | 6 | `ruz` | Refresh RUZ entity data from RegisterUZ API (CRZ-connected only) | Network |
 | 7 | `flag` | Evaluate 36 flag rules → red_flags table | CPU (fast) |
+| 8 | `compact` | Optimize + vacuum Delta tables, reclaim stale parquet | Disk I/O |
 
 ### Key design decisions
 
