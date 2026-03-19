@@ -28,7 +28,7 @@ import os
 import subprocess
 import sys
 import zipfile
-from concurrent.futures import ThreadPoolExecutor, as_completed
+from concurrent.futures import ProcessPoolExecutor, ThreadPoolExecutor, as_completed
 from datetime import date, datetime, timedelta
 from pathlib import Path
 from xml.etree import ElementTree as ET
@@ -281,9 +281,62 @@ def step_pdf(dates: list[date], workers: int = 16, limit: int = 0) -> int:
 # Step 4: PDF → text
 # ---------------------------------------------------------------------------
 
-def step_text(dates: list[date], workers: int = 4, force: bool = False) -> int:
-    """Convert downloaded PDFs to text using pdftotext."""
+def _convert_one_pdf(args: tuple) -> tuple:
+    """Convert a single PDF to text. Module-level for ProcessPoolExecutor pickling."""
+    fname, pdf_dir, text_dir, force = args
+    pdf_path = str(Path(pdf_dir) / fname)
+    txt_path = Path(text_dir) / fname.replace(".pdf", ".txt")
+
+    if not force and txt_path.exists() and txt_path.stat().st_size > 0:
+        return ("skip", fname, None)
+
+    # Try native text extraction first
+    try:
+        from pipeline.pdf_to_text import extract_text as _pdftotext
+        text = _pdftotext(pdf_path)
+    except Exception as e:
+        return ("fail", fname, str(e))
+
+    if text and text.strip():
+        txt_path.write_text(text)
+        return ("ok", fname, None)
+
+    # Scanned PDF — fall back to OCR
+    try:
+        import logging
+        import ocrmypdf
+        logging.getLogger("ocrmypdf").setLevel(logging.ERROR)
+        logging.getLogger("PIL").setLevel(logging.ERROR)
+
+        ocr_pdf = Path(pdf_dir) / f".ocr_{os.getpid()}_{fname}"
+        ocrmypdf.ocr(
+            pdf_path,
+            str(ocr_pdf),
+            language="slk+ces",
+            skip_text=True,
+            progress_bar=False,
+            pages="1-20",
+            tesseract_timeout=60,
+        )
+        text = _pdftotext(str(ocr_pdf))
+        ocr_pdf.unlink(missing_ok=True)
+
+        if text and text.strip():
+            txt_path.write_text(text)
+            return ("ocr_ok", fname, None)
+        return ("ocr_fail", fname, "OCR produced no text")
+
+    except Exception as e:
+        Path(pdf_dir).joinpath(f".ocr_{os.getpid()}_{fname}").unlink(missing_ok=True)
+        return ("ocr_fail", fname, str(e))
+
+
+def step_text(dates: list[date], workers: int = 0, force: bool = False) -> int:
+    """Convert downloaded PDFs to text. Uses ProcessPoolExecutor for OCR parallelism."""
     import duckdb
+
+    if workers <= 0:
+        workers = min(os.cpu_count() or 4, 8)
 
     pdf_dir = Path(get_path("CRZ_PDF_DIR", "data/pdfs"))
     text_dir = Path(get_path("CRZ_TEXT_DIR", "data/texts"))
@@ -313,60 +366,15 @@ def step_text(dates: list[date], workers: int = 4, force: bool = False) -> int:
     """, [date_from, date_to]).fetchall()
 
     pdf_files = [r[0] for r in rows if (pdf_dir / r[0]).exists()]
-    print(f"  {len(pdf_files)} PDFs to convert")
+    print(f"  {len(pdf_files)} PDFs to convert ({workers} workers)")
 
     ok, fail, skip, ocr_ok, ocr_fail = 0, 0, 0, 0, 0
 
-    def convert_one(fname):
-        pdf_path = str(pdf_dir / fname)
-        txt_path = text_dir / fname.replace(".pdf", ".txt")
-
-        if not force and txt_path.exists() and txt_path.stat().st_size > 0:
-            return ("skip", fname, None)
-
-        # Try native text extraction first
-        try:
-            text = pdftotext_extract(pdf_path)
-        except Exception as e:
-            return ("fail", fname, str(e))
-
-        if text and text.strip():
-            txt_path.write_text(text)
-            return ("ok", fname, None)
-
-        # Scanned PDF — fall back to OCR
-        try:
-            import logging
-            import ocrmypdf
-            logging.getLogger("ocrmypdf").setLevel(logging.ERROR)
-            logging.getLogger("PIL").setLevel(logging.ERROR)
-
-            ocr_pdf = pdf_dir / f".ocr_{fname}"
-            ocrmypdf.ocr(
-                pdf_path,
-                str(ocr_pdf),
-                language="slk+ces",
-                skip_text=True,
-                progress_bar=False,
-                pages="1-20",  # cap at 20 pages to avoid multi-minute OCR on huge docs
-                tesseract_timeout=60,
-            )
-            text = pdftotext_extract(str(ocr_pdf))
-            ocr_pdf.unlink(missing_ok=True)
-
-            if text and text.strip():
-                txt_path.write_text(text)
-                return ("ocr_ok", fname, None)
-            return ("ocr_fail", fname, "OCR produced no text")
-
-        except Exception as e:
-            # Clean up temp file on error
-            (pdf_dir / f".ocr_{fname}").unlink(missing_ok=True)
-            return ("ocr_fail", fname, str(e))
+    task_args = [(f, str(pdf_dir), str(text_dir), force) for f in pdf_files]
 
     pbar = tqdm(total=len(pdf_files), desc="PDF→text", unit="pdf")
-    with ThreadPoolExecutor(max_workers=workers) as pool:
-        futures = {pool.submit(convert_one, f): f for f in pdf_files}
+    with ProcessPoolExecutor(max_workers=workers) as pool:
+        futures = {pool.submit(_convert_one_pdf, a): a[0] for a in task_args}
         for future in as_completed(futures):
             status, fname, error = future.result()
             pbar.update(1)
@@ -750,7 +758,7 @@ def main():
 
     if "text" in steps:
         print("Step 4/6: Convert PDFs to text")
-        n = step_text(dates, workers=min(args.workers, 4), force=args.force)
+        n = step_text(dates, workers=args.workers, force=args.force)
         print(f"  → {n} texts converted\n")
 
     if "extract" in steps:
