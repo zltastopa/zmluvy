@@ -160,6 +160,20 @@ def step_download(dates: list[date], data_dir: Path, force: bool = False) -> lis
 # Step 2: Parse XML → upsert into Delta (zmluvy, prilohy, rezorty)
 # ---------------------------------------------------------------------------
 
+def _sanitize_xml(xml_path: Path) -> Path:
+    """Strip invalid XML characters (control chars except tab/newline/CR) from CRZ exports."""
+    import re
+    content = xml_path.read_bytes()
+    # XML 1.0 allows: #x9 | #xA | #xD | [#x20-#xD7FF] | [#xE000-#xFFFD]
+    # Remove bytes 0x00-0x08, 0x0B, 0x0C, 0x0E-0x1F (keep 0x09, 0x0A, 0x0D)
+    cleaned = re.sub(rb'[\x00-\x08\x0b\x0c\x0e-\x1f]', b'', content)
+    if cleaned != content:
+        sanitized = xml_path.parent / f".sanitized_{xml_path.name}"
+        sanitized.write_bytes(cleaned)
+        return sanitized
+    return xml_path
+
+
 def step_parse(xml_paths: list[Path]) -> tuple[int, int]:
     """Parse XML exports and upsert contracts + attachments into Delta."""
     all_contracts = []
@@ -167,7 +181,13 @@ def step_parse(xml_paths: list[Path]) -> tuple[int, int]:
 
     for xml_path in xml_paths:
         print(f"  Parsing {xml_path.name}...")
-        contracts, attachments = parse_xml(str(xml_path))
+        # Sanitize XML to handle CRZ exports with stray control characters
+        parse_path = _sanitize_xml(xml_path)
+        try:
+            contracts, attachments = parse_xml(str(parse_path))
+        finally:
+            if parse_path != xml_path:
+                parse_path.unlink(missing_ok=True)
         all_contracts.extend(contracts)
         all_attachments.extend(attachments)
 
@@ -495,30 +515,41 @@ def step_extract(
         if source_kind is None:
             return (zid, None, "no text or pdf")
 
-        try:
-            if source_kind == "text":
-                extraction, usage = extract_one(client, api_key, text, model=model)
-            else:
-                extraction, usage = extract_one_pdf(client, api_key, str(pdf_path), model=model)
+        last_error = None
+        for attempt in range(2):
+            try:
+                if source_kind == "text":
+                    extraction, usage = extract_one(client, api_key, text, model=model)
+                else:
+                    extraction, usage = extract_one_pdf(client, api_key, str(pdf_path), model=model)
 
-            meta = {"dodavatel": contract["dodavatel"], "objednavatel": contract["objednavatel"]}
-            extraction = sanitize_extraction(extraction, meta, text)
-            extraction["_zmluva_id"] = zid
-            extraction["_model"] = model
-            extraction["_source_kind"] = source_kind
+                meta = {"dodavatel": contract["dodavatel"], "objednavatel": contract["objednavatel"]}
+                extraction = sanitize_extraction(extraction, meta, text)
+                extraction["_zmluva_id"] = zid
+                extraction["_model"] = model
+                extraction["_source_kind"] = source_kind
 
-            # Save JSON sidecar
-            json_path = output_dir / f"{subor.replace('.pdf', '.json')}"
-            json_path.write_text(json.dumps(extraction, ensure_ascii=False, indent=2))
+                # Save JSON sidecar
+                json_path = output_dir / f"{subor.replace('.pdf', '.json')}"
+                json_path.write_text(json.dumps(extraction, ensure_ascii=False, indent=2))
 
-            return (zid, extraction, None)
+                return (zid, extraction, None)
 
-        except json.JSONDecodeError as e:
-            return (zid, None, f"bad JSON: {e}")
-        except httpx.HTTPStatusError as e:
-            return (zid, None, f"HTTP {e.response.status_code}")
-        except Exception as e:
-            return (zid, None, str(e))
+            except json.JSONDecodeError as e:
+                last_error = f"bad JSON: {e}"
+                if attempt == 0:
+                    import time
+                    time.sleep(1)  # brief pause before retry
+                    continue
+            except httpx.HTTPStatusError as e:
+                if e.response.status_code == 429:
+                    import time
+                    time.sleep(10)
+                return (zid, None, f"HTTP {e.response.status_code}")
+            except Exception as e:
+                return (zid, None, str(e))
+
+        return (zid, None, last_error)
 
     pbar = tqdm(total=len(to_process), desc="Extracting", unit="contract")
 

@@ -335,6 +335,88 @@ def smart_truncate(text, max_total=12000):
         return head + "\n\n[...middle omitted...]\n\n" + tail
 
 
+def _clean_llm_json(raw: str) -> str:
+    """Clean LLM output into valid JSON.
+
+    Handles: markdown fences, trailing commas, truncated output (unclosed
+    brackets/braces/strings).
+    """
+    import re
+
+    s = raw.strip()
+
+    # Strip markdown code fences
+    if s.startswith("```"):
+        # Remove opening fence (with optional language tag)
+        s = re.sub(r"^```[a-zA-Z]*\s*\n?", "", s)
+        # Remove closing fence
+        s = re.sub(r"\n?```\s*$", "", s)
+        s = s.strip()
+
+    # Remove trailing commas before } or ]
+    s = re.sub(r",\s*([}\]])", r"\1", s)
+
+    # Try parsing as-is first
+    try:
+        json.loads(s)
+        return s
+    except json.JSONDecodeError:
+        pass
+
+    # Truncated output repair: close unclosed strings, arrays, brackets
+    # Close any unclosed string literal
+    in_string = False
+    escaped = False
+    for ch in s:
+        if escaped:
+            escaped = False
+            continue
+        if ch == "\\":
+            escaped = True
+            continue
+        if ch == '"':
+            in_string = not in_string
+    if in_string:
+        s += '"'
+
+    # Remove trailing incomplete key-value pairs (e.g. `"key": "val` or `"key":`)
+    # after closing the string, strip trailing partial entries
+    s = re.sub(r',\s*"[^"]*"\s*:\s*"?[^"}\]]*$', "", s)
+    # Remove trailing commas again after surgery
+    s = re.sub(r",\s*([}\]])", r"\1", s)
+
+    # Count open braces/brackets and close them
+    opens = 0
+    open_sq = 0
+    in_str = False
+    esc = False
+    for ch in s:
+        if esc:
+            esc = False
+            continue
+        if ch == "\\":
+            esc = True
+            continue
+        if ch == '"':
+            in_str = not in_str
+            continue
+        if in_str:
+            continue
+        if ch == "{":
+            opens += 1
+        elif ch == "}":
+            opens -= 1
+        elif ch == "[":
+            open_sq += 1
+        elif ch == "]":
+            open_sq -= 1
+
+    s += "]" * max(open_sq, 0)
+    s += "}" * max(opens, 0)
+
+    return s
+
+
 def extract_one(client, api_key, text, model=MODEL):
     """Send text to LLM and return parsed JSON extraction."""
     # Smart truncation: head (parties/subject) + key middle sections + tail (signatures)
@@ -361,13 +443,7 @@ def extract_one(client, api_key, text, model=MODEL):
     data = resp.json()
 
     content = data["choices"][0]["message"]["content"]
-    # Strip markdown fences if present
-    content = content.strip()
-    if content.startswith("```"):
-        content = content.split("\n", 1)[1]
-    if content.endswith("```"):
-        content = content.rsplit("```", 1)[0]
-    content = content.strip()
+    content = _clean_llm_json(content)
 
     usage = data.get("usage", {})
     return json.loads(content), usage
@@ -411,12 +487,7 @@ def extract_one_pdf(client, api_key, pdf_path, model=MODEL):
     data = resp.json()
 
     content = data["choices"][0]["message"]["content"]
-    content = content.strip()
-    if content.startswith("```"):
-        content = content.split("\n", 1)[1]
-    if content.endswith("```"):
-        content = content.rsplit("```", 1)[0]
-    content = content.strip()
+    content = _clean_llm_json(content)
 
     usage = data.get("usage", {})
     return json.loads(content), usage
