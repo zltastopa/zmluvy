@@ -52,9 +52,9 @@ DEFAULT_RULES = [
     {
         "id": "missing_expiry",
         "label": "Neuvedena platnost",
-        "description": "Zmluva nema uvedeny datum platnosti (platnost_do)",
+        "description": "Zmluva nad 10 000 EUR nema uvedeny datum platnosti (vynimka pre najom, cintorin, vecne bremena, prevod majetku)",
         "severity": "info",
-        "sql_condition": "z.platnost_do IS NULL OR z.platnost_do = ''",
+        "sql_condition": "(z.platnost_do IS NULL OR z.platnost_do = '') AND z.suma > 10000 AND (e.service_category IS NULL OR e.service_category NOT IN ('property_lease', 'cemetery', 'easement_encumbrance', 'asset_transfer', 'copyright_royalty'))",
         "needs_extraction": 0,
     },
     {

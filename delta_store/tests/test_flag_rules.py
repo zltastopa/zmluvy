@@ -210,3 +210,64 @@ class TestSignatoryOverlap:
             db.execute("INSERT INTO extractions VALUES (?,NULL,NULL,NULL,NULL,NULL,NULL,NULL,?,NULL,NULL)", [i, ej])
         matching, _ = _eval_signatory_overlap(db)
         assert len(matching) == 0
+
+
+# =========================================================================
+# missing_expiry — exclude low-value and indefinite-by-nature categories
+# =========================================================================
+
+MISSING_EXPIRY_CONDITION = (
+    "(z.platnost_do IS NULL OR z.platnost_do = '') "
+    "AND z.suma > 10000 "
+    "AND (e.service_category IS NULL OR e.service_category NOT IN "
+    "('property_lease', 'cemetery', 'easement_encumbrance', 'asset_transfer', 'copyright_royalty'))"
+)
+
+
+class TestMissingExpiry:
+    def test_flags_high_value_no_expiry(self, db):
+        """High-value contract without expiry in non-exempt category should be flagged."""
+        db.execute("INSERT INTO zmluvy VALUES (1,'zmluva','Firma','44556677','Obec','00111222',50000,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL)")
+        db.execute("INSERT INTO extractions VALUES (1,NULL,'professional_consulting',0,NULL,0,0,NULL,NULL,NULL,NULL)")
+        result = run_sql_flag(db, MISSING_EXPIRY_CONDITION)
+        assert 1 in result
+
+    def test_flags_no_extraction(self, db):
+        """High-value contract without extraction (category=NULL) should still be flagged."""
+        db.execute("INSERT INTO zmluvy VALUES (1,'zmluva','Firma','44556677','Obec','00111222',50000,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL)")
+        result = run_sql_flag(db, MISSING_EXPIRY_CONDITION)
+        assert 1 in result
+
+    def test_skips_property_lease(self, db):
+        """Property lease without expiry should NOT be flagged (indefinite by nature)."""
+        db.execute("INSERT INTO zmluvy VALUES (1,'zmluva','Firma','44556677','Obec','00111222',50000,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL)")
+        db.execute("INSERT INTO extractions VALUES (1,NULL,'property_lease',0,NULL,0,0,NULL,NULL,NULL,NULL)")
+        result = run_sql_flag(db, MISSING_EXPIRY_CONDITION)
+        assert 1 not in result
+
+    def test_skips_cemetery(self, db):
+        """Cemetery contract without expiry should NOT be flagged."""
+        db.execute("INSERT INTO zmluvy VALUES (1,'zmluva','Firma','44556677','Obec','00111222',50000,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL)")
+        db.execute("INSERT INTO extractions VALUES (1,NULL,'cemetery',0,NULL,0,0,NULL,NULL,NULL,NULL)")
+        result = run_sql_flag(db, MISSING_EXPIRY_CONDITION)
+        assert 1 not in result
+
+    def test_skips_easement(self, db):
+        """Easement without expiry should NOT be flagged."""
+        db.execute("INSERT INTO zmluvy VALUES (1,'zmluva','Firma','44556677','Obec','00111222',50000,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL)")
+        db.execute("INSERT INTO extractions VALUES (1,NULL,'easement_encumbrance',0,NULL,0,0,NULL,NULL,NULL,NULL)")
+        result = run_sql_flag(db, MISSING_EXPIRY_CONDITION)
+        assert 1 not in result
+
+    def test_skips_low_value(self, db):
+        """Low-value contract (under 10k) without expiry should NOT be flagged."""
+        db.execute("INSERT INTO zmluvy VALUES (1,'zmluva','Firma','44556677','Obec','00111222',5000,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL)")
+        db.execute("INSERT INTO extractions VALUES (1,NULL,'professional_consulting',0,NULL,0,0,NULL,NULL,NULL,NULL)")
+        result = run_sql_flag(db, MISSING_EXPIRY_CONDITION)
+        assert 1 not in result
+
+    def test_skips_contract_with_expiry(self, db):
+        """Contract WITH expiry date should NOT be flagged."""
+        db.execute("INSERT INTO zmluvy VALUES (1,'zmluva','Firma','44556677','Obec','00111222',50000,NULL,NULL,'2027-12-31',NULL,NULL,NULL,NULL,NULL)")
+        result = run_sql_flag(db, MISSING_EXPIRY_CONDITION)
+        assert 1 not in result
