@@ -132,6 +132,28 @@ def qval(sql: str, params=None):
         return row[0] if row else None
 
 
+def _reload_tables():
+    """Re-materialize all Delta tables into DuckDB. Called on startup and /reload."""
+    global _conn
+    with _db_lock:
+        if _conn is not None:
+            _conn.close()
+        _conn = None
+        get_db()  # re-initializes connection and materializes tables
+    return True
+
+
+@app.post("/reload")
+def reload_tables():
+    """Re-read Delta tables from disk. Call after ingestion to pick up new data."""
+    import time
+    t0 = time.time()
+    _reload_tables()
+    elapsed = time.time() - t0
+    count = qval("SELECT count(*) FROM zmluvy")
+    return {"ok": True, "reload_seconds": round(elapsed, 1), "zmluvy_count": count}
+
+
 # ---------------------------------------------------------------------------
 # Filter helpers — DuckDB uses $1, $2 positional params
 # ---------------------------------------------------------------------------
