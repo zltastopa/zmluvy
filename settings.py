@@ -28,6 +28,20 @@ def get_path(name: str, default: str) -> str:
     return str(path)
 
 
+def get_r2_config():
+    """Return R2 config dict if R2_BUCKET is set, else None."""
+    bucket = os.getenv("R2_BUCKET")
+    if not bucket:
+        return None
+    return {
+        "endpoint_url": os.getenv("R2_ENDPOINT_URL"),
+        "access_key_id": os.getenv("R2_ACCESS_KEY_ID"),
+        "secret_access_key": os.getenv("R2_SECRET_ACCESS_KEY"),
+        "bucket": bucket,
+        "public_url": os.getenv("R2_PUBLIC_URL"),
+    }
+
+
 _COMPANY_SUFFIX_RE = re.compile(
     r'\s*,?\s*'
     r'(s\.?\s*r\.?\s*o\.?|a\.?\s*s\.?|spol\.\s*s\s*r\.?\s*o\.?'
