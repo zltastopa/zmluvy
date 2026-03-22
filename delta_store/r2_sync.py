@@ -1,16 +1,20 @@
 """Sync Delta Lake tables and crz.db between local disk and Cloudflare R2.
 
 Public downloads use httpx against R2_PUBLIC_URL (no credentials needed).
+A manifest.json is uploaded alongside the data so public clients can discover
+which files to download without needing S3 ListObjects.
+
 Uploads use boto3 with R2 credentials.
 
 Usage:
     uv run python -m delta_store.r2_sync download [--include-db]
-    uv run python -m delta_store.r2_sync upload
+    uv run python -m delta_store.r2_sync upload [--include-db]
 """
 
 from __future__ import annotations
 
 import argparse
+import json
 import os
 import sys
 from pathlib import Path
@@ -22,8 +26,9 @@ REPO_ROOT = Path(__file__).resolve().parent.parent
 TABLES_DIR = Path(__file__).resolve().parent / "tables"
 CRZ_DB_PATH = REPO_ROOT / "crz.db"
 
-# R2 object prefixes
+# R2 object prefixes / keys
 TABLES_PREFIX = "delta_store/tables/"
+MANIFEST_KEY = "delta_store/tables/manifest.json"
 CRZ_DB_KEY = "crz.db"
 
 
@@ -76,8 +81,8 @@ def _list_objects(client, bucket: str, prefix: str):
 def download_tables(target_dir: Path | None = None):
     """Download Delta tables from R2 to local disk.
 
-    Uses R2_PUBLIC_URL for unauthenticated downloads if available,
-    otherwise falls back to boto3 with credentials.
+    Uses R2_PUBLIC_URL + manifest.json for unauthenticated downloads if
+    available, otherwise falls back to boto3 with credentials.
     """
     target = target_dir or TABLES_DIR
     public_url = _public_url()
@@ -89,41 +94,32 @@ def download_tables(target_dir: Path | None = None):
 
 
 def _download_tables_public(public_url: str, target: Path):
-    """Download tables via public R2 URL using httpx."""
-    # We need the object listing from S3 API to know what files exist.
-    # Use boto3 if credentials are available, otherwise require R2_BUCKET
-    # with credentials for listing (public URL doesn't support listing).
-    client = None
-    bucket = os.getenv("R2_BUCKET")
-    if bucket and os.getenv("R2_ACCESS_KEY_ID"):
-        client = get_s3_client()
-        objects = _list_objects(client, bucket, TABLES_PREFIX)
-    else:
-        # Fall back to boto3-less listing via the index — not possible
-        # with plain R2 public URLs. Use S3 credentials for listing.
-        sys.exit(
-            "ERROR: Public downloads require R2_BUCKET + credentials "
-            "for listing objects. Set R2_ACCESS_KEY_ID and R2_SECRET_ACCESS_KEY."
-        )
-
-    downloaded = 0
-    skipped = 0
+    """Download tables via public R2 URL using manifest.json."""
+    manifest_url = f"{public_url}/{MANIFEST_KEY}"
     with httpx.Client(timeout=120, follow_redirects=True) as http:
-        for obj in objects:
-            key = obj["Key"]
-            rel = key[len(TABLES_PREFIX):]
-            if not rel:
-                continue
+        resp = http.get(manifest_url)
+        if resp.status_code == 404:
+            sys.exit(
+                "ERROR: manifest.json not found at public URL. "
+                "Run 'upload' with credentials first to generate it."
+            )
+        resp.raise_for_status()
+        manifest = resp.json()
+
+        downloaded = 0
+        skipped = 0
+        for entry in manifest["files"]:
+            rel = entry["path"]
+            size = entry["size"]
             local_path = target / rel
-            # Skip if same size already exists locally
-            if local_path.exists() and local_path.stat().st_size == obj["Size"]:
+            if local_path.exists() and local_path.stat().st_size == size:
                 skipped += 1
                 continue
             local_path.parent.mkdir(parents=True, exist_ok=True)
-            url = f"{public_url}/{key}"
-            resp = http.get(url)
-            resp.raise_for_status()
-            local_path.write_bytes(resp.content)
+            key = f"{TABLES_PREFIX}{rel}"
+            file_resp = http.get(f"{public_url}/{key}")
+            file_resp.raise_for_status()
+            local_path.write_bytes(file_resp.content)
             downloaded += 1
 
     print(f"  Downloaded {downloaded} files, skipped {skipped} (already up to date)")
@@ -139,6 +135,8 @@ def _download_tables_s3(target: Path):
     skipped = 0
     for obj in objects:
         key = obj["Key"]
+        if key == MANIFEST_KEY:
+            continue
         rel = key[len(TABLES_PREFIX):]
         if not rel:
             continue
@@ -154,7 +152,7 @@ def _download_tables_s3(target: Path):
 
 
 def upload_tables(source_dir: Path | None = None):
-    """Upload local Delta tables to R2."""
+    """Upload local Delta tables to R2, then write manifest.json."""
     source = source_dir or TABLES_DIR
     client = get_s3_client()
     bucket = _bucket()
@@ -166,10 +164,12 @@ def upload_tables(source_dir: Path | None = None):
     # Get existing objects for size comparison
     existing = {}
     for obj in _list_objects(client, bucket, TABLES_PREFIX):
-        existing[obj["Key"]] = obj["Size"]
+        if obj["Key"] != MANIFEST_KEY:
+            existing[obj["Key"]] = obj["Size"]
 
-    # Track which R2 keys correspond to local files
+    # Upload new/changed files, track all local keys
     local_keys = set()
+    manifest_files = []
     uploaded = 0
     skipped = 0
     for local_path in sorted(source.rglob("*")):
@@ -179,6 +179,7 @@ def upload_tables(source_dir: Path | None = None):
         key = f"{TABLES_PREFIX}{rel}"
         local_keys.add(key)
         local_size = local_path.stat().st_size
+        manifest_files.append({"path": str(rel), "size": local_size})
         if key in existing and existing[key] == local_size:
             skipped += 1
             continue
@@ -188,14 +189,22 @@ def upload_tables(source_dir: Path | None = None):
     # Delete stale R2 objects (e.g. parquet files removed by vacuum)
     deleted = 0
     for key in existing:
-        rel = key[len(TABLES_PREFIX):]
-        if rel and key not in local_keys:
+        if key not in local_keys:
             client.delete_object(Bucket=bucket, Key=key)
             deleted += 1
 
+    # Write manifest.json for public (credential-free) downloads
+    manifest = {"files": manifest_files}
+    client.put_object(
+        Bucket=bucket,
+        Key=MANIFEST_KEY,
+        Body=json.dumps(manifest).encode(),
+        ContentType="application/json",
+    )
+
     print(
         f"  Uploaded {uploaded}, skipped {skipped} (up to date), "
-        f"deleted {deleted} stale"
+        f"deleted {deleted} stale, manifest updated"
     )
 
 
@@ -233,7 +242,7 @@ def main():
     parser.add_argument(
         "--include-db",
         action="store_true",
-        help="Also download crz.db (for agents)",
+        help="Also download crz.db (legacy, for agents)",
     )
     args = parser.parse_args()
 
