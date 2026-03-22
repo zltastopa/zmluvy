@@ -8,7 +8,7 @@ services:
     ports:
       - "127.0.0.1:8321:8002"
     volumes:
-      - ./delta_store/tables:/app/delta_store/tables
+      - tables_cache:/app/delta_store/tables
       - ./data:/app/data
       - ./frontend:/app/frontend
       - ./assets:/app/assets
@@ -22,4 +22,7 @@ services:
       interval: 30s
       timeout: 5s
       retries: 3
-      start_period: 20s
+      start_period: 60s
+
+volumes:
+  tables_cache:
