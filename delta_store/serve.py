@@ -13,6 +13,7 @@ import argparse
 import csv
 import io
 import json
+import os
 import re
 import threading
 from pathlib import Path
@@ -1347,6 +1348,18 @@ def main():
     global TABLES_DIR
     if args.tables:
         TABLES_DIR = Path(args.tables)
+
+    # Auto-download tables from R2 if not present locally
+    if not (TABLES_DIR / "zmluvy" / "_delta_log").exists():
+        if os.getenv("R2_BUCKET") or os.getenv("R2_PUBLIC_URL"):
+            print("Downloading tables from R2...")
+            from delta_store.r2_sync import download_tables
+            download_tables(TABLES_DIR)
+        else:
+            sys.exit(
+                "ERROR: No local Delta tables and no R2 config. "
+                "Set R2_PUBLIC_URL or R2_BUCKET in .env"
+            )
 
     import uvicorn
     print(f"CRZ Delta Lake Server: http://{args.host}:{args.port}")

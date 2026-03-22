@@ -1700,6 +1700,11 @@ def main():
         n = step_compact()
         print(f"  → {n} MB reclaimed\n")
 
+    if os.getenv("R2_BUCKET"):
+        print("Syncing tables to R2...")
+        from delta_store.r2_sync import upload_tables
+        upload_tables(TABLES_DIR)
+
     print("Done!")
 
 
