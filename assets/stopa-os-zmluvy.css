@@ -7,6 +7,11 @@
   --stopa-surface-muted: #faf7ef;
   --stopa-field: rgba(251, 248, 241, 0.96);
   --stopa-field-focus: rgba(255, 255, 255, 0.98);
+  --stopa-search-surface: rgba(255, 255, 255, 0.98);
+  --stopa-search-surface-focus: rgba(255, 250, 236, 0.98);
+  --stopa-scroll-track: rgba(248, 243, 231, 0.96);
+  --stopa-scroll-thumb: rgba(223, 158, 0, 0.68);
+  --stopa-scroll-thumb-hover: rgba(223, 158, 0, 0.88);
   --stopa-text: #131313;
   --stopa-text-soft: rgba(19, 19, 19, 0.72);
   --stopa-text-faint: rgba(19, 19, 19, 0.52);
@@ -21,6 +26,7 @@
   --stopa-warning: #b56a00;
   --stopa-shadow-card: 0 10px 22px rgba(17, 17, 17, 0.06), 0 2px 8px rgba(17, 17, 17, 0.04);
   --stopa-shadow-lift: 0 16px 36px rgba(17, 17, 17, 0.1), 0 4px 12px rgba(17, 17, 17, 0.05);
+  --stopa-shadow-search: 0 14px 30px rgba(17, 17, 17, 0.07), 0 3px 10px rgba(17, 17, 17, 0.045);
   --stopa-radius-shell: 1.75rem;
   --stopa-radius-card: 1.25rem;
   --stopa-radius-field: 1rem;
@@ -297,6 +303,43 @@ a:visited {
   max-height: calc(100vh - 7.1rem) !important;
 }
 
+.filters,
+.table-wrap,
+.search-results {
+  scrollbar-width: thin;
+  scrollbar-color: var(--stopa-scroll-thumb) var(--stopa-scroll-track);
+}
+
+.filters::-webkit-scrollbar,
+.table-wrap::-webkit-scrollbar,
+.search-results::-webkit-scrollbar {
+  width: 0.8rem;
+  height: 0.8rem;
+}
+
+.filters::-webkit-scrollbar-track,
+.table-wrap::-webkit-scrollbar-track,
+.search-results::-webkit-scrollbar-track {
+  background: var(--stopa-scroll-track);
+  border-radius: 999px;
+}
+
+.filters::-webkit-scrollbar-thumb,
+.table-wrap::-webkit-scrollbar-thumb,
+.search-results::-webkit-scrollbar-thumb {
+  border: 0.18rem solid transparent;
+  border-radius: 999px;
+  background: var(--stopa-scroll-thumb);
+  background-clip: padding-box;
+}
+
+.filters:hover::-webkit-scrollbar-thumb,
+.table-wrap:hover::-webkit-scrollbar-thumb,
+.search-results:hover::-webkit-scrollbar-thumb {
+  background: var(--stopa-scroll-thumb-hover);
+  background-clip: padding-box;
+}
+
 .filters h2,
 .filter-section h3,
 .card-header,
@@ -414,8 +457,8 @@ a:visited {
   padding: 0.42rem 0.5rem 0.42rem 0.72rem !important;
   border: 1px solid var(--stopa-line-strong) !important;
   border-radius: var(--stopa-radius-field) !important;
-  background: var(--stopa-field) !important;
-  box-shadow: none !important;
+  background: var(--stopa-search-surface) !important;
+  box-shadow: var(--stopa-shadow-search) !important;
   cursor: text;
   transition: border-color 180ms ease, box-shadow 180ms ease, background-color 180ms ease;
 }
@@ -423,12 +466,13 @@ a:visited {
 .overview-search-row:hover,
 .search-box:hover {
   border-color: rgba(19, 19, 19, 0.22) !important;
+  box-shadow: 0 16px 34px rgba(17, 17, 17, 0.08), 0 4px 12px rgba(17, 17, 17, 0.05) !important;
 }
 
 .overview-search-row:focus-within,
 .search-box:focus-within {
-  background: var(--stopa-field-focus) !important;
-  box-shadow: 0 0 0 4px rgba(255, 196, 0, 0.12) !important;
+  background: var(--stopa-search-surface-focus) !important;
+  box-shadow: var(--stopa-shadow-search), 0 0 0 4px rgba(255, 196, 0, 0.12) !important;
 }
 
 .overview-search-row:focus-within .search-icon,
@@ -475,6 +519,7 @@ a:visited {
 
 .overview-search-row input::placeholder,
 .search-box input::placeholder {
+  color: rgba(19, 19, 19, 0.5) !important;
   transition: opacity 140ms ease;
 }
 
