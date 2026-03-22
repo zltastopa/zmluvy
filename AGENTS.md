@@ -218,6 +218,21 @@ sqlite3 crz.db "SELECT count(*) || ' zmluv, ' || (SELECT count(*) FROM red_flags
 
 Expected: `121615 zmluv, 309630 zlte stopy, 36 pravidiel` (numbers grow over time)
 
+## Local setup
+
+Data files (`delta_store/tables/`) are **not in the repo** — they're stored
+in Cloudflare R2 and downloaded on demand. After cloning:
+
+```bash
+uv sync                                           # install deps
+uv run python -m delta_store.r2_sync download      # download ~133 MB from R2 (no credentials needed)
+uv run python delta_store/serve.py                 # starts server (auto-downloads if tables missing)
+```
+
+`serve.py` auto-downloads from R2 on startup if tables are missing, so the
+explicit download step is optional — but avoids surprises when running tests
+or other scripts that expect the tables to exist.
+
 ## Agentic mode specifics
 
 - **Default data source:** Datasette at `https://zmluvy.zltastopa.sk/data/crz` — supports arbitrary SQL.
