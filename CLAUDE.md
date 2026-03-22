@@ -26,11 +26,20 @@ Located in `skills/` directory. Two orchestrators compose the reusable building 
 - **rpvs-lookup** — RPVS beneficial ownership lookup via Playwright
 - **foaf-network** — foaf.sk corporate network mapping via Playwright
 
-## Data storage
+## Local setup
 
-Data files (`crz.db`, `delta_store/tables/`) are stored in Cloudflare R2
-(bucket `crz-zltastopa`), not in the git repo. Download with:
-`uv run python -m delta_store.r2_sync download`
+Data files (`delta_store/tables/`) are **not in the repo** — they're stored
+in Cloudflare R2 and downloaded on demand. After cloning:
+
+```bash
+uv sync                                           # install deps
+uv run python -m delta_store.r2_sync download      # download ~133 MB from R2 (no credentials needed)
+uv run python delta_store/serve.py                 # starts server (auto-downloads if tables missing)
+```
+
+`serve.py` auto-downloads from R2 on startup if tables are missing, so the
+explicit download step is optional — but avoids surprises when running tests
+or other scripts that expect the tables to exist.
 
 ## Things 3 Integration
 
