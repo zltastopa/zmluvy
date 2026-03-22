@@ -28,6 +28,7 @@ crz.db.old
 *.db-wal
 *.db-shm
 .playwright-mcp/
+.playwright-cli/
 
 # Large SQL dumps (downloaded separately)
 *.sql
