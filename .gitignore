@@ -23,6 +23,10 @@ data/
 *.png
 !assets/zltastopa.png
 
+# Data files (stored in Cloudflare R2, downloaded on demand)
+crz.db
+delta_store/tables/
+
 # Database backups and SQLite WAL files
 crz.db.old
 *.db-wal
