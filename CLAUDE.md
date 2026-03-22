@@ -26,6 +26,12 @@ Located in `skills/` directory. Two orchestrators compose the reusable building 
 - **rpvs-lookup** — RPVS beneficial ownership lookup via Playwright
 - **foaf-network** — foaf.sk corporate network mapping via Playwright
 
+## Data storage
+
+Data files (`crz.db`, `delta_store/tables/`) are stored in Cloudflare R2
+(bucket `crz-zltastopa`), not in the git repo. Download with:
+`uv run python -m delta_store.r2_sync download`
+
 ## Things 3 Integration
 
 Project: **zltastopa** (Area: AI)

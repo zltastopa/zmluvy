@@ -21,8 +21,9 @@ Or use the JSON API:
 https://zmluvy.zltastopa.sk/data/crz.json?sql=SELECT+count(*)+FROM+zmluvy&_shape=array
 ```
 
-**Local fallback:** `crz.db` in the repo root, queryable with `sqlite3` CLI.
-Use local only when Datasette is unreachable or when the user asks.
+**Local fallback:** `crz.db` is not in the repo (stored in R2). Download it with:
+`uv run python -m delta_store.r2_sync download --include-db`
+Then query with `sqlite3 crz.db`. Use local only when Datasette is unreachable.
 
 Full schema, column descriptions, and example queries for every table:
 **[docs/data/](docs/data/README.md)**

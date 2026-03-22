@@ -17,6 +17,7 @@ CRZ.gov.sk only searches contract titles. CRZ Explorer searches across **all fie
 ```bash
 git clone https://github.com/zltastopa/zmluvy.git && cd zmluvy
 uv sync
+uv run python -m delta_store.r2_sync download   # ~133 MB from R2
 uv run python delta_store/serve.py
 # → http://localhost:8002
 ```
@@ -50,14 +51,19 @@ uv run python delta_store/serve.py
 │  CRZ Open Data  │────▶│  ingest.py         │────▶│  delta_store/    │
 │  (daily XMLs)   │     │  (8-step pipeline) │     │  tables/         │
 └─────────────────┘     └────────────────────┘     │  ├── zmluvy      │
-                              │                     │  ├── extractions │
-                              │ OCR (ProcessPool)   │  ├── prilohy     │
-                              │ LLM (OpenRouter)    │  ├── ruz_entities│
-                              │ RUZ API refresh     │  ├── red_flags   │
-                              ▼                     │  ├── flag_rules  │
-┌─────────────────┐     ┌────────────────────┐     │  └── ...15 total │
-│  Browser        │◀───▶│  serve.py          │◀────└──────────────────┘
-│  (dashboard)    │     │  (FastAPI + DuckDB) │        ~130 MB Parquet
+                              │        │            │  ├── extractions │
+                              │        │ upload     │  ├── prilohy     │
+                              │        ▼            │  ├── ruz_entities│
+                              │  ┌───────────┐     │  ├── red_flags   │
+                              │  │Cloudflare │     │  ├── flag_rules  │
+                              │  │    R2     │     │  └── ...15 total │
+                              │  └───────────┘     │     ~130 MB      │
+                              │        │            └──────────────────┘
+                              │        │ download          ▲
+                              ▼        ▼                   │
+┌─────────────────┐     ┌────────────────────┐─────────────┘
+│  Browser        │◀───▶│  serve.py          │
+│  (dashboard)    │     │  (FastAPI + DuckDB) │
 └─────────────────┘     └────────────────────┘
          │
          │  /api/*
@@ -68,7 +74,7 @@ uv run python delta_store/serve.py
 └─────────────────┘
 ```
 
-**Storage**: Delta Lake (Parquet files + `_delta_log/` transaction log) — ~130 MB after compaction (vs 981 MB SQLite).
+**Storage**: Delta Lake (Parquet files + `_delta_log/` transaction log) — ~130 MB after compaction (vs 981 MB SQLite). Data is stored in Cloudflare R2 and downloaded on demand.
 **Query engine**: DuckDB in-memory — materializes Delta tables on startup (~2-3 seconds), then serves from RAM. RUZ entities are optimized: only ~31k CRZ-connected rows materialized (vs 1.8M full), saving ~550 MB.
 **Concurrency**: Threading lock on DuckDB connection handles parallel dashboard requests safely.
 **Memory**: ~650 MB DuckDB / ~900 MB process RSS — runs comfortably on a 2 GB VPS.
@@ -132,13 +138,16 @@ uv sync
 cp .env.example .env
 # Edit .env — set OPENROUTER_API_KEY for LLM extraction
 
-# Ingest data for a date range
-uv run python delta_store/ingest.py --from 2026-03-01 --to 2026-03-19
+# Download data from R2 (~133 MB)
+uv run python -m delta_store.r2_sync download
 
-# Start the server
+# Start the server (auto-downloads from R2 if tables are missing)
 uv run python delta_store/serve.py
 # → Dashboard:  http://localhost:8002
 # → SQL API:    http://localhost:8002/data/crz.json?sql=SELECT+count(*)+FROM+zmluvy
+
+# Or ingest fresh data for a date range
+uv run python delta_store/ingest.py --from 2026-03-01 --to 2026-03-19
 ```
 
 ---
@@ -287,15 +296,15 @@ uv sync
 
 # 2. Configure
 cp .env.example .env
-# Set OPENROUTER_API_KEY
+# Set OPENROUTER_API_KEY and R2 credentials (R2_BUCKET, R2_ACCESS_KEY_ID, etc.)
 
-# 3. Initial data load (backfill)
-uv run python delta_store/ingest.py --from 2022-01 --to 2026-03
+# 3. Download existing data from R2
+uv run python -m delta_store.r2_sync download
 
-# 4. Start server
+# 4. Start server (auto-downloads from R2 if tables missing)
 uv run python delta_store/serve.py --host 0.0.0.0 --port 8002
 
-# 5. Set up daily cron (runs all 8 steps: download, parse, pdf, text, extract, ruz, flag, compact)
+# 5. Set up daily cron (runs all 8 steps + uploads to R2 if R2_BUCKET is set)
 crontab -e
 # 0 6 * * * cd /opt/crz-experiments && uv run python delta_store/ingest.py --date $(date +\%Y-\%m-\%d) >> /var/log/crz-ingest.log 2>&1
 ```
@@ -325,7 +334,7 @@ docker compose up -d --build
 
 The app listens on port 8002 inside the container, published as `127.0.0.1:8321` on the host. Put nginx in front for TLS.
 
-The Compose setup mounts `delta_store/tables/` from the host, keeping deploys fast even with ~130 MB of data.
+The container downloads data from R2 on first start (~133 MB). A named volume (`tables_cache`) persists the data across restarts. Set `R2_PUBLIC_URL` or `R2_BUCKET` in `.env` for the container to download data.
 
 ### No external database needed
 
@@ -366,6 +375,11 @@ Environment is loaded from `.env` by all entrypoints. CLI flags override `.env` 
 | `OPENROUTER_BASE_URL` | OpenRouter API base URL | `https://openrouter.ai/api/v1` |
 | `OPENROUTER_MODEL` | Model for extraction | `google/gemini-2.5-flash-lite` |
 | `PDFTOTEXT_BIN` | Path to `pdftotext` binary | `pdftotext` |
+| `R2_PUBLIC_URL` | Public R2 URL for downloads (no credentials) | — |
+| `R2_ENDPOINT_URL` | R2 S3-compatible endpoint | — |
+| `R2_ACCESS_KEY_ID` | R2 access key | — |
+| `R2_SECRET_ACCESS_KEY` | R2 secret key | — |
+| `R2_BUCKET` | R2 bucket name | — |
 
 ---
 
