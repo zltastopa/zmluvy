@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>CRZ Explorer</title>
+<title>Zmluvy</title>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4"></script>
 <style>
   @import url('https://fonts.googleapis.com/css2?family=Lexend:wght@400;500;600;700;800;900&display=swap');
@@ -1432,6 +1432,7 @@
     }
   }
 </style>
+<link rel="stylesheet" href="/assets/stopa-os-zmluvy.css">
 
 <script>
     !function(t,e){var o,n,p,r;e.__SV||(window.posthog && window.posthog.__loaded)||(window.posthog=e,e._i=[],e.init=function(i,s,a){function g(t,e){var o=e.split(".");2==o.length&&(t=t[o[0]],e=o[1]),t[e]=function(){t.push([e].concat(Array.prototype.slice.call(arguments,0)))}}(p=t.createElement("script")).type="text/javascript",p.crossOrigin="anonymous",p.async=!0,p.src=s.api_host.replace(".i.posthog.com","-assets.i.posthog.com")+"/static/array.js",(r=t.getElementsByTagName("script")[0]).parentNode.insertBefore(p,r);var u=e;for(void 0!==a?u=e[a]=[]:a="posthog",u.people=u.people||[],u.toString=function(t){var e="posthog";return"posthog"!==a&&(e+="."+a),t||(e+=" (stub)"),e},u.people.toString=function(){return u.toString(1)+".people (stub)"},o="vi init Ti Ci ft Ri Oi ki capture calculateEventProperties Li register register_once register_for_session unregister unregister_for_session zi getFeatureFlag getFeatureFlagPayload getFeatureFlagResult isFeatureEnabled reloadFeatureFlags updateFlags updateEarlyAccessFeatureEnrollment getEarlyAccessFeatures on onFeatureFlags onSurveysLoaded onSessionId getSurveys getActiveMatchingSurveys renderSurvey displaySurvey cancelPendingSurvey canRenderSurvey canRenderSurveyAsync identify setPersonProperties group resetGroups setPersonPropertiesForFlags resetPersonPropertiesForFlags setGroupPropertiesForFlags resetGroupPropertiesForFlags reset get_distinct_id getGroups get_session_id get_session_replay_url alias set_config startSessionRecording stopSessionRecording sessionRecordingStarted captureException startExceptionAutocapture stopExceptionAutocapture loadToolbar get_property getSessionProperty Ni Ai createPersonProfile setInternalOrTestUser Ui Si Hi opt_in_capturing opt_out_capturing has_opted_in_capturing has_opted_out_capturing get_explicit_consent_status is_capturing clear_opt_in_out_capturing Fi debug bt ji getPageViewId captureTraceFeedback captureTraceMetric wi".split(" "),n=0;n<o.length;n++)g(u,o[n]);e._i.push([i,s,a])},e.__SV=1)}(document,window.posthog||[]);
@@ -1444,17 +1445,14 @@
 </head>
 <body>
 
-<!-- Floating bug report -->
-<a class="bug-fab" href="#" onclick="return openBugReport()">
-  <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 8v4M12 16h.01"/></svg>
-  Nahlás chybu
-</a>
-
 <!-- Top bar -->
 <div class="topbar">
-  <a class="logo" href="/" aria-label="CRZ Explorer">
-    <svg class="brand-mark" viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg"><circle cx="26" cy="26" r="18" stroke="#F5C518" stroke-width="5"/><line x1="39" y1="39" x2="56" y2="56" stroke="#F5C518" stroke-width="5" stroke-linecap="round"/><path d="M20 26c0-3.3 2.7-6 6-6" stroke="#fff" stroke-width="2.5" stroke-linecap="round" opacity=".5"/></svg>
-    <span>CRZ Explorer</span>
+  <a class="logo" href="/" aria-label="Zmluvy">
+    <img class="brand-mark" src="/assets/zltastopa.png" alt="Žltá Stopa">
+    <span class="brand-copy">
+      <span class="product-meta">CRZ bez balastu.</span>
+      <span class="product-name">Zmluvy</span>
+    </span>
   </a>
   <div class="tabs">
     <div class="tab active" id="tab-overview" onclick="switchTab('overview')">
@@ -1483,7 +1481,7 @@
     </div>
     <a class="tab tab-link" href="/data">
       <span class="tab-icon" aria-hidden="true">
-        <svg viewBox="0 0 16 16"><ellipse cx="8" cy="3.5" rx="4.8" ry="2.2"/><path d="M3.2 3.5v4.5c0 1.2 2.1 2.2 4.8 2.2s4.8-1 4.8-2.2V3.5"/><path d="M3.2 8v4.5c0 1.2 2.1 2.2 4.8 2.2s4.8-1 4.8-2.2V8"/></svg>
+        <svg viewBox="0 0 16 16"><ellipse cx="8" cy="3.4" rx="3.8" ry="1.8"/><path d="M4.2 3.4v4.6c0 1 1.7 1.8 3.8 1.8s3.8-.8 3.8-1.8V3.4"/><path d="M4.2 8v4.6c0 1 1.7 1.8 3.8 1.8s3.8-.8 3.8-1.8V8"/></svg>
       </span>
       Datasette
     </a>
@@ -1491,9 +1489,10 @@
   <div class="spacer"></div>
   <span class="stats" id="totalStats"></span>
   <div class="links">
-    <a class="corner-brand-badge" href="https://www.zltastopa.sk" target="_blank" rel="noreferrer noopener" aria-label="Projekt Žltá Stopa">
-      <img src="/assets/projekt-zlta-stopa.png" alt="Projekt Žltá Stopa">
+    <a class="topbar-action topbar-action-ghost" href="#overviewSearchInput" onclick="return focusPrimarySearch()" aria-label="Preskočiť na vyhľadávanie">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="6"></circle><path d="M16 16L20.5 20.5"></path></svg>
     </a>
+    <a class="topbar-action topbar-action-outline-accent" href="#" onclick="return openBugReport()">Nahlásiť chybu</a>
   </div>
 </div>
 
@@ -1724,20 +1723,33 @@
 
     <!-- ===== OVERVIEW ===== -->
     <div id="view-overview" class="active">
-      <div class="overview-hero">
-        <h1>Niektoré dokumenty smrdia.</h1>
-        <p>CRZ Explorer mení surové CRZ záznamy na jasný prehľad. Vyfiltruj podozrivé vzory, porovnaj rezorty a otvor detaily bez boja s tabuľkami.</p>
-        <p class="wink">Rýchlo nájdi zmluvy, ktoré by v pôvodnom CRZ ostali skryté.</p>
-      </div>
-
-      <div class="overview-search">
-        <div class="overview-search-head">
-          <strong>Hľadaj naprieč celým CRZ</strong>
-          <span>Názov zmluvy, IČO, firma, predmet, poznámka, text príloh</span>
-        </div>
-        <div class="overview-search-row">
-          <input type="text" id="overviewSearchInput" placeholder="Skús: IČO, Robert, masáž, ministerstvo vnútra">
-          <button type="button" onclick="overviewSearchRun()">Vyhľadať</button>
+      <div class="overview-intro">
+        <div class="overview-search">
+          <div class="overview-search-head">
+            <p class="search-kicker">Hľadaj v CRZ bez balastu.</p>
+            <span class="shortcut-wrap">
+              <span>Stlač</span>
+              <span class="shortcut-key" aria-label="Keyboard shortcut slash">/</span>
+              <span>pre vyhľadávanie</span>
+            </span>
+          </div>
+          <div class="overview-search-row" data-focus-target="overviewSearchInput">
+            <span class="search-icon" aria-hidden="true">
+              <svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="6"></circle><path d="M16 16L20.5 20.5"></path></svg>
+            </span>
+            <input type="text" id="overviewSearchInput" placeholder="Meno, IČO, dodatok, rezort...">
+            <button type="button" onclick="overviewSearchRun()">Hľadať</button>
+          </div>
+          <div class="scope-stack">
+            <span class="scope-label">Rýchle filtre</span>
+            <div class="scope-row" aria-label="Rýchle scope filtre">
+              <button class="scope-chip scope-chip-active" data-scope="all" type="button" onclick="browseQuickScope('all')">Všetko</button>
+              <button class="scope-chip" data-scope="debtors" type="button" onclick="browseQuickScope('debtors')">Dlžníci</button>
+              <button class="scope-chip" data-scope="amendments" type="button" onclick="browseQuickScope('amendments')">Dodatky</button>
+              <button class="scope-chip" data-scope="high-value" type="button" onclick="browseQuickScope('high-value')">Veľké sumy</button>
+              <button class="scope-chip" data-scope="missing-amount" type="button" onclick="browseQuickScope('missing-amount')">Bez sumy</button>
+            </div>
+          </div>
         </div>
       </div>
 
@@ -1745,12 +1757,11 @@
         <div class="stat-card"><div class="value" id="s-total">-</div><div class="label">Zmlúv celkom</div></div>
         <div class="stat-card"><div class="value" id="s-value">-</div><div class="label">Celková hodnota</div></div>
         <div class="stat-card"><div class="value" id="s-avg">-</div><div class="label">Priemerná suma</div></div>
-        <div class="stat-card"><div class="value" id="s-max">-</div><div class="label">Najvyššia suma</div></div>
         <div class="stat-card"><div class="value" id="s-no-amount">-</div><div class="label">Bez uvedenej sumy</div></div>
-        <div class="stat-card"><div class="value" id="s-amendments">-</div><div class="label">Dodatkov</div></div>
+        <div class="stat-card"><div class="value" id="s-amendments">-</div><div class="label">Dodatky</div></div>
         <div class="stat-card stat-card-danger">
           <div class="value" id="s-debtors">-</div>
-          <div class="label">Zmluv s dlznikmi statu</div>
+          <div class="label">Zmluvy s dlžníkmi štátu</div>
           <div style="font-size: 11px; color: var(--muted); margin-top: 2px;" id="s-debtors-value"></div>
         </div>
       </div>
@@ -1835,25 +1846,38 @@
     <!-- ===== SEARCH ===== -->
     <div id="view-search">
       <div class="search-container">
-        <div class="search-box">
-          <input type="text" id="searchInput" placeholder="Hľadať zmluvy, dodávateľov, IČO, prílohy...">
-          <button onclick="searchRun()">Hľadať</button>
+        <div class="search-stage-inline">
+          <div class="search-head">
+            <p class="search-kicker">Hľadaj v CRZ bez balastu.</p>
+            <span class="shortcut-wrap">
+              <span>Stlač</span>
+              <span class="shortcut-key" aria-label="Keyboard shortcut slash">/</span>
+              <span>pre vyhľadávanie</span>
+            </span>
+          </div>
+          <div class="search-box" data-focus-target="searchInput">
+            <span class="search-icon" aria-hidden="true">
+              <svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="6"></circle><path d="M16 16L20.5 20.5"></path></svg>
+            </span>
+            <input type="text" id="searchInput" placeholder="Meno, IČO, dodatok, adresa...">
+            <button onclick="searchRun()">Hľadať</button>
+          </div>
+          <div id="searchHint" class="search-hint">
+            <p>Hľadajte zmluvy, dodatky, firmy, IČO, adresy, poznámky, prílohy a skryté entity.</p>
+            <div class="search-examples">
+              <button onclick="searchExample(this)">Telekom</button>
+              <button onclick="searchExample(this)">36231151</button>
+              <button onclick="searchExample(this)">dodatok</button>
+              <button onclick="searchExample(this)">bezodplatné</button>
+              <button onclick="searchExample(this)">ministerstvo zdravotníctva</button>
+              <button onclick="searchExample(this)">IT služby</button>
+            </div>
+          </div>
         </div>
         <div id="searchMeta" class="search-meta"></div>
         <div id="searchResults" class="search-results"></div>
         <div id="searchMore" class="search-more" style="display:none">
           <button onclick="searchLoadMore()">Načítať ďalšie</button>
-        </div>
-        <div id="searchHint" class="search-hint">
-          <p>Hľadajte čokoľvek — názvy zmlúv, dodávateľov, IČO, adresy, poznámky, prílohy, skryté entity...</p>
-          <div class="search-examples">
-            <button onclick="searchExample(this)">Telekom</button>
-            <button onclick="searchExample(this)">36231151</button>
-            <button onclick="searchExample(this)">dodatok</button>
-            <button onclick="searchExample(this)">bezodplatné</button>
-            <button onclick="searchExample(this)">ministerstvo zdravotníctva</button>
-            <button onclick="searchExample(this)">IT služby</button>
-          </div>
         </div>
       </div>
     </div>
@@ -1963,6 +1987,78 @@ function openBugReport() {
 // Shared utilities
 // ============================================================
 var currentTab = 'overview';
+
+function isEditableTarget(target) {
+  if (!target) return false;
+  var tag = target.tagName;
+  return tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT' || target.isContentEditable;
+}
+
+function focusPrimarySearch() {
+  var input;
+  if (currentTab === 'search') {
+    input = document.getElementById('searchInput');
+  } else {
+    if (currentTab === 'browse' || currentTab === 'methodology') {
+      switchTab('overview');
+    }
+    input = document.getElementById('overviewSearchInput');
+  }
+  if (!input) return false;
+  input.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  input.focus();
+  if (input.select) input.select();
+  return false;
+}
+
+function wireFocusShells() {
+  document.querySelectorAll('[data-focus-target]').forEach(function(el) {
+    el.addEventListener('click', function(e) {
+      if (e.target.closest('button') || e.target.closest('a')) return;
+      var input = document.getElementById(el.dataset.focusTarget);
+      if (input) input.focus();
+    });
+  });
+}
+
+function setQuickScopeActive(scope) {
+  document.querySelectorAll('.scope-chip[data-scope]').forEach(function(button) {
+    button.classList.toggle('scope-chip-active', button.dataset.scope === scope);
+  });
+}
+
+function browseQuickScope(scope) {
+  setQuickScopeActive(scope);
+  browseResetFilters(true);
+  switch (scope) {
+    case 'debtors':
+      extraParams.debtor = 'any';
+      break;
+    case 'amendments':
+      var typ = document.querySelector('[data-filter="typ"]');
+      if (typ) typ.value = 'dodatok';
+      break;
+    case 'high-value':
+      extraParams.suma_gt = '1000000';
+      break;
+    case 'missing-amount':
+      extraParams.suma_null = '1';
+      break;
+    default:
+      break;
+  }
+  switchTab('browse');
+  browsePage = 0;
+  browseFetchData();
+}
+
+document.addEventListener('keydown', function(e) {
+  if (e.key !== '/' || e.metaKey || e.ctrlKey || e.altKey || isEditableTarget(e.target)) return;
+  e.preventDefault();
+  focusPrimarySearch();
+});
+
+wireFocusShells();
 
 function switchTab(tab) {
   currentTab = tab;
@@ -2087,7 +2183,11 @@ var charts = {};
 
 const CHART_COLORS = {
   accent: '#FFC400',
-  accent2: '#C77A00',
+  accent2: '#8F6B00',
+  accentSoft: '#EAC95A',
+  accentMuted: '#DDBD7E',
+  neutral: '#CFC7B8',
+  neutralStrong: '#A89E8D',
   danger: '#C54A4A',
   success: '#3E9B65',
   info: '#5C7385',
@@ -2096,25 +2196,23 @@ const CHART_COLORS = {
 };
 
 const RANK_COLOR_STOPS = [
-  '#FFC400',
-  '#FFB637',
-  '#FFA24F',
-  '#FF8B64',
-  '#F27477',
-  '#D86E8D',
-  '#B672A0',
-  '#9477AF',
-  '#757FB7',
-  '#5C8EBA',
+  '#F0D780',
+  '#E3C36B',
+  '#D6B37A',
+  '#C6A48A',
+  '#B8A99A',
 ];
 
-const HEAT_TO_BLUE_STOPS = [
-  '#EAC34F',
-  '#E6A75B',
-  '#D98A6B',
-  '#C9797C',
-  '#A783A8',
-  '#7390B8',
+const CATEGORY_COLOR_STOPS = [
+  '#FFC400',
+  '#EAC95A',
+  '#E0BF6B',
+  '#D6B47A',
+  '#CCA88A',
+  '#C39F95',
+  '#BAA79F',
+  '#B0ADA6',
+  '#CFC7B8',
 ];
 
 const PENALTY_COLOR_MAP = {
@@ -2127,7 +2225,7 @@ const PENALTY_COLOR_MAP = {
 
 Chart.defaults.color = '#585850';
 Chart.defaults.borderColor = '#D6D6CE';
-Chart.defaults.font.family = "'Lexend', -apple-system, BlinkMacSystemFont, sans-serif";
+Chart.defaults.font.family = "'Inter', -apple-system, BlinkMacSystemFont, sans-serif";
 Chart.defaults.font.size = 12;
 
 function destroyChart(key) {
@@ -2169,8 +2267,13 @@ function buildRankColors(count, alpha, stepCount) {
   var colors = [];
   var steps = stepCount && stepCount > 1 ? stepCount : 0;
   for (var i = 0; i < count; i++) {
-    var t = count <= 1 ? 0 : (i / (count - 1));
-    if (steps) {
+    if (i === 0) {
+      colors.push(alpha == null ? CHART_COLORS.accent : 'rgba(255, 196, 0, ' + alpha + ')');
+      continue;
+    }
+    var tailCount = Math.max(1, count - 1);
+    var t = tailCount <= 1 ? 0 : ((i - 1) / (tailCount - 1));
+    if (steps && tailCount > 1) {
       t = Math.round(t * (steps - 1)) / (steps - 1);
     }
     var rgb = sampleColorStops(RANK_COLOR_STOPS, t);
@@ -2259,7 +2362,6 @@ async function loadSummary(params) {
   document.getElementById('s-total').textContent = fmtNum(d.total);
   document.getElementById('s-value').textContent = fmtEur(d.total_value) + ' EUR';
   document.getElementById('s-avg').textContent = fmtEur(d.avg_value) + ' EUR';
-  document.getElementById('s-max').textContent = fmtEur(d.max_value) + ' EUR';
   document.getElementById('s-no-amount').textContent = fmtNum(d.total - d.with_amount);
   document.getElementById('s-amendments').textContent = fmtNum(d.amendments);
   document.getElementById('s-debtors').textContent = fmtNum(d.debtor_contracts);
@@ -2275,7 +2377,7 @@ async function loadTimeline(params) {
       labels: data.map(function(d) { return d.month; }),
       datasets: [
         { label: 'Počet zmlúv', data: data.map(function(d) { return d.count; }),
-          backgroundColor: CHART_COLORS.accent + '99', borderRadius: 3, yAxisID: 'y' },
+          backgroundColor: 'rgba(255, 196, 0, 0.72)', borderRadius: 3, yAxisID: 'y' },
         { label: 'Celková hodnota (EUR)', data: data.map(function(d) { return d.total_value; }),
           type: 'line', borderColor: CHART_COLORS.accent2, backgroundColor: 'transparent',
           pointRadius: 2, tension: 0.3, yAxisID: 'y1' },
@@ -2310,18 +2412,24 @@ async function loadRezort(params) {
 async function loadCategory(params) {
   var data = await api('/api/by_category', params);
   var sorted = data.slice().sort(function(a, b) { return (b.count || 0) - (a.count || 0); });
+  var visible = sorted.slice(0, 8);
+  if (sorted.length > 8) {
+    var otherCount = sorted.slice(8).reduce(function(sum, item) { return sum + (item.count || 0); }, 0);
+    visible.push({ category: 'Ostatné', count: otherCount });
+  }
   destroyChart('category');
   var categoryColors = [];
-  for (var i = 0; i < sorted.length; i++) {
-    var t = sorted.length <= 1 ? 0 : (i / (sorted.length - 1));
-    var rgb = sampleColorStops(HEAT_TO_BLUE_STOPS, t);
-    categoryColors.push(rgb.replace('rgb(', 'rgba(').replace(')', ', 0.95)'));
+  for (var i = 0; i < visible.length; i++) {
+    var hex = i === visible.length - 1 && visible[i].category === 'Ostatné'
+      ? CHART_COLORS.neutral
+      : sampleColorStops(CATEGORY_COLOR_STOPS, visible.length <= 1 ? 0 : (i / (visible.length - 1)));
+    categoryColors.push((hex.indexOf('rgb(') === 0 ? hex : mixHex(hex, hex, 0)).replace('rgb(', 'rgba(').replace(')', ', 0.95)'));
   }
   charts.category = new Chart(document.getElementById('chart-category'), {
     type: 'doughnut',
     data: {
-      labels: sorted.map(function(d) { return d.category; }),
-      datasets: [{ data: sorted.map(function(d) { return d.count; }),
+      labels: visible.map(function(d) { return d.category; }),
+      datasets: [{ data: visible.map(function(d) { return d.count; }),
         backgroundColor: categoryColors,
         borderWidth: 1,
         borderColor: '#f4f4ef',

@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>CRZ Detail</title>
+<title>Zmluvy detail</title>
 <style>
   @import url('https://fonts.googleapis.com/css2?family=Lexend:wght@400;500;600;700;800;900&display=swap');
 
@@ -118,27 +118,26 @@
     line-height: 1;
   }
 
-  .topbar .parent-signature {
+  .topbar .parent-crumb {
     display: inline-flex;
     align-items: center;
-    justify-content: center;
-    text-decoration: none;
-    border-radius: 999px;
-    border: 0;
-    background: rgb(255 255 255 / 0.88);
-    color: var(--text);
-    font-size: 0.72rem;
-    font-weight: 820;
-    letter-spacing: -0.01em;
-    padding: 0.34rem 0.58rem;
-    box-shadow: inset 0 0 0 1px rgb(0 0 0 / 0.12);
-    transition: transform 170ms ease, background-color 170ms ease;
+    gap: 0.26rem;
+    color: var(--muted);
+    font-size: 0.76rem;
+    font-weight: 760;
     white-space: nowrap;
+    margin-left: 0.1rem;
   }
 
-  .topbar .parent-signature:hover {
-    background: var(--yellow);
-    transform: translateY(-1px);
+  .topbar .parent-crumb a {
+    color: var(--muted);
+    text-decoration: none;
+    border-bottom: 1px solid transparent;
+  }
+
+  .topbar .parent-crumb a:hover {
+    color: var(--text);
+    border-color: var(--yellow);
     text-decoration: none;
   }
 
@@ -774,6 +773,10 @@
   }
 
   @media (max-width: 740px) {
+    .topbar .parent-crumb {
+      display: none;
+    }
+
     .topbar .logo span {
       display: none;
     }
@@ -862,6 +865,7 @@
     }
   }
 </style>
+<link rel="stylesheet" href="/assets/stopa-os-zmluvy.css">
 
 <script>
     !function(t,e){var o,n,p,r;e.__SV||(window.posthog && window.posthog.__loaded)||(window.posthog=e,e._i=[],e.init=function(i,s,a){function g(t,e){var o=e.split(".");2==o.length&&(t=t[o[0]],e=o[1]),t[e]=function(){t.push([e].concat(Array.prototype.slice.call(arguments,0)))}}(p=t.createElement("script")).type="text/javascript",p.crossOrigin="anonymous",p.async=!0,p.src=s.api_host.replace(".i.posthog.com","-assets.i.posthog.com")+"/static/array.js",(r=t.getElementsByTagName("script")[0]).parentNode.insertBefore(p,r);var u=e;for(void 0!==a?u=e[a]=[]:a="posthog",u.people=u.people||[],u.toString=function(t){var e="posthog";return"posthog"!==a&&(e+="."+a),t||(e+=" (stub)"),e},u.people.toString=function(){return u.toString(1)+".people (stub)"},o="vi init Ti Ci ft Ri Oi ki capture calculateEventProperties Li register register_once register_for_session unregister unregister_for_session zi getFeatureFlag getFeatureFlagPayload getFeatureFlagResult isFeatureEnabled reloadFeatureFlags updateFlags updateEarlyAccessFeatureEnrollment getEarlyAccessFeatures on onFeatureFlags onSurveysLoaded onSessionId getSurveys getActiveMatchingSurveys renderSurvey displaySurvey cancelPendingSurvey canRenderSurvey canRenderSurveyAsync identify setPersonProperties group resetGroups setPersonPropertiesForFlags resetPersonPropertiesForFlags setGroupPropertiesForFlags resetGroupPropertiesForFlags reset get_distinct_id getGroups get_session_id get_session_replay_url alias set_config startSessionRecording stopSessionRecording sessionRecordingStarted captureException startExceptionAutocapture stopExceptionAutocapture loadToolbar get_property getSessionProperty Ni Ai createPersonProfile setInternalOrTestUser Ui Si Hi opt_in_capturing opt_out_capturing has_opted_in_capturing has_opted_out_capturing get_explicit_consent_status is_capturing clear_opt_in_out_capturing Fi debug bt ji getPageViewId captureTraceFeedback captureTraceMetric wi".split(" "),n=0;n<o.length;n++)g(u,o[n]);e._i.push([i,s,a])},e.__SV=1)}(document,window.posthog||[]);
@@ -874,17 +878,13 @@
 </head>
 <body>
 
-<!-- Floating bug report -->
-<a class="bug-fab" href="#" onclick="return openBugReport()">
-  <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 8v4M12 16h.01"/></svg>
-  Nahlás chybu
-</a>
-
 <div class="topbar">
-  <a class="parent-signature" href="https://www.zltastopa.sk" target="_blank" rel="noreferrer noopener">Žltá Stopa ↗</a>
-  <a class="logo" href="/" aria-label="CRZ Explorer">
-    <svg class="brand-mark" viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg"><circle cx="26" cy="26" r="18" stroke="#F5C518" stroke-width="5"/><line x1="39" y1="39" x2="56" y2="56" stroke="#F5C518" stroke-width="5" stroke-linecap="round"/><path d="M20 26c0-3.3 2.7-6 6-6" stroke="#fff" stroke-width="2.5" stroke-linecap="round" opacity=".5"/></svg>
-    <span>CRZ Explorer</span>
+  <a class="logo" href="/" aria-label="Zmluvy">
+    <img class="brand-mark" src="/assets/zltastopa.png" alt="Žltá Stopa">
+    <span class="brand-copy">
+      <span class="product-meta">CRZ bez balastu.</span>
+      <span class="product-name">Zmluvy</span>
+    </span>
   </a>
   <div class="tabs">
     <a class="tab" href="/">
@@ -897,7 +897,7 @@
       <span class="tab-icon" aria-hidden="true">
         <svg viewBox="0 0 16 16"><rect x="2.5" y="2.5" width="4.5" height="4.5" rx="0.8"/><rect x="9" y="2.5" width="4.5" height="4.5" rx="0.8"/><rect x="2.5" y="9" width="4.5" height="4.5" rx="0.8"/><rect x="9" y="9" width="4.5" height="4.5" rx="0.8"/></svg>
       </span>
-      Browse
+      Zoznam
     </a>
     <a class="tab" href="/search">
       <span class="tab-icon" aria-hidden="true">
@@ -911,10 +911,19 @@
       </span>
       Metodika
     </a>
+    <a class="tab tab-link" href="/data">
+      <span class="tab-icon" aria-hidden="true">
+        <svg viewBox="0 0 16 16"><ellipse cx="8" cy="3.4" rx="3.8" ry="1.8"/><path d="M4.2 3.4v4.6c0 1 1.7 1.8 3.8 1.8s3.8-.8 3.8-1.8V3.4"/><path d="M4.2 8v4.6c0 1 1.7 1.8 3.8 1.8s3.8-.8 3.8-1.8V8"/></svg>
+      </span>
+      Datasette
+    </a>
   </div>
   <div class="spacer"></div>
   <div class="links">
-    <a href="/data">Datasette</a>
+    <a class="topbar-action topbar-action-ghost" href="/search" aria-label="Otvoriť vyhľadávanie">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="6"></circle><path d="M16 16L20.5 20.5"></path></svg>
+    </a>
+    <a class="topbar-action topbar-action-outline-accent" href="#" onclick="return openBugReport()">Nahlásiť chybu</a>
   </div>
 </div>
 
@@ -923,7 +932,12 @@
 </div>
 
 <footer class="page-footer">
-  <a href="https://www.zltastopa.sk" target="_blank" rel="noreferrer noopener">Projekt Žltá Stopa ↗</a>
+  <a href="https://www.zltastopa.sk" target="_blank" rel="noreferrer noopener">
+    <span>Projekt Žltá Stopa</span>
+    <span class="footer-arrow" aria-hidden="true">
+      <svg viewBox="0 0 16 16"><path d="M5 11L11 5"/><path d="M6 5h5v5"/></svg>
+    </span>
+  </a>
 </footer>
 
 <script>
@@ -1029,23 +1043,30 @@ function renderDetail(result) {
 
   // Title
   var displayName = (extraction && extraction.actual_subject) || d.nazov_zmluvy || '';
-  document.title = 'CRZ #' + d.id + ' - ' + displayName;
+  document.title = 'Zmluvy #' + d.id + ' - ' + displayName;
 
   // Header
   var header = el('div', 'contract-header');
   var idLine = el('div', 'id-line');
   idLine.appendChild(el('span', 'contract-id', '#' + d.id));
-  var typTag = el('span', 'tag ' + (d.typ === 'dodatok' ? 'tag-dodatok' : 'tag-zmluva'), d.typ || '');
+  var typValue = (d.typ || '').trim();
+  var druhValue = (d.druh || '').trim();
+  var typTag = el('span', 'tag ' + (typValue === 'dodatok' ? 'tag-dodatok' : 'tag-zmluva'), typValue || '');
   idLine.appendChild(typTag);
   var stavTag = el('span', 'tag ' + (d.stav === 'zru\u0161en\u00e1' ? 'tag-cancelled' : 'tag-active'), d.stav || '');
   idLine.appendChild(stavTag);
-  if (d.druh && d.druh !== '0') {
-    idLine.appendChild(el('span', 'tag', d.druh));
+  if (druhValue && druhValue !== '0' && druhValue.toLowerCase() !== typValue.toLowerCase()) {
+    idLine.appendChild(el('span', 'tag', druhValue));
   }
   header.appendChild(idLine);
+  if (extraction && extraction.actual_subject && d.nazov_zmluvy && extraction.actual_subject !== d.nazov_zmluvy) {
+    header.appendChild(el('div', 'contract-title-kicker', 'Extrahovaný názov'));
+  }
   header.appendChild(el('h2', null, displayName || 'Bez názvu'));
   if (extraction && extraction.actual_subject && d.nazov_zmluvy && extraction.actual_subject !== d.nazov_zmluvy) {
-    var sub = el('div', 'contract-subtitle', d.nazov_zmluvy);
+    var sub = el('div', 'contract-subtitle');
+    sub.appendChild(el('div', 'contract-subtitle-label', 'Pôvodný názov v CRZ'));
+    sub.appendChild(el('div', 'contract-subtitle-value', d.nazov_zmluvy));
     header.appendChild(sub);
   }
   container.appendChild(header);
@@ -1065,7 +1086,7 @@ function renderDetail(result) {
   s3.appendChild(el('div', 'stat-label', 'Zverejnené'));
   stats.appendChild(s3);
   if (d.red_flags && d.red_flags.length > 0) {
-    var s4 = el('div', 'stat-block danger');
+    var s4 = el('div', 'stat-block signal');
     s4.appendChild(el('div', 'stat-value', String(d.red_flags.length)));
     s4.appendChild(el('div', 'stat-label', 'Žlté stopy'));
     stats.appendChild(s4);
@@ -1081,7 +1102,7 @@ function renderDetail(result) {
   // Red flags
   if (d.red_flags && d.red_flags.length > 0) {
     container.appendChild(el('div', 'section-title', 'Žlté stopy'));
-    var flagCard = card(null, 'card-danger');
+    var flagCard = card(null, 'card-signal');
     var flagList = el('div', 'flag-list');
     d.red_flags.forEach(function(f) {
       var item = el('div', 'flag-item');
@@ -1323,6 +1344,7 @@ function renderDetail(result) {
       fsCard.appendChild(kv('Typ', ej.funding_source.type || '-'));
       if (ej.funding_source.scheme_reference) fsCard.appendChild(kv('Schéma/referencia', ej.funding_source.scheme_reference));
       if (ej.funding_source.grant_amount) fsCard.appendChild(kv('Suma grantu', ej.funding_source.grant_amount));
+      if (ej && ej.bank_accounts && ej.bank_accounts.length > 0) fsCard.style.marginTop = '0.82rem';
       container.appendChild(fsCard);
     }
   } else {

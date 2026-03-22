@@ -238,3 +238,24 @@ Expected: `121615 zmluv, 309630 zlte stopy, 36 pravidiel` (numbers grow over tim
   - **cross-referencer** (Opus) — find cross-cutting patterns, classify CONFIRMED/INCONCLUSIVE/DISMISSED
   - **phase-gater** (Haiku) — GO/STOP decisions between investigation phases
   - **report-writer** (Opus) — produce INVESTIGATIVNA SPRAVA from structured findings
+## Frontend design system
+
+This repo should follow the shared Stopa OS design system in `../design-system/`.
+
+Before frontend work:
+
+- read `../design-system/DESIGN.md`
+- inspect `../design-system/preview/search-study-airy.html`
+- reuse the shared tokens and patterns before inventing repo-local UI
+
+Current direction for `zmluvy`:
+
+- search-first overview
+- floating compact header
+- centered search stage below the header
+- always-visible horizontal scope chips
+- calm, dense, neutral data surfaces
+- one highlighted KPI at most
+- full-width list surfaces when browsing records
+
+When changing the visual language here, keep `../design-system/` in sync.
