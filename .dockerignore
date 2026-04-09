@@ -8,6 +8,7 @@ __pycache__/
 crz.db
 crz.db.old
 data/
+delta_store/tables/
 tmp/
 *.zip
 *.sql
