@@ -19,7 +19,6 @@ import os
 import sys
 from pathlib import Path
 
-import boto3
 import httpx
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
@@ -34,6 +33,8 @@ CRZ_DB_KEY = "crz.db"
 
 def get_s3_client():
     """Create a boto3 S3 client configured for Cloudflare R2."""
+    import boto3
+
     endpoint = os.getenv("R2_ENDPOINT_URL")
     access_key = os.getenv("R2_ACCESS_KEY_ID")
     secret_key = os.getenv("R2_SECRET_ACCESS_KEY")
