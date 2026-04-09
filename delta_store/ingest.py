@@ -475,12 +475,19 @@ def step_extract(
             }
 
     # Filter already-extracted (unless force)
-    if not force and (Path(extractions_path) / "_delta_log").exists():
-        existing_ids = set(
-            r[0] for r in conn.execute(f"""
-                SELECT zmluva_id FROM delta_scan('{extractions_path}')
-            """).fetchall()
-        )
+    if not force:
+        existing_ids = set()
+        if (Path(extractions_path) / "_delta_log").exists():
+            existing_ids.update(
+                r[0] for r in conn.execute(f"""
+                    SELECT zmluva_id FROM delta_scan('{extractions_path}')
+                """).fetchall()
+            )
+        # Also skip contracts with existing JSON sidecar files
+        for zid, contract in contracts.items():
+            json_path = output_dir / contract["subor"].replace(".pdf", ".json")
+            if json_path.exists():
+                existing_ids.add(zid)
         to_process = {k: v for k, v in contracts.items() if k not in existing_ids}
     else:
         to_process = contracts
