@@ -427,7 +427,7 @@ def api_flags(db, params):
         {j}
         WHERE fr.enabled = 1 AND ({where} OR rf.id IS NULL)
         GROUP BY fr.id
-        ORDER BY count DESC""",
+        ORDER BY count ASC""",
         bindings,
     ).fetchall()
 

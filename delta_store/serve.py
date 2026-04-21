@@ -533,7 +533,7 @@ def api_flags(request: Request):
         {j}
         WHERE fr.enabled = 1 AND ({where} OR rf.id IS NULL)
         GROUP BY fr.id, fr.label, fr.severity, fr.description
-        ORDER BY count DESC""", bindings)
+        ORDER BY count ASC""", bindings)
 
     total = q1(
         f"""SELECT count(DISTINCT rf.zmluva_id) as total
