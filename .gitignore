@@ -11,7 +11,7 @@ wheels/
 
 # Data files (downloaded separately)
 tmp/
-data/
+/data/
 *.zip
 .env
 .openrouter_key

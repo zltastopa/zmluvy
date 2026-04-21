@@ -306,7 +306,7 @@ DEFAULT_RULES = [
     {
         "id": "fs_vat_deregistered",
         "label": "Vymazany z DPH registra",
-        "description": "Dodavatel bol vymazany zo zoznamu platitelov DPH (podla ICO)",
+        "description": "Dodavatel bol vymazany zo zoznamu platitelov DPH (podla ICO). Ak nema aktivne dovody na zrusenie registracie (fs_vat_dereg_reasons), detail obsahuje priznak HISTORICKY — firma sa mohla opat zaregistrovat.",
         "severity": "danger",
         "sql_condition": "__custom__",
         "needs_extraction": 0,
@@ -432,11 +432,11 @@ def _insert_remove_flags(db, flag_type, matching_ids, details=None):
             (zmluva_id, flag_type, detail),
         )
         inserted += cursor.rowcount
-        # Update detail if it was NULL (from a previous SQL-based evaluator)
+        # Update detail if it changed (was NULL, or text differs)
         if cursor.rowcount == 0 and detail:
             db.execute(
-                "UPDATE red_flags SET detail = ? WHERE zmluva_id = ? AND flag_type = ? AND detail IS NULL",
-                (detail, zmluva_id, flag_type),
+                "UPDATE red_flags SET detail = ? WHERE zmluva_id = ? AND flag_type = ? AND (detail IS NULL OR detail != ?)",
+                (detail, zmluva_id, flag_type, detail),
             )
     placeholder = ",".join(str(i) for i in matching_ids) if matching_ids else "0"
     cursor2 = db.execute(
@@ -941,15 +941,29 @@ def _eval_threshold_gaming(db):
 
 @_custom("fs_vat_deregistered")
 def _eval_fs_vat_deregistered(db):
-    """Flag contracts where supplier was deregistered from VAT (ICO match)."""
+    """Flag contracts where supplier was deregistered from VAT (ICO match).
+
+    Cross-checks with fs_vat_dereg_reasons to distinguish active vs historical
+    deregistrations. Suppliers that were historically deregistered but have no
+    active reasons are downgraded to warning-level detail.
+    """
     has_table = db.execute(
         "SELECT count(*) FROM sqlite_master WHERE type='table' AND name='fs_vat_deregistered'"
     ).fetchone()[0]
     if not has_table:
         return 0, 0
 
+    active_dereg_icos = set()
+    has_reasons = db.execute(
+        "SELECT count(*) FROM sqlite_master WHERE type='table' AND name='fs_vat_dereg_reasons'"
+    ).fetchone()[0]
+    if has_reasons:
+        for r in db.execute("SELECT DISTINCT ico FROM fs_vat_dereg_reasons").fetchall():
+            active_dereg_icos.add(r["ico"])
+
     rows = db.execute("""
-        SELECT z.id, v.nazov, v.rok_porusenia, v.dat_vymazu
+        SELECT z.id, replace(z.dodavatel_ico, ' ', '') AS ico,
+               v.nazov, v.rok_porusenia, v.dat_vymazu
         FROM zmluvy z
         JOIN fs_vat_deregistered v ON v.ico = replace(z.dodavatel_ico, ' ', '')
         WHERE v.ico IS NOT NULL
@@ -958,12 +972,14 @@ def _eval_fs_vat_deregistered(db):
     matching_ids = set()
     details = {}
     for r in rows:
-        matching_ids.add(r["id"])
         parts = [r["nazov"] or ""]
         if r["rok_porusenia"]:
             parts.append(f"rok porusenia: {r['rok_porusenia']}")
         if r["dat_vymazu"]:
             parts.append(f"vymazany: {r['dat_vymazu']}")
+        if r["ico"] not in active_dereg_icos:
+            parts.append("HISTORICKY (firma moze byt opat registrovana ako platitel DPH)")
+        matching_ids.add(r["id"])
         details[r["id"]] = ", ".join(parts)
     return _insert_remove_flags(db, "fs_vat_deregistered", matching_ids, details)
 
