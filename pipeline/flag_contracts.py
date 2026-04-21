@@ -263,6 +263,14 @@ DEFAULT_RULES = [
     },
     # --- New flags: extraction cross-references ---
     {
+        "id": "signatory_overlap",
+        "label": "Zdielany podpisujuci",
+        "description": "Osoba podpisujuca zmluvu za dodavatela sa nachadza aj v zmluvach inych dodavatelov (3+ sukromne firmy, bez statnych organizacii)",
+        "severity": "warning",
+        "sql_condition": "__custom__",
+        "needs_extraction": 1,
+    },
+    {
         "id": "hidden_entity_is_supplier",
         "label": "Skryta entita je dodavatel",
         "description": "Skryta entita v zmluve (ICO) je zaroven dodavatelom v inych zmluvach",
@@ -864,6 +872,42 @@ def _eval_nace_mismatch(db):
             matching_ids.add(r["id"])
             details[r["id"]] = f"NACE: {r['nace_category']} ({r['nace_code']}), zmluva: {cat}"
     return _insert_remove_flags(db, "nace_mismatch", matching_ids, details)
+
+
+@_custom("signatory_overlap")
+def _eval_signatory_overlap(db):
+    """Flag contracts where a signatory signs for 3+ different private suppliers."""
+    rows = db.execute("""
+        SELECT e.zmluva_id, e.extraction_json, z.dodavatel_ico
+        FROM extractions e
+        JOIN zmluvy z ON z.id = e.zmluva_id
+        WHERE e.extraction_json IS NOT NULL
+        AND z.dodavatel_ico IS NOT NULL AND z.dodavatel_ico != ''
+        AND z.dodavatel_ico NOT LIKE '00%'
+    """).fetchall()
+
+    sig_map = defaultdict(set)
+    sig_contracts = defaultdict(set)
+    for r in rows:
+        try:
+            ej = json.loads(r["extraction_json"])
+        except Exception:
+            continue
+        for sig in (ej.get("signatories") or []):
+            name = (sig.get("name") or "").strip().lower()
+            if name and len(name) > 5:
+                sig_map[name].add(r["dodavatel_ico"])
+                sig_contracts[name].add(r["zmluva_id"])
+
+    suspicious_sigs = {name: icos for name, icos in sig_map.items() if len(icos) >= 3}
+
+    matching_ids = set()
+    details = {}
+    for name, icos in suspicious_sigs.items():
+        for zmluva_id in sig_contracts[name]:
+            matching_ids.add(zmluva_id)
+            details[zmluva_id] = f"{name.title()} podpisuje za {len(icos)} roznych sukromnych dodavatelov"
+    return _insert_remove_flags(db, "signatory_overlap", matching_ids, details)
 
 
 @_custom("hidden_entity_is_supplier")
