@@ -12,6 +12,7 @@ import confpath  # noqa: F401
 
 import argparse
 import json
+import re
 import sqlite3
 import time
 from collections import defaultdict
@@ -55,7 +56,7 @@ DEFAULT_RULES = [
         "description": "Zmluva nad 10 000 EUR nema uvedeny datum platnosti (vynimka pre najom, cintorin, vecne bremena, prevod majetku)",
         "severity": "info",
         "sql_condition": "(z.platnost_do IS NULL OR z.platnost_do = '') AND z.suma > 10000 AND (e.service_category IS NULL OR e.service_category NOT IN ('property_lease', 'cemetery', 'easement_encumbrance', 'asset_transfer', 'copyright_royalty'))",
-        "needs_extraction": 0,
+        "needs_extraction": 1,
     },
     {
         "id": "bezodplatne",
@@ -126,7 +127,19 @@ DEFAULT_RULES = [
         "label": "Zrusena firma",
         "description": "Dodavatel je zruseny/zaniknuty podla registra uctovnych zavierok (RUZ)",
         "severity": "danger",
-        "sql_condition": "z.dodavatel_ico IS NOT NULL AND z.dodavatel_ico != '' AND z.dodavatel_ico IN (SELECT cin FROM ruz_entities WHERE terminated_on IS NOT NULL AND cin IS NOT NULL) AND z.dodavatel_ico NOT IN (SELECT cin FROM ruz_entities WHERE terminated_on IS NULL AND cin IS NOT NULL)",
+        "sql_condition": (
+            "z.dodavatel_ico IS NOT NULL AND z.dodavatel_ico != '' "
+            "AND replace(z.dodavatel_ico, ' ', '') IN ("
+            "  SELECT r.cin FROM ruz_entities r"
+            "  JOIN ico_ruz_match m ON m.ruz_cin = r.cin AND m.ico = r.cin AND m.match = 1"
+            "  WHERE r.terminated_on IS NOT NULL AND r.cin IS NOT NULL"
+            ") "
+            "AND replace(z.dodavatel_ico, ' ', '') NOT IN ("
+            "  SELECT r.cin FROM ruz_entities r"
+            "  JOIN ico_ruz_match m ON m.ruz_cin = r.cin AND m.ico = r.cin AND m.match = 1"
+            "  WHERE r.terminated_on IS NULL AND r.cin IS NOT NULL"
+            ")"
+        ),
         "needs_extraction": 0,
     },
     {
@@ -142,7 +155,14 @@ DEFAULT_RULES = [
         "label": "Mikro dodavatel, velka zmluva",
         "description": "Dodavatel ma 0-1 zamestnancov podla RUZ, ale zmluva presahuje 100 000 EUR",
         "severity": "warning",
-        "sql_condition": "z.suma > 100000 AND z.dodavatel_ico IS NOT NULL AND z.dodavatel_ico != '' AND z.dodavatel_ico IN (SELECT cin FROM ruz_entities WHERE organization_size_id IN (1, 2) AND cin IS NOT NULL AND terminated_on IS NULL)",
+        "sql_condition": (
+            "z.suma > 100000 AND z.dodavatel_ico IS NOT NULL AND z.dodavatel_ico != '' "
+            "AND replace(z.dodavatel_ico, ' ', '') IN ("
+            "  SELECT r.cin FROM ruz_entities r"
+            "  JOIN ico_ruz_match m ON m.ruz_cin = r.cin AND m.ico = r.cin AND m.match = 1"
+            "  WHERE r.organization_size_id IN (1, 2) AND r.cin IS NOT NULL AND r.terminated_on IS NULL"
+            ")"
+        ),
         "needs_extraction": 0,
     },
     {
@@ -208,7 +228,14 @@ DEFAULT_RULES = [
         "label": "Zahranicny dodavatel",
         "description": "Dodavatel je registrovany v zahranici podla registra uctovnych zavierok (RUZ)",
         "severity": "info",
-        "sql_condition": "z.dodavatel_ico IS NOT NULL AND z.dodavatel_ico != '' AND z.dodavatel_ico IN (SELECT cin FROM ruz_entities WHERE region = 'Zahraničie' AND cin IS NOT NULL)",
+        "sql_condition": (
+            "z.dodavatel_ico IS NOT NULL AND z.dodavatel_ico != '' "
+            "AND replace(z.dodavatel_ico, ' ', '') IN ("
+            "  SELECT r.cin FROM ruz_entities r"
+            "  JOIN ico_ruz_match m ON m.ruz_cin = r.cin AND m.ico = r.cin AND m.match = 1"
+            "  WHERE r.region = 'Zahraničie' AND r.cin IS NOT NULL"
+            ")"
+        ),
         "needs_extraction": 0,
     },
     {
@@ -216,7 +243,14 @@ DEFAULT_RULES = [
         "label": "Neziskovka s velkou zmluvou",
         "description": "Dodavatel je neziskova organizacia, nadacia alebo fond s zmluvou nad 100 000 EUR",
         "severity": "warning",
-        "sql_condition": "z.suma > 100000 AND z.dodavatel_ico IS NOT NULL AND z.dodavatel_ico != '' AND z.dodavatel_ico IN (SELECT cin FROM ruz_entities WHERE legal_form_id IN (117, 118, 119) AND cin IS NOT NULL)",
+        "sql_condition": (
+            "z.suma > 100000 AND z.dodavatel_ico IS NOT NULL AND z.dodavatel_ico != '' "
+            "AND replace(z.dodavatel_ico, ' ', '') IN ("
+            "  SELECT r.cin FROM ruz_entities r"
+            "  JOIN ico_ruz_match m ON m.ruz_cin = r.cin AND m.ico = r.cin AND m.match = 1"
+            "  WHERE r.legal_form_id IN (117, 118, 119) AND r.cin IS NOT NULL"
+            ")"
+        ),
         "needs_extraction": 0,
     },
     {
@@ -275,7 +309,14 @@ DEFAULT_RULES = [
         "label": "Nova mikro firma, velka zmluva",
         "description": "Dodavatel bol zalozeny menej ako 1 rok pred podpisom, ma 0-1 zamestnancov a zmluva je nad 50 000 EUR",
         "severity": "danger",
-        "sql_condition": "z.suma > 50000 AND z.id IN (SELECT zmluva_id FROM red_flags WHERE flag_type = 'fresh_company') AND z.dodavatel_ico IN (SELECT cin FROM ruz_entities WHERE organization_size_id IN (1, 2) AND cin IS NOT NULL AND terminated_on IS NULL)",
+        "sql_condition": (
+            "z.suma > 50000 AND z.id IN (SELECT zmluva_id FROM red_flags WHERE flag_type = 'fresh_company') "
+            "AND replace(z.dodavatel_ico, ' ', '') IN ("
+            "  SELECT r.cin FROM ruz_entities r"
+            "  JOIN ico_ruz_match m ON m.ruz_cin = r.cin AND m.ico = r.cin AND m.match = 1"
+            "  WHERE r.organization_size_id IN (1, 2) AND r.cin IS NOT NULL AND r.terminated_on IS NULL"
+            ")"
+        ),
         "needs_extraction": 0,
     },
     {
@@ -363,7 +404,90 @@ def init_tables(db):
     """)
     db.execute("CREATE INDEX IF NOT EXISTS idx_red_flags_zmluva ON red_flags(zmluva_id)")
     db.execute("CREATE INDEX IF NOT EXISTS idx_red_flags_type ON red_flags(flag_type)")
+    db.execute("""
+        CREATE TABLE IF NOT EXISTS ico_ruz_match (
+            ico TEXT NOT NULL,
+            ruz_cin TEXT NOT NULL,
+            match INTEGER NOT NULL DEFAULT 0,
+            dodavatel TEXT,
+            ruz_name TEXT,
+            checked_at TEXT DEFAULT (datetime('now')),
+            PRIMARY KEY (ico, ruz_cin)
+        )
+    """)
+    db.execute("CREATE INDEX IF NOT EXISTS idx_ico_ruz_match_ico ON ico_ruz_match(ico)")
     db.commit()
+
+
+_PUNCT_SPACE_RE = re.compile(r'[\s\-.,;:_/()]+')
+
+
+def _normalize_for_match(name: str) -> str:
+    n = normalize_company_name(name)
+    return _PUNCT_SPACE_RE.sub('', n)
+
+
+def _names_match(dodavatel: str, ruz_name: str) -> bool:
+    if not dodavatel or not ruz_name:
+        return False
+    a = normalize_company_name(dodavatel)
+    b = normalize_company_name(ruz_name)
+    if not a or not b:
+        return False
+    if a == b:
+        return True
+    if a in b or b in a:
+        return True
+    a_compact = _normalize_for_match(dodavatel)
+    b_compact = _normalize_for_match(ruz_name)
+    if a_compact and b_compact and a_compact == b_compact:
+        return True
+    a_words = set(a.split())
+    b_words = set(b.split())
+    if len(a_words) >= 2 and len(b_words) >= 2:
+        overlap = a_words & b_words
+        if len(overlap) >= 2:
+            return True
+    return False
+
+
+def build_ico_ruz_cache(db):
+    new_pairs = db.execute("""
+        SELECT DISTINCT
+            replace(z.dodavatel_ico, ' ', '') AS ico,
+            z.dodavatel,
+            r.cin AS ruz_cin,
+            r.name AS ruz_name
+        FROM zmluvy z
+        JOIN ruz_entities r ON r.cin = replace(z.dodavatel_ico, ' ', '')
+        WHERE z.dodavatel_ico IS NOT NULL AND z.dodavatel_ico != ''
+          AND r.cin IS NOT NULL
+          AND NOT EXISTS (
+              SELECT 1 FROM ico_ruz_match m
+              WHERE m.ico = replace(z.dodavatel_ico, ' ', '')
+                AND m.ruz_cin = r.cin
+          )
+    """).fetchall()
+    if not new_pairs:
+        return 0
+    inserted = 0
+    for row in new_pairs:
+        matched = 1 if _names_match(row["dodavatel"], row["ruz_name"]) else 0
+        db.execute(
+            "INSERT OR IGNORE INTO ico_ruz_match (ico, ruz_cin, match, dodavatel, ruz_name) "
+            "VALUES (?, ?, ?, ?, ?)",
+            (row["ico"], row["ruz_cin"], matched, row["dodavatel"], row["ruz_name"]),
+        )
+        inserted += 1
+    db.commit()
+    rejected = db.execute("SELECT count(*) FROM ico_ruz_match WHERE match = 0").fetchone()[0]
+    print(f"  ico_ruz_match: {inserted} new pairs checked, {rejected} total rejected (IČO collisions)")
+    return inserted
+
+
+def _get_verified_icos(db):
+    rows = db.execute("SELECT DISTINCT ico FROM ico_ruz_match WHERE match = 1").fetchall()
+    return {r["ico"] for r in rows}
 
 
 def seed_rules(db):
@@ -560,11 +684,14 @@ def _eval_vszp_debtor_entity(db):
 
 @_custom("fresh_company")
 def _eval_fresh_company(db):
+    verified = _get_verified_icos(db)
     ruz_rows = db.execute(
         "SELECT cin, established_on, name FROM ruz_entities WHERE cin IS NOT NULL AND established_on IS NOT NULL AND terminated_on IS NULL"
     ).fetchall()
     ruz_map = {}
     for r in ruz_rows:
+        if r["cin"] not in verified:
+            continue
         est = _parse_date(r["established_on"])
         if est and (r["cin"] not in ruz_map or est < ruz_map[r["cin"]][0]):
             ruz_map[r["cin"]] = (est, r["name"])
@@ -577,7 +704,7 @@ def _eval_fresh_company(db):
     matching_ids = set()
     details = {}
     for c in contracts:
-        ico = c["dodavatel_ico"]
+        ico = c["dodavatel_ico"].replace(" ", "")
         if ico not in ruz_map:
             continue
         est_date, company_name = ruz_map[ico]
@@ -711,7 +838,8 @@ def _eval_nace_mismatch(db):
         SELECT z.id, z.dodavatel_ico, e.service_category, r.nace_code, r.nace_category
         FROM zmluvy z
         JOIN extractions e ON e.zmluva_id = z.id
-        JOIN ruz_entities r ON r.cin = z.dodavatel_ico
+        JOIN ruz_entities r ON r.cin = replace(z.dodavatel_ico, ' ', '')
+        JOIN ico_ruz_match m ON m.ruz_cin = r.cin AND m.ico = r.cin AND m.match = 1
         WHERE e.service_category IS NOT NULL AND e.service_category != 'other'
         AND r.nace_code IS NOT NULL AND r.nace_code != ''
         AND z.dodavatel_ico IS NOT NULL AND z.dodavatel_ico != ''
@@ -1026,6 +1154,7 @@ def _eval_negative_equity(db):
         SELECT z.id, e.nazov, e.vlastne_imanie, e.obdobie
         FROM zmluvy z
         JOIN ruz_equity e ON e.ico = replace(z.dodavatel_ico, ' ', '')
+        JOIN ico_ruz_match m ON m.ico = e.ico AND m.match = 1
         WHERE e.vlastne_imanie < 0
     """).fetchall()
 
@@ -1182,6 +1311,8 @@ def main():
         print("Tables and default rules initialized.")
         list_rules(db)
     else:
+        print("Building IČO ↔ RUZ name-match cache...")
+        build_ico_ruz_cache(db)
         print("Evaluating žltá stopa rules...")
         run_rules(db, rule_id=args.rule)
 
