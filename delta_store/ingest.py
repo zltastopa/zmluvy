@@ -936,6 +936,16 @@ def _eval_custom_rules(conn, date_from: str, date_to: str) -> list[dict]:
     now = datetime.now().isoformat()
     flags = []
 
+    # Foreign entity ICOs (legal_form_id 421 = 'Zahranič.osoba,právnická')
+    try:
+        _foreign_icos = set(
+            r[0] for r in conn.execute(
+                "SELECT cin FROM ruz_entities WHERE legal_form_id = 421 AND cin IS NOT NULL"
+            ).fetchall()
+        )
+    except Exception:
+        _foreign_icos = set()
+
     def _add_flags(rule_id, zmluva_ids, details=None):
         for zid in zmluva_ids:
             flags.append({
@@ -982,12 +992,14 @@ def _eval_custom_rules(conn, date_from: str, date_to: str) -> list[dict]:
                 sp_map[norm] = (name, amount)
         if sp_map:
             contracts = conn.execute("""
-                SELECT id, dodavatel FROM zmluvy
+                SELECT id, dodavatel, dodavatel_ico FROM zmluvy
                 WHERE dodavatel IS NOT NULL AND dodavatel != ''
                   AND datum_zverejnenia >= $1 AND datum_zverejnenia <= $2
             """, [date_from, date_to]).fetchall()
             matching, details = set(), {}
-            for cid, dodavatel in contracts:
+            for cid, dodavatel, dod_ico in contracts:
+                if (dod_ico or "").replace(" ", "") in _foreign_icos:
+                    continue
                 norm = normalize_company_name(dodavatel)
                 if norm in sp_map:
                     matching.add(cid)
@@ -1044,7 +1056,7 @@ def _eval_custom_rules(conn, date_from: str, date_to: str) -> list[dict]:
         """, [date_from, date_to]).fetchall()
         matching, details = set(), {}
         for cid, ico, d_podpis, d_zverej in contracts:
-            if ico not in ruz_map:
+            if ico in _foreign_icos or ico not in ruz_map:
                 continue
             est_date, company_name = ruz_map[ico]
             contract_date = _parse_date_str(d_podpis or d_zverej)
@@ -1168,6 +1180,7 @@ def _eval_custom_rules(conn, date_from: str, date_to: str) -> list[dict]:
               AND lower(z.nazov_zmluvy) NOT LIKE '%nenávratný%'
               AND lower(z.nazov_zmluvy) NOT LIKE '%nenávratn%'
               AND lower(z.nazov_zmluvy) NOT LIKE '%transferov%'
+              AND r.legal_form_id != 421
         """, [date_from, date_to]).fetchall()
         matching, details = set(), {}
         for cid, ico, cat, nace_code, nace_cat in rows:
@@ -1355,12 +1368,14 @@ def _eval_custom_rules(conn, date_from: str, date_to: str) -> list[dict]:
         debtor_map = {r[0]: (r[1], r[2]) for r in debtor_rows}
         if debtor_map:
             contracts = conn.execute("""
-                SELECT id, dodavatel FROM zmluvy
+                SELECT id, dodavatel, dodavatel_ico FROM zmluvy
                 WHERE dodavatel IS NOT NULL AND dodavatel != ''
                   AND datum_zverejnenia >= $1 AND datum_zverejnenia <= $2
             """, [date_from, date_to]).fetchall()
             matching, details = set(), {}
-            for cid, dodavatel in contracts:
+            for cid, dodavatel, dod_ico in contracts:
+                if (dod_ico or "").replace(" ", "") in _foreign_icos:
+                    continue
                 norm = normalize_company_name(dodavatel)
                 if norm in debtor_map:
                     matching.add(cid)
@@ -1378,6 +1393,9 @@ def _eval_custom_rules(conn, date_from: str, date_to: str) -> list[dict]:
             JOIN fs_vat_deregistered v ON v.ico = replace(z.dodavatel_ico, ' ', '')
             WHERE v.ico IS NOT NULL
               AND z.datum_zverejnenia >= $1 AND z.datum_zverejnenia <= $2
+              AND replace(z.dodavatel_ico, ' ', '') NOT IN (
+                SELECT cin FROM ruz_entities WHERE legal_form_id = 421 AND cin IS NOT NULL
+              )
         """, [date_from, date_to]).fetchall()
         matching, details = set(), {}
         for cid, nazov, rok, dat in rows:
@@ -1400,6 +1418,9 @@ def _eval_custom_rules(conn, date_from: str, date_to: str) -> list[dict]:
             JOIN fs_vat_dereg_reasons v ON v.ico = replace(z.dodavatel_ico, ' ', '')
             WHERE v.ico IS NOT NULL
               AND z.datum_zverejnenia >= $1 AND z.datum_zverejnenia <= $2
+              AND replace(z.dodavatel_ico, ' ', '') NOT IN (
+                SELECT cin FROM ruz_entities WHERE legal_form_id = 421 AND cin IS NOT NULL
+              )
         """, [date_from, date_to]).fetchall()
         matching, details = set(), {}
         for cid, nazov, rok, dat in rows:
@@ -1422,6 +1443,9 @@ def _eval_custom_rules(conn, date_from: str, date_to: str) -> list[dict]:
             JOIN ruz_equity e ON e.ico = replace(z.dodavatel_ico, ' ', '')
             WHERE e.vlastne_imanie < 0
               AND z.datum_zverejnenia >= $1 AND z.datum_zverejnenia <= $2
+              AND replace(z.dodavatel_ico, ' ', '') NOT IN (
+                SELECT cin FROM ruz_entities WHERE legal_form_id = 421 AND cin IS NOT NULL
+              )
         """, [date_from, date_to]).fetchall()
         matching, details = set(), {}
         for cid, nazov, vi, obdobie in rows:

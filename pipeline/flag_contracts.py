@@ -33,6 +33,15 @@ DB_PATH = get_path("CRZ_DB_PATH", "crz.db")
 #   p.*          (prilohy columns, LEFT JOINed, grouped)
 # -----------------------------------------------------------------------
 
+# SQL subquery: ICOs of foreign legal entities in RUZ (legal_form_id 421).
+# Used to exclude foreign entities from Slovak-only register checks.
+_FOREIGN_ICO_SQL = (
+    "SELECT r.cin FROM ruz_entities r"
+    " JOIN ico_ruz_match m ON m.ruz_cin = r.cin AND m.ico = r.cin AND m.match = 1"
+    " WHERE r.legal_form_id = 421 AND r.cin IS NOT NULL"
+)
+_NOT_FOREIGN = f"AND replace(z.dodavatel_ico, ' ', '') NOT IN ({_FOREIGN_ICO_SQL})"
+
 DEFAULT_RULES = [
     {
         "id": "hidden_entities",
@@ -87,7 +96,7 @@ DEFAULT_RULES = [
         "label": "Danovo nespolahlivy dodavatel",
         "description": "Dodavatel ma status 'menej spolahlivy' podla Financnej spravy SR",
         "severity": "danger",
-        "sql_condition": "z.dodavatel_ico IN (SELECT ico FROM tax_reliability WHERE status = 'menej spoľahlivý')",
+        "sql_condition": f"z.dodavatel_ico IN (SELECT ico FROM tax_reliability WHERE status = 'menej spoľahlivý') {_NOT_FOREIGN}",
         "needs_extraction": 0,
     },
     {
@@ -103,7 +112,7 @@ DEFAULT_RULES = [
         "label": "Dlznik VSZP",
         "description": "Dodavatel je dlznik Vseobecnej zdravotnej poistovne (podla ICO)",
         "severity": "danger",
-        "sql_condition": "z.dodavatel_ico IN (SELECT cin FROM vszp_debtors WHERE cin IS NOT NULL)",
+        "sql_condition": f"z.dodavatel_ico IN (SELECT cin FROM vszp_debtors WHERE cin IS NOT NULL) {_NOT_FOREIGN}",
         "needs_extraction": 0,
     },
     {
@@ -138,7 +147,8 @@ DEFAULT_RULES = [
             "  SELECT r.cin FROM ruz_entities r"
             "  JOIN ico_ruz_match m ON m.ruz_cin = r.cin AND m.ico = r.cin AND m.match = 1"
             "  WHERE r.terminated_on IS NULL AND r.cin IS NOT NULL"
-            ")"
+            ") "
+            f"{_NOT_FOREIGN}"
         ),
         "needs_extraction": 0,
     },
@@ -147,7 +157,7 @@ DEFAULT_RULES = [
         "label": "Dodavatel nie je v RUZ",
         "description": "Dodavatel s ICO nie je evidovany v registri uctovnych zavierok",
         "severity": "info",
-        "sql_condition": "z.dodavatel_ico IS NOT NULL AND z.dodavatel_ico != '' AND length(z.dodavatel_ico) = 8 AND z.dodavatel_ico NOT LIKE '00%' AND z.dodavatel_ico NOT IN (SELECT cin FROM ruz_entities WHERE cin IS NOT NULL)",
+        "sql_condition": f"z.dodavatel_ico IS NOT NULL AND z.dodavatel_ico != '' AND length(z.dodavatel_ico) = 8 AND z.dodavatel_ico NOT LIKE '00%' AND z.dodavatel_ico NOT IN (SELECT cin FROM ruz_entities WHERE cin IS NOT NULL) {_NOT_FOREIGN}",
         "needs_extraction": 0,
     },
     {
@@ -161,7 +171,8 @@ DEFAULT_RULES = [
             "  SELECT r.cin FROM ruz_entities r"
             "  JOIN ico_ruz_match m ON m.ruz_cin = r.cin AND m.ico = r.cin AND m.match = 1"
             "  WHERE r.organization_size_id IN (1, 2) AND r.cin IS NOT NULL AND r.terminated_on IS NULL"
-            ")"
+            ") "
+            f"{_NOT_FOREIGN}"
         ),
         "needs_extraction": 0,
     },
@@ -226,14 +237,14 @@ DEFAULT_RULES = [
     {
         "id": "foreign_supplier",
         "label": "Zahranicny dodavatel",
-        "description": "Dodavatel je registrovany v zahranici podla registra uctovnych zavierok (RUZ)",
+        "description": "Dodavatel je zahranicna pravnicka osoba podla registra uctovnych zavierok (RUZ, legal_form_id 421)",
         "severity": "info",
         "sql_condition": (
             "z.dodavatel_ico IS NOT NULL AND z.dodavatel_ico != '' "
             "AND replace(z.dodavatel_ico, ' ', '') IN ("
             "  SELECT r.cin FROM ruz_entities r"
             "  JOIN ico_ruz_match m ON m.ruz_cin = r.cin AND m.ico = r.cin AND m.match = 1"
-            "  WHERE r.region = 'Zahraničie' AND r.cin IS NOT NULL"
+            "  WHERE r.legal_form_id = 421 AND r.cin IS NOT NULL"
             ")"
         ),
         "needs_extraction": 0,
@@ -249,7 +260,8 @@ DEFAULT_RULES = [
             "  SELECT r.cin FROM ruz_entities r"
             "  JOIN ico_ruz_match m ON m.ruz_cin = r.cin AND m.ico = r.cin AND m.match = 1"
             "  WHERE r.legal_form_id IN (117, 118, 119) AND r.cin IS NOT NULL"
-            ")"
+            ") "
+            f"{_NOT_FOREIGN}"
         ),
         "needs_extraction": 0,
     },
@@ -315,7 +327,8 @@ DEFAULT_RULES = [
             "  SELECT r.cin FROM ruz_entities r"
             "  JOIN ico_ruz_match m ON m.ruz_cin = r.cin AND m.ico = r.cin AND m.match = 1"
             "  WHERE r.organization_size_id IN (1, 2) AND r.cin IS NOT NULL AND r.terminated_on IS NULL"
-            ")"
+            ") "
+            f"{_NOT_FOREIGN}"
         ),
         "needs_extraction": 0,
     },
@@ -490,6 +503,18 @@ def _get_verified_icos(db):
     return {r["ico"] for r in rows}
 
 
+_foreign_icos_cache = None
+
+
+def _get_foreign_icos(db):
+    """Return set of ICOs belonging to foreign entities (cached per run)."""
+    global _foreign_icos_cache
+    if _foreign_icos_cache is None:
+        rows = db.execute(f"SELECT cin FROM ({_FOREIGN_ICO_SQL})").fetchall()
+        _foreign_icos_cache = {r["cin"] for r in rows}
+    return _foreign_icos_cache
+
+
 def seed_rules(db):
     """Insert or update default rules."""
     for rule in DEFAULT_RULES:
@@ -640,6 +665,7 @@ def _eval_tax_unreliable_entity(db):
 
 @_custom("socpoist_debtor")
 def _eval_socpoist_debtor(db):
+    foreign = _get_foreign_icos(db)
     socpoist_rows = db.execute(
         "SELECT name_normalized, name, amount FROM socpoist_debtors WHERE name_normalized IS NOT NULL"
     ).fetchall()
@@ -650,12 +676,15 @@ def _eval_socpoist_debtor(db):
             socpoist_map[key] = (r["name"], r["amount"])
 
     contracts = db.execute(
-        "SELECT id, dodavatel FROM zmluvy WHERE dodavatel IS NOT NULL AND dodavatel != ''"
+        "SELECT id, dodavatel, dodavatel_ico FROM zmluvy WHERE dodavatel IS NOT NULL AND dodavatel != ''"
     ).fetchall()
 
     matching_ids = set()
     details = {}
     for c in contracts:
+        ico = (c["dodavatel_ico"] or "").replace(" ", "")
+        if ico in foreign:
+            continue
         norm = normalize_company_name(c["dodavatel"])
         if norm in socpoist_map:
             matching_ids.add(c["id"])
@@ -684,6 +713,7 @@ def _eval_vszp_debtor_entity(db):
 
 @_custom("fresh_company")
 def _eval_fresh_company(db):
+    foreign = _get_foreign_icos(db)
     verified = _get_verified_icos(db)
     ruz_rows = db.execute(
         "SELECT cin, established_on, name FROM ruz_entities WHERE cin IS NOT NULL AND established_on IS NOT NULL AND terminated_on IS NULL"
@@ -705,7 +735,7 @@ def _eval_fresh_company(db):
     details = {}
     for c in contracts:
         ico = c["dodavatel_ico"].replace(" ", "")
-        if ico not in ruz_map:
+        if ico in foreign or ico not in ruz_map:
             continue
         est_date, company_name = ruz_map[ico]
         contract_date = _parse_date(c["datum_podpisu"] or c["datum_zverejnenia"])
@@ -857,6 +887,7 @@ def _eval_nace_mismatch(db):
         AND lower(z.nazov_zmluvy) NOT LIKE '%nenávratný%'
         AND lower(z.nazov_zmluvy) NOT LIKE '%nenávratn%'
         AND lower(z.nazov_zmluvy) NOT LIKE '%transferov%'
+        AND r.legal_form_id != 421
     """).fetchall()
 
     matching_ids = set()
@@ -1102,12 +1133,13 @@ def _eval_fs_vat_deregistered(db):
         for r in db.execute("SELECT DISTINCT ico FROM fs_vat_dereg_reasons").fetchall():
             active_dereg_icos.add(r["ico"])
 
-    rows = db.execute("""
+    rows = db.execute(f"""
         SELECT z.id, replace(z.dodavatel_ico, ' ', '') AS ico,
                v.nazov, v.rok_porusenia, v.dat_vymazu
         FROM zmluvy z
         JOIN fs_vat_deregistered v ON v.ico = replace(z.dodavatel_ico, ' ', '')
         WHERE v.ico IS NOT NULL
+        {_NOT_FOREIGN}
     """).fetchall()
 
     matching_ids = set()
@@ -1134,11 +1166,12 @@ def _eval_fs_vat_dereg_risk(db):
     if not has_table:
         return 0, 0
 
-    rows = db.execute("""
+    rows = db.execute(f"""
         SELECT z.id, v.nazov, v.rok_porusenia, v.dat_zverejnenia
         FROM zmluvy z
         JOIN fs_vat_dereg_reasons v ON v.ico = replace(z.dodavatel_ico, ' ', '')
         WHERE v.ico IS NOT NULL
+        {_NOT_FOREIGN}
     """).fetchall()
 
     matching_ids = set()
@@ -1163,12 +1196,13 @@ def _eval_negative_equity(db):
     if not has_table:
         return 0, 0
 
-    rows = db.execute("""
+    rows = db.execute(f"""
         SELECT z.id, e.nazov, e.vlastne_imanie, e.obdobie
         FROM zmluvy z
         JOIN ruz_equity e ON e.ico = replace(z.dodavatel_ico, ' ', '')
         JOIN ico_ruz_match m ON m.ico = e.ico AND m.match = 1
         WHERE e.vlastne_imanie < 0
+        {_NOT_FOREIGN}
     """).fetchall()
 
     matching_ids = set()
@@ -1199,13 +1233,17 @@ def _eval_fs_tax_debtor(db):
     ).fetchall()
     debtor_map = {r["nazov_normalized"]: (r["nazov"], r["max_sum"]) for r in debtor_rows}
 
+    foreign = _get_foreign_icos(db)
     contracts = db.execute(
-        "SELECT id, dodavatel FROM zmluvy WHERE dodavatel IS NOT NULL AND dodavatel != ''"
+        "SELECT id, dodavatel, dodavatel_ico FROM zmluvy WHERE dodavatel IS NOT NULL AND dodavatel != ''"
     ).fetchall()
 
     matching_ids = set()
     details = {}
     for c in contracts:
+        ico = (c["dodavatel_ico"] or "").replace(" ", "")
+        if ico in foreign:
+            continue
         norm = normalize_company_name(c["dodavatel"])
         if norm in debtor_map:
             matching_ids.add(c["id"])
