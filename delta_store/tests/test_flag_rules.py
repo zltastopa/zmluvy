@@ -415,6 +415,43 @@ class TestNaceMismatch:
         assert 41 not in _NACE_COMPATIBLE['insurance']
 
 
+class TestNaceMismatchGrantExclusion:
+    """Grant/dotácia contracts should be excluded from nace_mismatch."""
+
+    @staticmethod
+    def _matches_exclusion(nazov: str) -> bool:
+        from pipeline.flag_contracts import _GRANT_EXCLUSION_PATTERNS
+        lower = nazov.lower()
+        return any(pat in lower for pat in _GRANT_EXCLUSION_PATTERNS)
+
+    def test_dotacia_excluded(self):
+        assert self._matches_exclusion("Zmluva o poskytnutí dotácie na rok 2026")
+
+    def test_prispevok_excluded(self):
+        assert self._matches_exclusion("Zmluva o poskytnutí príspevku na rekonštrukciu")
+
+    def test_nfp_excluded(self):
+        assert self._matches_exclusion("Zmluva o poskytnutí NFP č. 123/2026")
+
+    def test_nenavratny_excluded(self):
+        assert self._matches_exclusion("Zmluva o poskytnutí nenávratného finančného príspevku")
+
+    def test_grant_excluded(self):
+        assert self._matches_exclusion("Grant agreement for research project")
+
+    def test_transfer_excluded(self):
+        assert self._matches_exclusion("Zmluva o transferových platbách")
+
+    def test_regular_contract_not_excluded(self):
+        assert not self._matches_exclusion("Zmluva o dielo č. 157/2026 — Revitalizácia MPR Žilina")
+
+    def test_service_contract_not_excluded(self):
+        assert not self._matches_exclusion("Zmluva o poskytovaní služieb IT podpory")
+
+    def test_construction_contract_not_excluded(self):
+        assert not self._matches_exclusion("Zmluva o dodávke stavebných prác")
+
+
 # =========================================================================
 # hidden_price — severity should be 'info' not 'warning'
 # =========================================================================

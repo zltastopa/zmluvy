@@ -1160,6 +1160,14 @@ def _eval_custom_rules(conn, date_from: str, date_to: str) -> list[dict]:
               AND r.nace_code IS NOT NULL AND r.nace_code != ''
               AND z.dodavatel_ico IS NOT NULL AND z.dodavatel_ico != ''
               AND z.datum_zverejnenia >= $1 AND z.datum_zverejnenia <= $2
+              AND lower(z.nazov_zmluvy) NOT LIKE '%dotác%'
+              AND lower(z.nazov_zmluvy) NOT LIKE '%dotáci%'
+              AND lower(z.nazov_zmluvy) NOT LIKE '%príspev%'
+              AND lower(z.nazov_zmluvy) NOT LIKE '%grant%'
+              AND lower(z.nazov_zmluvy) NOT LIKE '%nfp%'
+              AND lower(z.nazov_zmluvy) NOT LIKE '%nenávratný%'
+              AND lower(z.nazov_zmluvy) NOT LIKE '%nenávratn%'
+              AND lower(z.nazov_zmluvy) NOT LIKE '%transferov%'
         """, [date_from, date_to]).fetchall()
         matching, details = set(), {}
         for cid, ico, cat, nace_code, nace_cat in rows:

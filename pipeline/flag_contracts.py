@@ -256,7 +256,7 @@ DEFAULT_RULES = [
     {
         "id": "nace_mismatch",
         "label": "Nesulad odvetvia",
-        "description": "Registrovane odvetvie dodavatela (NACE) nezodpoveda predmetu zmluvy",
+        "description": "Registrovane odvetvie dodavatela (NACE) nezodpoveda predmetu zmluvy. Vynimka: dotacie, granty, NFP a prispevky su vylucene — prijemca deleguje pracu na subdodavatelov.",
         "severity": "warning",
         "sql_condition": "__custom__",
         "needs_extraction": 1,
@@ -810,6 +810,11 @@ def _eval_rapid_succession(db):
     return _insert_remove_flags(db, "rapid_succession", matching_ids, details)
 
 
+# Grant/dotácia patterns excluded from nace_mismatch — recipients delegate work
+_GRANT_EXCLUSION_PATTERNS = [
+    'dotác', 'dotáci', 'príspev', 'grant', 'nfp', 'nenávratný', 'nenávratn', 'transferov',
+]
+
 # NACE sector -> compatible service categories
 _NACE_COMPATIBLE = {
     'software_it': {58, 59, 60, 61, 62, 63, 70, 71, 72, 74},
@@ -843,6 +848,14 @@ def _eval_nace_mismatch(db):
         WHERE e.service_category IS NOT NULL AND e.service_category != 'other'
         AND r.nace_code IS NOT NULL AND r.nace_code != ''
         AND z.dodavatel_ico IS NOT NULL AND z.dodavatel_ico != ''
+        AND lower(z.nazov_zmluvy) NOT LIKE '%dotác%'
+        AND lower(z.nazov_zmluvy) NOT LIKE '%dotáci%'
+        AND lower(z.nazov_zmluvy) NOT LIKE '%príspev%'
+        AND lower(z.nazov_zmluvy) NOT LIKE '%grant%'
+        AND lower(z.nazov_zmluvy) NOT LIKE '%nfp%'
+        AND lower(z.nazov_zmluvy) NOT LIKE '%nenávratný%'
+        AND lower(z.nazov_zmluvy) NOT LIKE '%nenávratn%'
+        AND lower(z.nazov_zmluvy) NOT LIKE '%transferov%'
     """).fetchall()
 
     matching_ids = set()
