@@ -217,7 +217,7 @@ DEFAULT_RULES = [
     {
         "id": "rapid_succession",
         "label": "Zmluvy v rychlom slede",
-        "description": "Dodavatel dostal 3+ zmluvy od rovnakeho objednavatela v priebehu 14 dni",
+        "description": "Sukromny dodavatel dostal 3+ zmluvy od rovnakeho objednavatela v priebehu 14 dni (bez statnych organizacii)",
         "severity": "warning",
         "sql_condition": "__custom__",
         "needs_extraction": 0,
@@ -775,11 +775,12 @@ def _eval_supplier_monopoly(db):
 
 @_custom("rapid_succession")
 def _eval_rapid_succession(db):
-    """Flag contracts where same supplier+buyer have 3+ contracts within 14 days."""
+    """Flag contracts where same private supplier+buyer have 3+ contracts within 14 days."""
     rows = db.execute("""
         SELECT id, dodavatel_ico, objednavatel_ico, datum_podpisu, datum_zverejnenia
         FROM zmluvy
         WHERE dodavatel_ico IS NOT NULL AND dodavatel_ico != ''
+        AND dodavatel_ico NOT LIKE '00%'
         AND objednavatel_ico IS NOT NULL AND objednavatel_ico != ''
         ORDER BY dodavatel_ico, objednavatel_ico, datum_podpisu
     """).fetchall()
