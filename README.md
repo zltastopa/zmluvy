@@ -336,6 +336,55 @@ The app listens on port 8002 inside the container, published as `127.0.0.1:8321`
 
 The container downloads data from R2 on first start (~133 MB). A named volume (`tables_cache`) persists the data across restarts. Set `R2_PUBLIC_URL` or `R2_BUCKET` in `.env` for the container to download data.
 
+#### Updating the deployment
+
+Two flows depending on what changed:
+
+**Code changes only (frontend, server logic, scripts):**
+
+```bash
+cd ~/crz-experiments
+git pull
+docker compose restart      # if Python code changed
+# Frontend is mounted as a volume — no restart needed for HTML/CSS changes.
+```
+
+**Fresh data on R2 (after running `delta_store/ingest.py` elsewhere):**
+
+```bash
+docker compose exec app /app/.venv/bin/python -m delta_store.r2_sync download
+curl http://localhost:8321/reload
+```
+
+The `/reload` endpoint re-materializes Delta tables into DuckDB without restarting the container.
+
+**Dependency changes (`pyproject.toml` / `uv.lock`):**
+
+```bash
+docker compose down
+docker volume rm crz-experiments_tables_cache   # only if you want fresh data on next start
+docker compose build --no-cache
+docker compose up -d
+docker compose logs -f --tail 20                # watch for "Downloading tables from R2..."
+```
+
+#### Daily cron jobs (on the VPS)
+
+```bash
+crontab -e
+# Daily ingestion at 06:00 — pulls yesterday's contracts and pushes to R2
+0 6 * * * cd ~/crz-experiments && docker compose exec -T app /app/.venv/bin/python delta_store/ingest.py >> /var/log/crz-ingest.log 2>&1
+
+# Daily Discord red-flag report at 09:00 — covers contracts published yesterday
+0 9 * * * cd ~/crz-experiments && docker compose exec -T app /app/.venv/bin/python -m delta_store.discord_report >> /var/log/crz-discord.log 2>&1
+```
+
+#### Gotchas
+
+- **`docker compose exec app python …` fails with `ModuleNotFoundError`.** The container's `python` resolves to the system Python, not the venv. Always invoke `/app/.venv/bin/python` explicitly inside the container.
+- **Server starts but `zmluvy` table doesn't exist.** Means the named volume has stale `_delta_log` files but no parquet, so the startup R2 download was skipped. Fix: `docker compose down && docker volume rm crz-experiments_tables_cache && docker compose up -d`.
+- **`delta_store/tables/` must stay in `.dockerignore`.** Otherwise `COPY . .` bakes the local `_delta_log` directories into the image and Docker seeds the volume from them, tricking the startup check.
+
 ### No external database needed
 
 DuckDB runs in-process. Delta tables are just Parquet files on disk. The server materializes everything into RAM on startup (~2-3 seconds). No PostgreSQL, no Redis, no database server to manage.
