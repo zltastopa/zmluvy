@@ -353,7 +353,7 @@ docker compose restart      # if Python code changed
 
 ```bash
 docker compose exec app /app/.venv/bin/python -m delta_store.r2_sync download
-curl http://localhost:8321/reload
+curl -X POST http://localhost:8321/reload
 ```
 
 The `/reload` endpoint re-materializes Delta tables into DuckDB without restarting the container.
